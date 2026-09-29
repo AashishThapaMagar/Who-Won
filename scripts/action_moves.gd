@@ -42,6 +42,10 @@ static func for_fighter(id: String) -> Dictionary:
 			m.drive = BASE._move("Rush kick", "side_kick", "kick", "kick", 68, -65, 0.17, 0.07, 0.30, 1.1, 1.0, 43)
 			m.breaker.name = "Relay wheel"
 			m.breaker.pose = "spin"
+			# Signature four-hit combo: three quick punches, then heavy for a
+			# leaping kick.
+			m.combo_finish = BASE._move("Endless Rush", "spin", "kick", "kick", 74, -80, 0.13, 0.09, 0.36, 1.6, 1.7, 26)
+			m.combo_finish.hitstun = 0.5
 		"abhi":
 			m.cross.name = "Thunder straight"
 			m.hook.name = "Mic drop"

@@ -73,6 +73,13 @@ const MESHY_MOVES := {
 		"uppercut": "Right_Uppercut_from_Guard", "punch_heavy": "Punch_Combo",
 		"kick": "Roundhouse_Kick", "kick_front": "High_Kick", "kick_spin": "Sweep_Kick",
 	},
+	# Bib's biped download: named moves plus three id-named ones (a stepping
+	# power punch, a jumping kick and a taunt), measured the same way.
+	"bib": {
+		"jab": ["Punch_Combo", 0.60], "cross": ["01a0ebe2", 1.00], "punch_heavy": "Punch_Combo",
+		"kick": ["High_Kick", 1.05], "kick_front": ["Leg_Sweep", 0.95], "kick_spin": ["01a0ebe3", 1.30],
+		"taunt": ["01a0ebe0", 2.60], "victory": "victory",
+	},
 	# Ananta's Meshy set exports with id names; each is [id, second the blow
 	# lands], measured from the peak reach of the striking hand or foot.
 	"anant": {
