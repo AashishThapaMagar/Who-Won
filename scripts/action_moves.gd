@@ -57,6 +57,10 @@ static func for_fighter(id: String) -> Dictionary:
 			m.breaker.pose = "spin"
 			m.back_heavy = BASE._move("Slip away / retreat feint", "feint", "punch", "punch", 0, -88, 0.18, 0.02, 0.20, 0, 0, -45)
 			m.back_heavy.utility = "feint"
+			# Signature four-hit combo: swaying palm, straight, hook, then
+			# heavy for the capoeira flip kick.
+			m.combo_finish = BASE._move("Spiral Storm", "spin", "kick", "kick", 74, -70, 0.15, 0.09, 0.40, 1.75, 1.8, 24)
+			m.combo_finish.hitstun = 0.55
 		"anant":
 			m.jab.name = "First word"
 			m.cross.name = "Sovereign straight"

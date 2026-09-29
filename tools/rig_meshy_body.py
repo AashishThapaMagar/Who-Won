@@ -29,7 +29,7 @@ from mathutils import Matrix, Vector
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SKELETON = os.path.join(ROOT, "assets", "fighters", "anug", "idle.fbx")
 TEXTURE_SIZE = 2048
-TRIANGLE_BUDGET = 32000
+TRIANGLE_BUDGET = 45000
 
 
 def import_any(path):
@@ -125,6 +125,9 @@ def load_model(path):
         mod.use_collapse_triangulate = True
         bpy.ops.object.modifier_apply(modifier=mod.name)
         print("DECIMATED %d -> %d" % (tris, sum(len(p.vertices) - 2 for p in model.data.polygons)))
+    # Smooth shading (the collapse leaves flat facets that read as jagged
+    # patches in close-ups); hard creases stay sharp.
+    bpy.ops.object.shade_smooth_by_angle(angle=math.radians(50))
     for obj in [o for o in objects if o.name in bpy.data.objects and o != model]:
         bpy.data.objects.remove(obj, do_unlink=True)
     # Feet on the floor, centred over the origin.
@@ -449,7 +452,32 @@ def unbend(model, arm, rest_arm):
     apply_modifiers(model)
 
 
+def name_textures():
+    """Meshy embeds its colour and normal maps both as "texture_0"; the glTF
+    exporter then writes one file for both, so the normal map slot ends up
+    holding the colour picture (blotchy, faceted shading). Each image gets a
+    name from the slot it feeds."""
+    for material in bpy.data.materials:
+        if not material.use_nodes:
+            continue
+        for node in material.node_tree.nodes:
+            if node.type != "TEX_IMAGE" or node.image is None:
+                continue
+            role = "color"
+            for link in node.outputs["Color"].links:
+                target = link.to_node
+                if target.type == "NORMAL_MAP":
+                    role = "normal"
+                    node.image.colorspace_settings.name = "Non-Color"
+                elif target.type == "BSDF_PRINCIPLED":
+                    role = {"Base Color": "color", "Roughness": "roughness", "Metallic": "metallic"}.get(link.to_socket.name, "map")
+                elif target.type in ("SEPARATE_COLOR", "SEPRGB"):
+                    role = "orm"
+            node.image.name = "%s_%s" % (material.name, role)
+
+
 def shrink_textures():
+    name_textures()
     for image in bpy.data.images:
         if image.size[0] > TEXTURE_SIZE:
             image.scale(TEXTURE_SIZE, TEXTURE_SIZE)
