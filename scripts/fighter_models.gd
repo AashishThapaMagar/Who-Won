@@ -57,7 +57,9 @@ const SHARED_TIMING := {
 ## MOVES_FOLDER). Fighters differ only in their strikes (STRIKES).
 const MOVES_FOLDER := "res://assets/fighters/anug/style/"
 const STYLE_MOVES := {
-	"walk": "walk_forward", "walk_back": "walk_back", "sidestep_left": "strafe_left",
+	# No walk_back here: the style download twists the upper body ~120° away
+	# from the opponent; the shared Mixamo back-step keeps facing forward.
+	"walk": "walk_forward", "sidestep_left": "strafe_left",
 	"sidestep_right": "strafe_right", "run": "run",
 }
 ## The only clips a fighter's style folder may override.

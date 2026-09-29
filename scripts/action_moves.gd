@@ -66,6 +66,10 @@ static func for_fighter(id: String) -> Dictionary:
 			m.breaker.name = "Crown wheel"
 			m.breaker.pose = "spin"
 			m.back_heavy = BASE._move("Sovereign throw", "grapple", "grapple", "hook", 30, -72, 0.30, 0.07, 0.48, 1.5, 1.4, 8)
+			# Signature four-hit combo: jab, straight, backfist, then heavy for
+			# a spinning finisher that launches.
+			m.combo_finish = BASE._move("The Final Word", "spin", "kick", "kick", 72, -72, 0.14, 0.09, 0.38, 1.8, 1.8, 22)
+			m.combo_finish.hitstun = 0.55
 	# Original, character-specific strike routes. Finishers use separate slots
 	# so learning an easy chain does not replace directional signature moves.
 	var finishers := {
@@ -95,6 +99,8 @@ static func for_fighter(id: String) -> Dictionary:
 	m.kick.push = 0.25
 	m.cross.hitstun = 0.30
 	m.cross.next_heavy = "chain_finish"
+	if m.has("combo_finish"):
+		m.hook.next_heavy = "combo_finish"
 	# Every character has a short-range throw, with different commitment/payoff.
 	var throws := {
 		"anug": ["Keeper catch", "clinch_shove", 0.24, 1.15, 1.25],

@@ -18,8 +18,11 @@ enum Quality { LOW, MEDIUM, HIGH, CUSTOM }
 const RENDER_SCALES := [0.5, 0.75, 1.0]
 ## [render scale index, anti-aliasing (0 off, 1 2x, 2 4x),
 ##  shadows (0 off, 1 low, 2 high), photo-real arena textures].
+## Every preset renders at full resolution: a lower 3D scale turns the
+## fighters' faces and outfits into visible pixels. Cheaper presets save
+## time on shadows and arena textures instead.
 const PRESETS := [
-	[1, 0, 0, false],
+	[2, 1, 0, false],
 	[2, 1, 1, false],
 	# High uses 2x MSAA: 4x cost ~15 fps at 1080p on integrated GPUs.
 	[2, 1, 2, true],
@@ -203,6 +206,13 @@ func _load() -> void:
 		show_fps = cfg.get_value("graphics", "show_fps", show_fps)
 		post_effects = cfg.get_value("graphics", "post_effects", post_effects)
 		adaptive_quality = cfg.get_value("graphics", "adaptive_quality", adaptive_quality)
+		# A preset always means its current values, so older saves (half
+		# resolution on LOW) come back sharp.
+		if quality < PRESETS.size():
+			render_scale = PRESETS[quality][0]
+			anti_aliasing = PRESETS[quality][1]
+			shadows = PRESETS[quality][2]
+			detailed_textures = PRESETS[quality][3]
 		hit_effects = cfg.get_value("fight", "hit_effects", hit_effects)
 		input_display = cfg.get_value("fight", "input_display", input_display)
 

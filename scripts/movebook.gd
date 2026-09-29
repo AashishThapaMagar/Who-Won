@@ -269,6 +269,8 @@ func _build_cards(fighter: Node) -> void:
 	_section("COMBOS")
 	_combo(["L", "›", "L", "›", "L"], "%s › %s › %s" % [moves.jab.name, moves.cross.name, moves.hook.name], "Punch chain. Tap each button as the last hit connects.")
 	_combo(["L", "›", "L", "›", "H"], "%s › %s › %s" % [moves.jab.name, moves.cross.name, moves[moves.cross.next_heavy].name], "Mixed chain: two punches into a heavy finisher.")
+	if moves.has("combo_finish"):
+		_combo(["L", "›", "L", "›", "L", "›", "H"], "%s › %s › %s › %s" % [moves.jab.name, moves.cross.name, moves.hook.name, moves.combo_finish.name], "Signature combo. Three punches, then heavy for the spinning finisher.")
 	if moves.has("chain_bridge"):
 		_combo(["H", "›", "L", "›", "H"], "%s › %s › %s" % [moves.kick.name, moves.chain_bridge.name, moves.chain_finish.name], "Kick route. Release directions and tap each strike on contact.")
 	_combo(["L", "›", "L", "›", "↓", "↘", "→", "H"], "Command combo", "Land two punches, then roll the motion into the ender within 0.4 s.")
