@@ -71,6 +71,14 @@ const MESHY_MOVES := {
 		"uppercut": "Right_Uppercut_from_Guard", "punch_heavy": "Punch_Combo",
 		"kick": "Roundhouse_Kick", "kick_front": "High_Kick", "kick_spin": "Sweep_Kick",
 	},
+	# Ananta's Meshy set exports with id names; each is [id, second the blow
+	# lands], measured from the peak reach of the striking hand or foot.
+	"anant": {
+		"jab": ["01a0ebcb", 0.30], "cross": ["01a0ebcf", 0.55], "hook": ["01a0ebd2", 0.45],
+		"uppercut": ["01a0ebd4", 1.05], "punch_heavy": ["01a0ebcd", 0.90],
+		"kick": ["01a0ebd0", 0.80], "kick_spin": ["01a0ebd0", 0.80], "kick_front": ["01a0ebcc", 1.05],
+		"taunt": ["01a0ebc9", 1.95],
+	},
 }
 ## Per-fighter style: body build and tint, plus style clips (file in
 ## style/ -> logical clip) and their timing. Impact times were measured
@@ -183,12 +191,22 @@ static func _mixamo(fighter_id: String) -> Dictionary:
 	timing.merge(style.get("timing", {}), true)
 	var meshy := {}
 	var meshy_file := "res://assets/fighters/%s/meshy_moves.fbx" % fighter_id
+	if not ResourceLoader.exists(meshy_file):
+		meshy_file = meshy_file.get_basename() + ".glb"
 	if MESHY_MOVES.has(fighter_id) and ResourceLoader.exists(meshy_file):
-		meshy = {"file": meshy_file, "clips": MESHY_MOVES[fighter_id]}
+		var names := {}
 		for logical in MESHY_MOVES[fighter_id]:
+			var entry = MESHY_MOVES[fighter_id][logical]
 			clips[logical] = "meshy_" + logical
-			# Meshy clips are whole moves; the impact sits at 45%.
-			timing.erase(logical)
+			if entry is Array:
+				# [name, impact second]: a window around the blow.
+				names[logical] = entry[0]
+				timing[logical] = [maxf(0.0, entry[1] - 0.35), entry[1], entry[1] + 0.55]
+			else:
+				# Whole moves; the impact sits at 45%.
+				names[logical] = entry
+				timing.erase(logical)
+		meshy = {"file": meshy_file, "clips": names}
 	# A fighter's own rigged body (assets/fighters/<id>/body.fbx, from Mixamo
 	# "With Skin") replaces the X Bot and keeps its real textures untinted.
 	var body := "res://assets/fighters/%s/body.fbx" % fighter_id

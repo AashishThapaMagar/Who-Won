@@ -339,6 +339,54 @@ def make_fists(model, arm):
         print("FIST %s length %.3f moved %d" % (name, length, sum(1 for v in hand if rel[v.index].dot(along) > knuckle)))
 
 
+def loosen_the_coat(model, arm, leg_radius=0.15, keep=0.35):
+    """Long coats and robes are skinned onto the thighs, so every step drags
+    the hem sideways with the leg like a board. Cloth hanging clear of a leg
+    (between hip and shin) instead follows the hips, keeping only a little
+    of the thigh's swing, and loses any shin or foot pull, so it sways like
+    fabric rather than riding the legs."""
+    hips_z = bone_head(arm, "Hips").z
+    groups = {g.index: g.name for g in model.vertex_groups}
+    if "mixamorig:Hips" not in model.vertex_groups:
+        model.vertex_groups.new(name="mixamorig:Hips")
+    hips = model.vertex_groups["mixamorig:Hips"]
+    legs = []
+    for side in ("Left", "Right"):
+        legs.append((bone_head(arm, side + "UpLeg"), bone_head(arm, side + "Leg"), bone_head(arm, side + "Foot")))
+    changed = 0
+    for vert in model.data.vertices:
+        co = model.matrix_world @ vert.co
+        if co.z > hips_z or co.z < legs[0][2].z + 0.15:
+            continue
+        nearest = min(min(_segment_distance(co, a, b), _segment_distance(co, b, c)) for a, b, c in legs)
+        if nearest < leg_radius:
+            continue  # trousers: they belong to the legs
+        # Further from the leg, looser: fully "keep" at the leg edge, half
+        # that a hand's width out.
+        share = keep * max(0.5, 1.0 - (nearest - leg_radius) / 0.12)
+        moved = 0.0
+        for element in vert.groups:
+            name = groups.get(element.group, "")
+            if name.endswith("UpLeg"):
+                moved += element.weight * (1.0 - share)
+                element.weight *= share
+            elif name.endswith(("Leg", "Foot", "ToeBase", "Toe_End")):
+                moved += element.weight
+                element.weight = 0.0
+        if moved > 0.0:
+            hips.add([vert.index], moved, "ADD")
+            changed += 1
+    # Blend the seam between loosened cloth and trousers.
+    bpy.ops.object.select_all(action="DESELECT")
+    model.select_set(True)
+    bpy.context.view_layer.objects.active = model
+    bpy.ops.object.mode_set(mode="WEIGHT_PAINT")
+    bpy.ops.object.vertex_group_smooth(group_select_mode="ALL", factor=0.5, repeat=2)
+    bpy.ops.object.vertex_group_normalize_all(group_select_mode="ALL", lock_active=False)
+    bpy.ops.object.mode_set(mode="OBJECT")
+    print("COAT loosened %d vertices" % changed)
+
+
 def free_the_sides(model, arm):
     """Hands the clothing hanging between the arms and the body (coat sides,
     under-sleeves) to the spine, so raising the arms doesn't drag it up like
@@ -468,6 +516,8 @@ def main():
         # Coat first, then the arms have the final say over what rides on them.
         free_the_sides(model, fit_arm)
         claim_the_arms(model, fit_arm)
+    if "--coat" in args:
+        loosen_the_coat(model, fit_arm)
     make_fists(model, fit_arm)
     rig_the_hands(model, fit_arm)
     unbend(model, fit_arm, rest_arm)

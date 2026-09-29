@@ -317,9 +317,17 @@ func _add_meshy_clips(library: AnimationLibrary, path: String, wanted: Dictionar
 	var target_keys := {}
 	for bone in target.get_bone_count():
 		target_keys[_bone_key(target.get_bone_name(bone))] = bone
+	# Meshy's own names only when the rig uses them (its biped FBX); its
+	# rigged .glb already uses Mixamo's.
+	var native := false
+	for bone in source.get_bone_count():
+		native = native or _bone_key(source.get_bone_name(bone)) == "spine02"
 	for bone in source.get_bone_count():
 		var key := _bone_key(source.get_bone_name(bone))
-		key = MESHY_BONES.get(key, key)
+		if native:
+			key = MESHY_BONES.get(key, key)
+		elif key in ["headfront", "lefthandmiddle4", "righthandmiddle4"]:
+			key = ""
 		if key != "" and target_keys.has(key):
 			pairs[bone] = target_keys[key]
 	var source_hips := source.find_bone(source.get_bone_name(0))
@@ -351,7 +359,7 @@ func _add_meshy_clips(library: AnimationLibrary, path: String, wanted: Dictionar
 	for logical in wanted:
 		var clip_name := ""
 		for candidate in names:
-			if String(candidate).ends_with(String(wanted[logical])):
+			if String(candidate).contains(String(wanted[logical])):
 				clip_name = candidate
 		if clip_name == "":
 			continue

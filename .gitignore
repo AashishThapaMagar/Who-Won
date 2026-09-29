@@ -22,6 +22,9 @@ assets/fighters/*/*.fbx.import
 # Bodies built by tools/build_fighter_body.py carry the Mixamo rig too.
 assets/fighters/*/body.glb
 assets/fighters/*/body.glb.import
+assets/fighters/*/meshy_moves.glb
+assets/fighters/*/meshy_moves.glb.import
+assets/fighters/*/meshy_moves_*
 # Textures the glTF export unpacks next to a built body (e.g. its face).
 assets/fighters/*/body_*.png
 assets/fighters/*/body_*.png.import
