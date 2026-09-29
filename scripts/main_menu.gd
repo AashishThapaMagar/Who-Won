@@ -125,53 +125,6 @@ func _ready() -> void:
 	play_button.add_theme_stylebox_override("hover", UI.blade(Color("f03a52"), UI.GOLD, 8))
 	play_button.add_theme_color_override("font_hover_color", UI.WHITE)
 	play_button.pressed.connect(_confirm)
-	# The player's fighter stands in a spotlight on the right: the favourite
-	# from the records, else the last one chosen.
-	hero_glow = ColorRect.new()
-	hero_glow.position = Vector2(520, 110)
-	hero_glow.size = Vector2(380, 330)
-	hero_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var spot := ShaderMaterial.new()
-	spot.shader = Shader.new()
-	spot.shader.code = SPOTLIGHT
-	hero_glow.material = spot
-	add_child(hero_glow)
-	hero = preload("res://scripts/roster_portrait.gd").new()
-	hero.hero = true
-	hero.facing_left = true
-	hero.index = _hero_index()
-	hero.position = Vector2(330, 40)
-	hero.size = Vector2(620, 496)
-	add_child(hero)
-	hero_eyebrow = UI.eyebrow(self, "YOUR FIGHTER", Vector2(560, 30), Vector2(370, 16))
-	hero_eyebrow.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	hero_name = UI.heading(self, "", Vector2(560, 44), Vector2(370, 48), 40, UI.WHITE)
-	hero_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	hero_title = UI.label(self, "", Vector2(560, 92), Vector2(370, 18), 11, UI.GOLD)
-	hero_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	hero_title.add_theme_font_override("font", UI.strong_font())
-	for row in 3:
-		var y := 118.0 + row * 17.0
-		UI.label(self, ["POWER", "SPEED", "STAMINA"][row], Vector2(760, y - 4), Vector2(60, 14), 9, UI.MUTED).add_theme_font_override("font", UI.strong_font())
-		var track := ColorRect.new()
-		track.position = Vector2(826, y)
-		track.size = Vector2(104, 5)
-		track.color = Color(1, 1, 1, 0.14)
-		track.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		add_child(track)
-		var fill := ColorRect.new()
-		fill.position = track.position
-		fill.size = Vector2(0, 5)
-		fill.color = UI.GOLD
-		fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		add_child(fill)
-		hero_stats.append(fill)
-	var browse_left := UI.button(self, "◀", Vector2(590, 250), Vector2(34, 28))
-	var browse_right := UI.button(self, "▶", Vector2(876, 250), Vector2(34, 28))
-	for pair in [[browse_left, -1], [browse_right, 1]]:
-		(pair[0] as Button).focus_mode = Control.FOCUS_NONE
-		(pair[0] as Button).pressed.connect(_browse_hero.bind(pair[1]))
-	_show_hero(hero.index, false)
 	# Splash card for the highlighted mode.
 	mode_title_label = UI.heading(self, "", Vector2(470, 322), Vector2(460, 76), 60, UI.WHITE)
 	mode_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -186,7 +139,7 @@ func _ready() -> void:
 	record_strip.add_theme_constant_override("outline_size", 4)
 	_refresh_record_strip()
 	var hint_x := 40.0
-	for hint in [["↑↓", "SELECT"], ["◀ ▶", "FIGHTER"], ["ENTER", "CONFIRM"], ["F2", "PRACTICE"]]:
+	for hint in [["↑↓", "SELECT"], ["ENTER", "CONFIRM"], ["F2", "PRACTICE"]]:
 		hint_x += UI.key_hint(self, hint[0], hint[1], Vector2(hint_x, 514))
 	UI.label(self, "v1.0  /  PRESS ENTER TO FIGHT", Vector2(640, 514), Vector2(290, 18), 11, UI.MUTED).horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_refresh_mode_summary()
@@ -242,7 +195,7 @@ func _show_hero(index: int, animate := true) -> void:
 ## Left / Right (or the arrows) choose the featured fighter, who becomes
 ## player one's pick; browsing stops the showcase rotation.
 func _browse_hero(step: int) -> void:
-	if transitioning or is_instance_valid(modal):
+	if hero == null or transitioning or is_instance_valid(modal):
 		return
 	browsing = true
 	hero_eyebrow.text = "YOUR FIGHTER"
@@ -253,7 +206,7 @@ func _browse_hero(step: int) -> void:
 
 ## Until the player browses, the spotlight tours the roster.
 func _process(delta: float) -> void:
-	if browsing or transitioning or is_instance_valid(modal):
+	if hero == null or browsing or transitioning or is_instance_valid(modal):
 		return
 	showcase_time += delta
 	if showcase_time >= SHOWCASE_EVERY:
@@ -285,10 +238,6 @@ func _mode_row(mode_key: String, title: String, desc: String, index: float, acce
 	btn.focus_mode = Control.FOCUS_NONE
 	var heading := UI.heading(btn, title, Vector2(30, 0), Vector2(236, ROW_HEIGHT), 26, UI.WHITE, Color(0, 0, 0, 0.6))
 	heading.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	# Arcade-style index beside each entry.
-	var number := UI.label(btn, "%02d" % (int(index) + 1), Vector2(8, 0), Vector2(22, ROW_HEIGHT), 10, Color(accent, 0.9))
-	number.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	number.add_theme_font_override("font", UI.strong_font())
 	heading.add_theme_constant_override("shadow_offset_x", 2)
 	heading.add_theme_constant_override("shadow_offset_y", 2)
 	return {"button": btn, "title": title, "desc": desc, "accent": accent, "heading": heading, "home": Vector2(44, y)}
@@ -730,9 +679,9 @@ func _input(event: InputEvent) -> void:
 		elif event.is_action_pressed("ui_up"):
 			_step_entries(-1)
 		elif event.is_action_pressed("ui_right"):
-			_browse_hero(1)
+			_step_entries(1)
 		elif event.is_action_pressed("ui_left"):
-			_browse_hero(-1)
+			_step_entries(-1)
 		elif event.is_action_pressed("ui_accept"):
 			_confirm()
 		else:
@@ -745,12 +694,8 @@ func _input(event: InputEvent) -> void:
 		_start_practice()
 		get_viewport().set_input_as_handled()
 		return
-	if event.physical_keycode in [KEY_LEFT, KEY_RIGHT]:
-		_browse_hero(1 if event.physical_keycode == KEY_RIGHT else -1)
-		get_viewport().set_input_as_handled()
-		return
-	if event.physical_keycode in [KEY_UP, KEY_DOWN]:
-		_step_entries(1 if event.physical_keycode == KEY_DOWN else -1)
+	if event.physical_keycode in [KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT]:
+		_step_entries(1 if event.physical_keycode in [KEY_DOWN, KEY_RIGHT] else -1)
 		get_viewport().set_input_as_handled()
 	elif event.physical_keycode == KEY_ENTER and (play_button.has_focus() or home_modes.values().has(get_viewport().gui_get_focus_owner())):
 		_confirm()

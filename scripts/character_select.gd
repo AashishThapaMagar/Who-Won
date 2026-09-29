@@ -88,7 +88,9 @@ func _ready() -> void:
 	UI.heading(self, titles[mode_id], Vector2(186, 6), Vector2(740, 50), 38, UI.WHITE, mode_accent.darkened(0.25))
 	var subtitles := {"local": "TWO PLAYERS. ONE KEYBOARD. SETTLE THE SCORE.", "ai": "PICK YOUR FIGHTER, YOUR RIVAL AND YOUR DIFFICULTY.", "arcade": "ONE FIGHTER. THE WHOLE ROSTER. A FINAL SHOWDOWN.", "story": "CHOOSE WHO WILL WALK THE ROAD TO THE FINAL WORD."}
 	UI.eyebrow(self, subtitles[mode_id], Vector2(190, 56), Vector2(740, 20), mode_accent)
-	if MatchSetup.arcade:
+	# Arcade is just: pick a fighter, then READY TO FIGHT.
+	var simple := mode_id == "arcade"
+	if MatchSetup.arcade and not simple:
 		_build_campaign()
 	for player in 2:
 		_build_player(player)
@@ -109,7 +111,7 @@ func _ready() -> void:
 	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER if mode_id != "arcade" else HORIZONTAL_ALIGNMENT_LEFT
 	status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	start_button = UI.button(self, {"local": "START DUEL", "ai": "CHALLENGE CPU", "arcade": "BEGIN THE CLIMB", "story": "BEGIN CHAPTER ONE"}[mode_id], Vector2(361, 327) if not MatchSetup.arcade else (Vector2(146, 351) if mode_id == "story" else Vector2(700, 328)), Vector2(238, 36) if mode_id != "arcade" else Vector2(222, 44), true)
+	start_button = UI.button(self, {"local": "START DUEL", "ai": "CHALLENGE CPU", "arcade": "READY TO FIGHT", "story": "BEGIN CHAPTER ONE"}[mode_id], Vector2(361, 327) if not MatchSetup.arcade else (Vector2(146, 351) if mode_id == "story" else Vector2(345, 342)), Vector2(238, 36) if mode_id != "arcade" else Vector2(270, 46), true)
 	start_button.add_theme_font_override("font", UI.display_font())
 	start_button.add_theme_font_size_override("font_size", 20 if mode_id != "arcade" else 24)
 	start_button.pressed.connect(_start_match)
@@ -152,11 +154,12 @@ func _ready() -> void:
 		marker.add_theme_constant_override("outline_size", 4)
 		marker.add_theme_font_override("font", UI.strong_font())
 		markers.append(marker)
-	if mode_id == "arcade":
-		_build_ladder(tile_shader)
+	if simple:
+		status_label.visible = false
+		ready_players.assign([true, true])
 	var hint := "P1: A/D select, F ready    |    P2: arrows select, K ready    |    R random    |    Enter fight"
 	if MatchSetup.arcade:
-		hint = "A/D choose your fighter    |    R random    |    F lock in    |    Enter begin    |    Esc back"
+		hint = "A/D or click to choose    |    click again, F or Enter to fight    |    R random    |    Esc back"
 	elif mode_id == "ai":
 		hint = "A/D choose fighter    |    Arrows choose CPU    |    R random    |    F lock in    |    Enter challenge"
 	var hint_label := UI.label(self, hint, Vector2(55, 512), Vector2(850, 22), 12, UI.WHITE)
@@ -175,8 +178,8 @@ func _build_player(player: int) -> void:
 	var pos := Vector2(30 if player == 0 else 630, 88)
 	var dimensions := Vector2(300, 216)
 	if MatchSetup.arcade:
-		pos = Vector2(65, 88) if player == 0 else Vector2(798, 104)
-		dimensions = Vector2(340, 210) if player == 0 else Vector2(96, 94)
+		pos = Vector2(290, 80) if player == 0 else Vector2(798, 104)
+		dimensions = Vector2(380, 214) if player == 0 else Vector2(96, 94)
 	if mode_id == "story" and player == 0:
 		pos = Vector2(585, 88)
 		dimensions = Vector2(310, 210)
@@ -238,18 +241,18 @@ func _build_player(player: int) -> void:
 	details.append(detail)
 	var tab := UI.button(self, "", pos + Vector2(0, dimensions.y + 54), Vector2(124, 30))
 	tab.pressed.connect(func(): editing_player = player; _refresh())
-	tab.visible = not compact
+	tab.visible = not compact and mode_id != "arcade"
 	player_tabs.append(tab)
 	var random := UI.button(self, "?", pos + Vector2(128, dimensions.y + 54), Vector2(40, 30))
 	random.tooltip_text = "Random fighter"
 	random.add_theme_font_override("font", UI.display_font())
 	random.add_theme_font_size_override("font_size", 18)
 	random.pressed.connect(_roulette.bind(player))
-	random.visible = not compact and not (MatchSetup.vs_ai and player == 1)
+	random.visible = not compact and not (MatchSetup.vs_ai and player == 1) and mode_id != "arcade"
 	random_buttons.append(random)
 	var lock := UI.button(self, "LOCK IN", pos + Vector2(172, dimensions.y + 54), Vector2(128, 30))
 	lock.pressed.connect(_toggle_ready.bind(player))
-	lock.visible = not compact and not (MatchSetup.vs_ai and player == 1)
+	lock.visible = not compact and not (MatchSetup.vs_ai and player == 1) and mode_id != "arcade"
 	ready_buttons.append(lock)
 
 ## Random select: spin through the roster with a slowing tick, land on a
@@ -421,6 +424,10 @@ func _back() -> void:
 		get_tree().change_scene_to_file("res://scenes/MainMenu.tscn")
 
 func _choose(index: int) -> void:
+	# Arcade: clicking the fighter already chosen goes straight in.
+	if mode_id == "arcade" and index == selections[0]:
+		_start_match()
+		return
 	_select_for_player(index, editing_player)
 
 func _select_for_player(index: int, player: int) -> void:
@@ -432,11 +439,16 @@ func _select_for_player(index: int, player: int) -> void:
 	if MatchSetup.arcade:
 		selections[1] = 1 if selections[0] == 0 else 0
 		ready_players[1] = true
+	if mode_id == "arcade":
+		ready_players[0] = true
 	editing_player = player
 	_refresh()
 
 func _toggle_ready(player: int) -> void:
 	if transitioning or rolling[player] or (MatchSetup.vs_ai and player == 1):
+		return
+	if mode_id == "arcade":
+		_start_match()
 		return
 	ready_players[player] = not ready_players[player]
 	preload("res://scripts/sfx.gd").fire("menu_confirm" if ready_players[player] else "menu_back")
@@ -452,7 +464,7 @@ func _refresh() -> void:
 		cards[i].add_theme_stylebox_override("hover", UI.box(Color(1, 1, 1, 0.08), UI.GOLD, 4))
 		cards[i].add_theme_stylebox_override("pressed", UI.box(Color(1, 1, 1, 0.15), UI.GOLD, 4))
 		tiles[i].modulate = Color.WHITE if chosen else Color(0.72, 0.72, 0.78)
-		markers[i].text = ("P1 " if selections[0] == i else "") + (("CPU" if MatchSetup.vs_ai else "P2") if selections[1] == i else "")
+		markers[i].text = ("P1 " if selections[0] == i else "") + (("CPU" if MatchSetup.vs_ai else "P2") if selections[1] == i and mode_id != "arcade" else "")
 		previews[i].modulate = Color.WHITE if chosen else Color(0.78, 0.78, 0.84)
 	for player in 2:
 		var profile := ROSTER.profile(selections[player])

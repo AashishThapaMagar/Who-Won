@@ -26,10 +26,6 @@ func run() -> void:
 	check(menu._selected_mode() == "story", "Down arrow selects the next mode")
 	key(menu, KEY_UP)
 	check(menu._selected_mode() == "arcade", "Up arrow selects the previous mode")
-	var before: int = menu.hero.index
-	key(menu, KEY_RIGHT)
-	check(menu.hero.index == posmod(before + 1, 7) and menu._selected_mode() == "arcade", "Right arrow browses the featured fighter, not the modes")
-	check(root.get_node("MatchSetup").selected_fighters[0] == menu.hero.index, "The featured fighter becomes player one's pick")
 	menu._show_settings()
 	key(menu, KEY_RIGHT)
 	check(menu._selected_mode() == "arcade", "Modal isolates mode navigation")
