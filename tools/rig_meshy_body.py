@@ -474,6 +474,34 @@ def name_textures():
                 elif target.type in ("SEPARATE_COLOR", "SEPRGB"):
                     role = "orm"
             node.image.name = "%s_%s" % (material.name, role)
+        # Meshy's biped FBX puts a second copy of the colour picture in the
+        # normal-map slot; a colour image read as normals makes blotchy,
+        # patchy shading, so that fake normal map is dropped.
+        images = {}
+        for node in material.node_tree.nodes:
+            if node.type == "TEX_IMAGE" and node.image is not None:
+                role = node.image.name.rsplit("_", 1)[-1]
+                images[role] = node
+        if "color" in images and "normal" in images:
+            a, b = images["color"].image, images["normal"].image
+            if tuple(a.size) == tuple(b.size) and _same_pixels(a, b):
+                for link in list(images["normal"].outputs["Color"].links):
+                    normal_map = link.to_node
+                    for out in list(normal_map.outputs["Normal"].links):
+                        material.node_tree.links.remove(out)
+                material.node_tree.nodes.remove(images["normal"])
+                print("DROPPED fake normal map (a copy of the colour texture)")
+
+
+def _same_pixels(a, b, samples=64):
+    """Compares a spread of pixels; enough to tell a copy from a real map."""
+    import numpy
+    pa = numpy.array(a.pixels[:], dtype=numpy.float32)
+    pb = numpy.array(b.pixels[:], dtype=numpy.float32)
+    if pa.size != pb.size:
+        return False
+    step = max(1, pa.size // (samples * 4))
+    return bool(numpy.allclose(pa[::step], pb[::step], atol=0.01))
 
 
 def shrink_textures():
