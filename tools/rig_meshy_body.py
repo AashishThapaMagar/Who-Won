@@ -574,8 +574,10 @@ def main():
         claim_the_arms(model, fit_arm)
     if "--coat" in args:
         loosen_the_coat(model, fit_arm)
-    make_fists(model, fit_arm)
-    rig_the_hands(model, fit_arm)
+    if "--open-hands" not in args:
+        # Fists for the game; --open-hands keeps them relaxed (for Mixamo).
+        make_fists(model, fit_arm)
+        rig_the_hands(model, fit_arm)
     unbend(model, fit_arm, rest_arm)
     bpy.data.objects.remove(source, do_unlink=True)
     bpy.data.objects.remove(fit_arm, do_unlink=True)
@@ -589,6 +591,8 @@ def main():
     if "--preview" in args:
         preview(args[args.index("--preview") + 1], model, rest_arm)
     out = os.path.join(ROOT, "assets", "fighters", fighter_id, "body.glb")
+    if "--out" in args:
+        out = args[args.index("--out") + 1]
     os.makedirs(os.path.dirname(out), exist_ok=True)
     bpy.ops.object.select_all(action="DESELECT")
     rest_arm.select_set(True)
