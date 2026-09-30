@@ -3,10 +3,10 @@ extends Node3D
 ## weathered materials, atmospheric skies and animated practical details.
 ## Procedural construction helpers remain below for future scenery edits.
 const ROUNDS := [
-	{"name": "HERITAGE SQUARE", "night": true, "detail": "NIGHT / Temple lamps light the carved square and its three-tier pagoda"},
-	{"name": "LANTERN SQUARE", "night": true, "detail": "NIGHT / Paper lanterns glow across the old square"},
-	{"name": "TERRACE OVERLOOK", "night": false, "detail": "SUNSET / Terraced hills and the Himalaya turning gold"},
-	{"name": "MOONLIT STUPA", "night": true, "detail": "FINAL NIGHT / Prayer flags stream from a white stupa"},
+	{"name": "HERITAGE SQUARE", "night": false, "detail": "DAY / Carved windows and a three-tier pagoda under a clear sky"},
+	{"name": "LANTERN SQUARE", "night": false, "detail": "MORNING / Paper lanterns strung across the old square"},
+	{"name": "TERRACE OVERLOOK", "night": false, "detail": "AFTERNOON / Terraced hills and the Himalaya in full sun"},
+	{"name": "MOONLIT STUPA", "night": false, "detail": "DAY / Prayer flags stream from a white stupa"},
 ]
 const ARENA_MODELS := [
 	"res://assets/arenas/models/heritage-square.glb",
@@ -52,20 +52,20 @@ const AMBIENCE := [
 ## Sky and light per round: [sky top, horizon, sun colour, sun energy,
 ## ambient colour, ambient energy, sun pitch, sun yaw, mountain tint].
 const MOODS := [
-	[Color("050a1c"), Color("22305a"), Color("c4d3ff"), 0.42, Color("4b5684"), 0.36, -38.0, -40.0, Color(0.42, 0.47, 0.68)],
-	[Color("070b1c"), Color("1d2442"), Color("9fb4ec"), 0.36, Color("5b6690"), 0.4, -40.0, 30.0, Color(0.32, 0.36, 0.55)],
-	[Color("46558f"), Color("f4a45e"), Color("ffb070"), 1.05, Color("c79a86"), 0.4, -16.0, 28.0, Color(1.0, 0.78, 0.62)],
-	[Color("050817"), Color("18223e"), Color("b7c8f5"), 0.36, Color("5d6a96"), 0.32, -35.0, -25.0, Color(0.36, 0.42, 0.62)],
+	[Color("3f7fd0"), Color("cfe2f2"), Color("fff1dc"), 0.7, Color("b9c9dc"), 0.36, -48.0, -35.0, Color(1, 1, 1)],
+	[Color("4a86d0"), Color("e6ecf2"), Color("fff4e0"), 0.72, Color("c3cbd6"), 0.36, -42.0, 30.0, Color(1, 1, 1)],
+	[Color("3d7fd4"), Color("d7e7f5"), Color("fff0d8"), 0.75, Color("bfcad8"), 0.36, -50.0, 28.0, Color(1, 1, 1)],
+	[Color("3a78cf"), Color("d2e4f4"), Color("fffaf0"), 0.72, Color("c0cbdc"), 0.36, -45.0, -25.0, Color(1, 1, 1)],
 ]
 ## Finishing grade per round (arena_grade.gdshader): [shadow tint,
 ## highlight tint, saturation, contrast, vignette, exposure, glow intensity,
 ## glow threshold]. Night squares lean teal in the darks and amber in the
 ## lamplight; the sunset warms everything; the stupa finale is cold and clean.
 const GRADES := [
-	[Color(0.86, 0.92, 1.08), Color(1.06, 0.98, 0.9), 1.12, 1.08, 0.34, 1.05, 1.1, 0.72],
-	[Color(0.84, 0.9, 1.1), Color(1.08, 0.97, 0.86), 1.16, 1.1, 0.36, 1.05, 1.25, 0.68],
-	[Color(0.94, 0.9, 1.0), Color(1.08, 1.0, 0.9), 1.18, 1.06, 0.28, 1.12, 0.7, 0.95],
-	[Color(0.86, 0.92, 1.12), Color(0.98, 1.0, 1.06), 1.02, 1.12, 0.4, 1.0, 1.15, 0.7],
+	[Color(0.97, 0.99, 1.03), Color(1.03, 1.0, 0.96), 1.08, 1.04, 0.22, 1.0, 0.5, 0.95],
+	[Color(0.97, 0.99, 1.03), Color(1.04, 1.0, 0.95), 1.08, 1.04, 0.22, 1.0, 0.5, 0.95],
+	[Color(0.97, 0.99, 1.03), Color(1.03, 1.0, 0.96), 1.1, 1.04, 0.2, 1.02, 0.5, 0.95],
+	[Color(0.96, 0.99, 1.04), Color(1.02, 1.0, 0.98), 1.06, 1.05, 0.22, 1.0, 0.5, 0.95],
 ]
 const GRADE_SHADER := preload("res://scripts/arena_grade.gdshader")
 const SURFACE_SHADER := """shader_type spatial;

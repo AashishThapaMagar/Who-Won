@@ -61,6 +61,16 @@ var active := false
 var _last_state := -1
 ## Set from the fighter's impact signal: kicks land as heavy hits.
 var last_hit_heavy := false
+## A hit landed this frame: the reaction restarts even mid-hitstun, so every
+## blow of a combo gets its own flinch.
+var _react := false
+## Metres the attacker is stepped toward the rival so the striking fist or
+## foot actually meets the body (visual only; see _reach_step).
+var _reach := 0.0
+const REACTIONS := ["hit", "hit_heavy", "block_hit"]
+## Distance from the rival's chest bone at which a strike reads as touching.
+const CONTACT := 0.16
+const MAX_REACH_STEP := 0.3
 ## Metres per second each locomotion clip travels at normal speed, keyed by
 ## animation name (measured before its hips are pinned).
 var clip_pace: Dictionary = {}
@@ -153,8 +163,12 @@ static func _load_character(path: String) -> Node3D:
 	return null
 
 func _on_impact(_point: Vector2, blocked: bool, heavy: bool) -> void:
+	_react = true
 	if not blocked:
-		last_hit_heavy = heavy
+		# Heavy reaction for kicks and for the harder punches and finishers.
+		var attacker = visual.fighter.get("opponent") if visual != null and visual.fighter != null else null
+		var move: Dictionary = attacker.current_move if attacker != null and attacker.get("current_move") != null else {}
+		last_hit_heavy = heavy or float(move.get("damage", 1.0)) >= 1.2
 
 ## Scales the model to its configured height, feet on the floor, turned to
 ## face the game's +X like the procedural rig.
@@ -383,6 +397,16 @@ func _add_meshy_clips(library: AnimationLibrary, path: String, wanted: Dictionar
 			out_tracks[bone] = track
 		var hips_track := out.add_track(Animation.TYPE_POSITION_3D)
 		out.track_set_path(hips_track, NodePath(str(to_skeleton) + ":" + target.get_bone_name(target_hips)))
+		# Whole-move strike clips (no timing given) get their impact measured
+		# at the frame the hands or feet reach furthest from the hips.
+		var measure: bool = logical in SCRUBBED and not config.get("timing", {}).has(logical)
+		var limbs: Array[int] = []
+		for key in ["lefthand", "righthand", "leftfoot", "rightfoot"]:
+			if target_keys.has(key):
+				limbs.append(target_keys[key])
+		var peak_extent := -1.0
+		var peak_time := -1.0
+		var t_node_scale := 1.0
 		var step := 1.0 / 30.0
 		var time := 0.0
 		while time <= clip.length + 0.0001:
@@ -405,6 +429,24 @@ func _add_meshy_clips(library: AnimationLibrary, path: String, wanted: Dictionar
 					out.rotation_track_insert_key(out_tracks[bone], at, (parent_world.inverse() * t_world[bone]).normalized())
 				else:
 					t_world[bone] = parent_world * target.get_bone_rest(bone).basis.get_rotation_quaternion()
+			if measure:
+				# Forward kinematics on the rebuilt rotations: how far the
+				# hands and feet reach from the hips at this moment.
+				var t_pos := {}
+				for bone in target.get_bone_count():
+					var parent := target.get_bone_parent(bone)
+					if parent < 0:
+						t_pos[bone] = Vector3.ZERO
+					else:
+						var parent_rot: Quaternion = t_world[parent]
+						t_pos[bone] = (t_pos[parent] as Vector3) + parent_rot * (target.get_bone_rest(bone).origin * t_node_scale)
+				var hips_at: Vector3 = t_pos[target_hips]
+				for limb in limbs:
+					var d: Vector3 = (t_pos[limb] as Vector3) - hips_at
+					var extent := Vector2(d.x, d.z).length()
+					if extent > peak_extent:
+						peak_extent = extent
+						peak_time = at
 			var hips := target.get_bone_rest(target_hips).origin
 			if position_track >= 0:
 				var moved: Vector3 = clip.position_track_interpolate(position_track, at) - source.get_bone_rest(source_hips).origin
@@ -412,6 +454,11 @@ func _add_meshy_clips(library: AnimationLibrary, path: String, wanted: Dictionar
 			out.position_track_insert_key(hips_track, at, hips)
 			time += step
 		var key: String = "meshy_" + logical
+		if measure and peak_time >= 0.0:
+			# The blow lands at full extension, not at a guessed fraction.
+			var timing: Dictionary = config.get("timing", {})
+			timing[logical] = [maxf(0.0, peak_time - 0.4), peak_time, minf(clip.length, peak_time + 0.55)]
+			config["timing"] = timing
 		clip_pace["files/" + key] = _pin_hips(out)
 		if logical == "jump":
 			# The game's physics lifts the body; the clip keeps only the
@@ -615,17 +662,68 @@ func update(delta: float) -> void:
 		guard_weight = 0.0
 		_scrub_attack(fighter, logical, clip, delta, frozen)
 		_procedural(fighter, logical, delta, frozen)
+		_reach_step(fighter, delta, true)
 		return
-	if clip != current or (entered and not logical in LOOPING):
-		player.play(clip, 0.12)
+	_reach_step(fighter, delta, false)
+	var restart := _react and logical in REACTIONS
+	_react = false
+	if clip != current or (entered and not logical in LOOPING) or restart:
+		# Snap into a flinch; ease back out of one.
+		var was_reaction: bool = current != "" and current in [clip_names.get("hit", ""), clip_names.get("hit_heavy", ""), clip_names.get("block_hit", "")]
+		player.play(clip, 0.05 if logical in REACTIONS else (0.22 if was_reaction else 0.12))
+		if restart:
+			player.seek(0.0, true)
 		current = clip
 	player.speed_scale = 0.0 if frozen else _loop_speed(fighter, logical, clip)
+	if logical in REACTIONS and not frozen:
+		# The recoil plays out inside the short stun instead of being cut
+		# off halfway and snapping back to the stance.
+		player.speed_scale = 1.25 if logical == "hit_heavy" else 1.6
 	player.advance(delta)
 	if not frozen:
 		guard_time += delta
 		guard_weight = move_toward(guard_weight, 1.0 if logical in GUARDED else 0.0, delta * 8.0)
 	_apply_guard()
 	_procedural(fighter, logical, delta, frozen)
+
+## Steps the attacker in during a strike so the fist or foot meets the
+## rival's body instead of stopping short of it (gameplay reach and hit
+## timing are unchanged; this only moves the model). Eases in through the
+## wind-up and back out through recovery.
+func _reach_step(fighter: Node, delta: float, attacking: bool) -> void:
+	var goal := 0.0
+	var rival = fighter.get("opponent")
+	var direction := Vector3.ZERO
+	if attacking and skeleton != null and rival != null and rival.get_node_or_null("Visual") != null:
+		var other = rival.get_node("Visual").get("animated")
+		if other != null and other.active and other.skeleton != null:
+			var chest_bone: int = other._bone("spine2")
+			var chest: Vector3 = other.skeleton.global_transform * other.skeleton.get_bone_global_pose(chest_bone).origin
+			var here: Vector3 = skeleton.global_transform * skeleton.get_bone_global_pose(_bone("hips")).origin
+			direction = Vector3(chest.x - here.x, 0.0, chest.z - here.z)
+			var apart := direction.length()
+			if apart > 0.01 and apart < 1.6:
+				direction /= apart
+				# The limb furthest forward is the one striking.
+				var tip := -INF
+				for key in ["lefthand", "righthand", "leftfoot", "rightfoot"]:
+					var bone := _bone(key)
+					if bone >= 0:
+						var at: Vector3 = skeleton.global_transform * skeleton.get_bone_global_pose(bone).origin
+						tip = maxf(tip, (at - here).dot(direction))
+				# root was reset this frame, so tip is measured without the step.
+				var short := apart - tip - CONTACT
+				# Full step by the moment the blow lands, held through the active
+				# frames, released over the recovery.
+				var t: float = fighter.attack_timer
+				var startup: float = maxf(fighter.attack_startup(), 0.01)
+				var total: float = maxf(fighter.attack_duration(), startup + 0.01)
+				var envelope := smoothstep(0.0, startup * 0.8, t) * (1.0 - smoothstep(startup + (total - startup) * 0.45, total, t))
+				goal = clampf(short, 0.0, MAX_REACH_STEP) * envelope
+	_reach = lerpf(_reach, goal, 1.0 - exp(-30.0 * delta))
+	if _reach > 0.001 and direction != Vector3.ZERO:
+		var parent := root.get_parent() as Node3D
+		root.position += parent.global_transform.basis.inverse() * (direction * _reach)
 
 ## Bones by the Mixamo-style key their name ends with (see _bone_key).
 func _bone(key: String) -> int:

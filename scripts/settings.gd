@@ -21,17 +21,18 @@ const RENDER_SCALES := [0.5, 0.75, 1.0]
 ## Every preset renders at full resolution: a lower 3D scale turns the
 ## fighters' faces and outfits into visible pixels. Cheaper presets save
 ## time on shadows and arena textures instead.
+## The fighters get the budget: HIGH smooths their edges with 4x MSAA and
+## pays for it with low-cost arena shadows and textures.
 const PRESETS := [
 	[2, 1, 0, false],
 	[2, 1, 1, false],
-	# High uses 2x MSAA: 4x cost ~15 fps at 1080p on integrated GPUs.
-	[2, 1, 2, true],
+	[2, 2, 1, false],
 ]
 var quality: int = Quality.HIGH
 var render_scale: int = 2
-var anti_aliasing: int = 1
-var shadows: int = 2
-var detailed_textures: bool = true
+var anti_aliasing: int = 2
+var shadows: int = 1
+var detailed_textures: bool = false
 var vsync: bool = true
 var show_fps: bool = false
 ## Bloom and the per-arena finishing grade (nepal_stage_3d.gd).
