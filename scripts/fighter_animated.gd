@@ -413,6 +413,15 @@ func _add_meshy_clips(library: AnimationLibrary, path: String, wanted: Dictionar
 			time += step
 		var key: String = "meshy_" + logical
 		clip_pace["files/" + key] = _pin_hips(out)
+		if logical == "jump":
+			# The game's physics lifts the body; the clip keeps only the
+			# tuck, or the fighter would rise twice as high.
+			for track in out.get_track_count():
+				if out.track_get_type(track) == Animation.TYPE_POSITION_3D:
+					var ground: Vector3 = out.track_get_key_value(track, 0)
+					for k in out.track_get_key_count(track):
+						var v: Vector3 = out.track_get_key_value(track, k)
+						out.track_set_key_value(track, k, Vector3(v.x, minf(v.y, ground.y), v.z))
 		library.add_animation(key, out)
 	scene.free()
 

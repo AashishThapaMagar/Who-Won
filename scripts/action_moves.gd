@@ -21,6 +21,7 @@ static func for_fighter(id: String) -> Dictionary:
 			m.hook.name = "Palm deflection"
 			m.drive = BASE._move("Diving clearance", "dive", "punch", "hook", 66, -69, 0.22, 0.10, 0.42, 1.55, 1.25, 52)
 			m.breaker = BASE._move("High-ball punch", "uppercut", "punch", "hook", 42, -98, 0.18, 0.08, 0.38, 1.65, 1.5, 16)
+			m.combo_finish = BASE._move("Goal Kick", "spin", "kick", "kick", 72, -40, 0.14, 0.09, 0.38, 1.7, 1.8, 20)
 			m.back_heavy = BASE._move("Low save", "save", "punch", "hook", 47, -50, 0.14, 0.07, 0.28, 1.1, 1.0, 18)
 		"ish":
 			m.jab.name = "Flash jab"
@@ -28,6 +29,7 @@ static func for_fighter(id: String) -> Dictionary:
 			m.drive.name = "Flash hammer"
 			m.drive.lunge = 46.0
 			m.breaker = BASE._move("Sky hammer", "uppercut", "punch", "hook", 42, -96, 0.25, 0.07, 0.43, 1.8, 1.5, 20)
+			m.combo_finish = BASE._move("Hammer Drop", "uppercut", "punch", "hook", 48, -96, 0.12, 0.08, 0.36, 1.75, 1.7, 24)
 		"sab":
 			m.jab.name = "Iron check"
 			m.hook.name = "Anvil hook"
@@ -35,6 +37,7 @@ static func for_fighter(id: String) -> Dictionary:
 			m.breaker = BASE._move("Iron-grip throw", "grapple", "grapple", "hook", 32, -72, 0.32, 0.08, 0.52, 1.9, 1.7, 10)
 			m.drive.name = "Battering ram"
 			m.drive.pose = "overhand"
+			m.combo_finish = BASE._move("Anvil Drop", "overhand", "punch", "hook", 50, -92, 0.16, 0.09, 0.42, 1.9, 1.9, 18)
 		"bib":
 			m.jab.name = "Needle check"
 			m.cross.name = "Rapid straight"
@@ -53,6 +56,7 @@ static func for_fighter(id: String) -> Dictionary:
 			m.drive.pose = "overhand"
 			m.back_heavy = BASE._move("Big talk / recover 24 stamina", "taunt", "punch", "punch", 0, -88, 0.22, 0.02, 0.66, 0, 0)
 			m.back_heavy.utility = "taunt"
+			m.combo_finish = BASE._move("Thunderclap", "overhand", "punch", "hook", 55, -92, 0.14, 0.09, 0.40, 1.8, 1.8, 22)
 		"sup":
 			m.jab.name = "Swaying palm"
 			m.kick = BASE._move("Low spiral", "sweep", "kick", "kick", 62, -28, 0.17, 0.08, 0.30, 0.95, 0.8)
@@ -107,7 +111,9 @@ static func for_fighter(id: String) -> Dictionary:
 	m.kick.push = 0.25
 	m.cross.hitstun = 0.30
 	m.cross.next_heavy = "chain_finish"
+	# Every fighter's signature combo: three punches, then heavy.
 	if m.has("combo_finish"):
+		m.combo_finish.hitstun = maxf(float(m.combo_finish.get("hitstun", 0.25)), 0.5)
 		m.hook.next_heavy = "combo_finish"
 	# Every character has a short-range throw, with different commitment/payoff.
 	var throws := {

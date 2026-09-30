@@ -79,6 +79,11 @@ const MESHY_MOVES := {
 		"jab": ["Punch_Combo", 0.60], "cross": ["01a0ebe2", 1.00], "punch_heavy": "Punch_Combo",
 		"kick": ["High_Kick", 1.05], "kick_front": ["Leg_Sweep", 0.95], "kick_spin": ["01a0ebe3", 1.30],
 		"taunt": ["01a0ebe0", 2.60], "victory": "victory",
+		# His whole set: fight stance (also his guard while moving), back-step,
+		# run, jump, block, hit reaction and a dodge for the back-dash.
+		"idle": "Combat_Stance", "walk_back": "Walk_Fight_Back", "run": "Running",
+		"jump": "Regular_Jump", "block": "Block1", "block_hit": "Block1",
+		"hit": "Hit_Reaction", "backdash": "Stand_Dodge",
 	},
 	# Ananta's Meshy set exports with id names; each is [id, second the blow
 	# lands], measured from the peak reach of the striking hand or foot.
