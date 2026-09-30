@@ -1,8 +1,8 @@
 extends Node3D
 ## Ananta's character intro, shot the way Kurosawa shoots a swordsman: alone
 ## in Heritage Square on a long lens with dust blowing across, low angles,
-## hard wipes between shots, his combat in short decisive bursts with
-## slow-motion finishers, then the face and his name. 30 seconds. Recorded with
+## a few long still takes joined by slow dissolves, his combat crossing the
+## frame with slow-motion finishers, then the face and his name. 30 seconds. Recorded with
 ##   godot --path . --fixed-fps 30 --write-movie intro.avi res://scenes/AnantaIntro.tscn
 const UI := preload("res://scripts/ui_kit.gd")
 const STAGE := preload("res://scripts/nepal_stage_3d.gd")
@@ -170,6 +170,23 @@ func _slowmo(scale: float, seconds: float) -> void:
 	Engine.time_scale = scale
 	get_tree().create_timer(seconds * scale).timeout.connect(func(): Engine.time_scale = 1.0)
 
+## A slow dissolve: the outgoing frame, frozen, fades out over the new shot.
+func _dissolve(seconds := 1.4) -> void:
+	var image := get_viewport().get_texture().get_image()
+	var still := TextureRect.new()
+	# Expand first, or the rect keeps the full-resolution frame's size.
+	still.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	still.stretch_mode = TextureRect.STRETCH_SCALE
+	still.texture = ImageTexture.create_from_image(image)
+	still.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.get_parent().add_child(still)
+	still.position = Vector2.ZERO
+	still.size = SIZE
+	overlay.get_parent().move_child(still, flash.get_index())
+	var tween := still.create_tween()
+	tween.tween_property(still, "modulate:a", 0.0, seconds).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_callback(still.queue_free)
+
 ## Kurosawa's wipe: a hard vertical edge pushes the frozen old shot away.
 func _wipe(left_to_right := true) -> void:
 	var image := get_viewport().get_texture().get_image()
@@ -246,64 +263,54 @@ func _at(time: float, action: Callable) -> void:
 
 func _timeline() -> void:
 	var at := Vector3.ZERO
-	# 0-4: the square on a long lens, Ananta small in the middle of it, the
-	# pagoda behind him, dust blowing across. He does not move.
+	# Four long takes, the way Kurosawa stages a fighter: a long lens from
+	# far away so the square compresses behind him, the camera low and
+	# mostly still, the action crossing the frame; dissolves only.
+	#
+	# 0-8: across the whole square on a very long lens, from waist height,
+	# the pagoda and Himalaya pressed up behind him. He waits, then strikes.
 	_at(0.0, func():
 		_move(hero, "idle")
-		_cut({"fov": 12, "eye": at + Vector3(0.6, 1.4, 20), "look": at + Vector3(0, 1.4, -6), "eye_to": at + Vector3(0.2, 1.3, 17), "time": 4.0})
-		fade.create_tween().tween_property(fade, "color:a", 0.0, 1.6))
-	# 4-7: close and low on the stance, fists up, the wind on his coat.
-	_at(4.0, func():
-		_wipe()
-		_cut({"fov": 26, "follow": "hero", "offset": Vector3(1.5, -1.2, 1.2), "offset_to": Vector3(1.3, -1.1, 1.0), "aim": Vector3(0, -0.6, 0), "time": 3.0}))
-	# 7-11: the combo, jab, cross, hook, then the flying knee.
-	_at(7.0, func():
-		_wipe(false)
-		_cut({"fov": 34, "eye": at + Vector3(0.9, 1.1, 3.2), "look": at + Vector3(0.5, 1.1, 0), "eye_to": at + Vector3(0.6, 1.05, 2.8), "time": 4.0})
-		_move(hero, "jab"))
-	_at(7.5, func(): _impact(0.035))
-	_at(8.25, func(): _impact(0.04))
-	_at(7.7, func(): _move(hero, "cross"))
-	_at(8.5, func(): _move(hero, "hook"))
-	_at(8.9, func(): _impact(0.045))
-	_at(9.2, func():
-		_move(hero, "finisher")
-		_cut({"fov": 44, "eye": at + Vector3(0.6, 1.6, 5.2), "look": at + Vector3(0.3, 1.2, 0), "eye_to": at + Vector3(0.3, 1.5, 4.8), "time": 2.6}))
-	_at(10.1, func(): _slowmo(0.35, 1.0); _impact(0.09))
-	# 12-17: the kicks, body kick, front kick, spinning back kick.
-	_at(12.0, func():
-		_wipe()
+		_cut({"fov": 7, "eye": at + Vector3(0.0, 0.9, 26), "look": at + Vector3(0, 1.3, 0), "eye_to": at + Vector3(0.0, 0.9, 24.5), "look_to": at + Vector3(0, 1.3, 0), "time": 8.0})
+		fade.create_tween().tween_property(fade, "color:a", 0.0, 2.2))
+	_at(4.6, func(): _move(hero, "jab"))
+	_at(5.0, func(): _impact(0.02))
+	_at(5.4, func(): _move(hero, "cross"))
+	_at(5.9, func(): _impact(0.025))
+	# 8-16: in profile, camera at knee height, the fight moving across the
+	# frame; the pagoda sits behind him. Combo into the flying knee.
+	_at(8.0, func():
+		_dissolve()
 		_move(hero, "idle")
-		_cut({"fov": 34, "eye": at + Vector3(-0.8, 0.8, 3.4), "look": at + Vector3(0.3, 0.9, 0), "eye_to": at + Vector3(0.2, 0.9, 3.2), "time": 5.0}))
-	_at(12.4, func(): _move(hero, "kick"))
-	_at(13.1, func(): _impact(0.05))
-	_at(13.8, func(): _move(hero, "kick_front"))
-	_at(14.7, func(): _impact(0.05))
-	_at(15.3, func(): _move(hero, "kick_spin"))
-	_at(15.9, func(): _slowmo(0.35, 0.9); _impact(0.08))
-	# 17-21: from the ground, the uppercut and the punch combo against the sky.
-	_at(17.2, func():
-		_wipe(false)
+		_cut({"fov": 18, "eye": at + Vector3(0.4, 0.55, 8.5), "look": at + Vector3(0.4, 1.05, 0), "eye_to": at + Vector3(0.7, 0.55, 8.2), "look_to": at + Vector3(0.6, 1.05, 0), "time": 8.0}))
+	_at(9.4, func(): _move(hero, "jab"))
+	_at(9.8, func(): _impact(0.03))
+	_at(10.1, func(): _move(hero, "cross"))
+	_at(10.6, func(): _impact(0.035))
+	_at(10.9, func(): _move(hero, "hook"))
+	_at(11.3, func(): _impact(0.04))
+	_at(11.8, func(): _move(hero, "finisher"))
+	_at(12.7, func(): _slowmo(0.35, 1.2); _impact(0.07))
+	# 16-23: head-on and low, looking up at him, the street behind; the
+	# kick string ending in a slow spinning back kick.
+	_at(16.0, func():
+		_dissolve()
 		_move(hero, "idle")
-		_cut({"fov": 30, "follow": "hero", "offset": Vector3(1.4, -1.35, 1.1), "aim": Vector3(0.2, -0.1, 0), "time": 4.0}))
-	_at(17.6, func(): _move(hero, "uppercut"))
-	_at(18.05, func(): _impact(0.06))
-	_at(18.9, func(): _move(hero, "punch_heavy"))
-	_at(19.5, func(): _impact(0.05))
-	# 21-24: silhouette on the long lens, one last spinning kick.
-	_at(21.3, func():
-		_wipe()
+		_cut({"fov": 16, "eye": at + Vector3(2.8, 0.45, 8.2), "look": at + Vector3(0, 1.15, 0), "eye_to": at + Vector3(2.4, 0.45, 7.8), "time": 7.0}))
+	_at(17.0, func(): _move(hero, "kick"))
+	_at(17.7, func(): _impact(0.04))
+	_at(18.4, func(): _move(hero, "kick_front"))
+	_at(19.3, func(): _impact(0.045))
+	_at(19.9, func(): _move(hero, "kick_spin"))
+	_at(20.5, func(): _slowmo(0.35, 1.0); _impact(0.07))
+	# 23-30: the face on a long lens, flattened and still, slowly closer;
+	# then his name.
+	_at(23.0, func():
+		_dissolve(1.8)
 		_move(hero, "idle")
-		_cut({"fov": 13, "eye": at + Vector3(3.0, 0.5, 15), "look": at + Vector3(0, 1.1, 0), "eye_to": at + Vector3(2.4, 0.5, 13.5), "time": 3.0}))
-	_at(21.8, func(): _move(hero, "kick_spin"))
-	_at(22.4, func(): _slowmo(0.4, 0.8); _impact(0.05))
-	# 24-30: the face, slowly, then his name.
-	_at(24.2, func():
-		_wipe(false)
-		_move(hero, "idle")
-		_place(hero, at, -PI / 2.0 + 0.15)
-		_cut({"fov": 20, "follow": "hero", "offset": Vector3(0.12, -0.04, 1.9), "offset_to": Vector3(0.06, -0.02, 1.1), "aim": Vector3(0, -0.04, 0), "time": 5.5}))
-	_at(25.2, func(): _title([["ANANTA", 64, UI.WHITE], ["THE FINAL WORD", 15, UI.GOLD]], 360.0, 2.8))
+		_place(hero, at, -PI / 2.0 + 0.12)
+		_cut({"fov": 7, "follow": "hero", "offset": Vector3(0.25, -0.05, 6.5), "offset_to": Vector3(0.15, -0.03, 4.8), "aim": Vector3(0, -0.05, 0), "time": 6.5}))
+	_at(25.0, func(): _title([["ANANTA", 64, UI.WHITE], ["THE FINAL WORD", 15, UI.GOLD]], 360.0, 2.6))
 	_at(29.0, func(): fade.create_tween().tween_property(fade, "color:a", 1.0, 0.9))
 	beats.sort_custom(func(a, b): return a[0] < b[0])
 
