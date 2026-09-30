@@ -67,6 +67,11 @@ const GRADES := [
 	[Color(0.97, 0.99, 1.03), Color(1.03, 1.0, 0.96), 1.1, 1.04, 0.2, 1.02, 0.5, 0.95],
 	[Color(0.96, 0.99, 1.04), Color(1.02, 1.0, 0.98), 1.06, 1.05, 0.22, 1.0, 0.5, 0.95],
 ]
+## Night version of any arena (cinematics set force_night): the starlit sky,
+## lamp glow and teal-and-amber grade Heritage Square used to have.
+const NIGHT_MOOD := [Color("050a1c"), Color("22305a"), Color("c4d3ff"), 0.42, Color("4b5684"), 0.36, -38.0, -40.0, Color(0.42, 0.47, 0.68)]
+const NIGHT_GRADE := [Color(0.86, 0.92, 1.08), Color(1.06, 0.98, 0.9), 1.12, 1.08, 0.34, 1.05, 1.1, 0.72]
+var force_night := false
 const GRADE_SHADER := preload("res://scripts/arena_grade.gdshader")
 const SURFACE_SHADER := """shader_type spatial;
 // World-space procedural surfaces: 0 brick, 1 cut stone, 2 roof tiles,
@@ -278,7 +283,7 @@ func show_round(index: int) -> void:
 	if index == current_round:
 		return
 	current_round = index
-	night = ROUNDS[index].night
+	night = ROUNDS[index].night or force_night
 	var changing := content != null
 	if content != null:
 		remove_child(content)
@@ -294,7 +299,7 @@ func show_round(index: int) -> void:
 	_import_arena(index)
 	if PROPS.has(index) and ResourceLoader.exists(PROPS[index] + "pagoda.glb"):
 		_dress_heritage(PROPS[index])
-	content.add_child(HIMALAYA.build(MOODS[index][1], night, index == 2))
+	content.add_child(HIMALAYA.build(_mood()[1], night, index == 2))
 	_fight_lighting()
 	_arena_inlay()
 	_batch_static()
@@ -875,9 +880,12 @@ func _place_prop(path: String, at: Vector3, turn: float, scale := 1.0, tint := C
 					mesh.set_surface_override_material(surface, _tinted[material])
 	content.add_child(prop)
 
+func _mood() -> Array:
+	return NIGHT_MOOD if force_night else MOODS[current_round]
+
 func _lighting() -> void:
-	var mood: Array = MOODS[current_round]
-	var look: Array = GRADES[current_round]
+	var mood: Array = _mood()
+	var look: Array = NIGHT_GRADE if force_night else GRADES[current_round]
 	sky_material.set_shader_parameter("top_color", mood[0])
 	sky_material.set_shader_parameter("horizon_color", mood[1])
 	sky_material.set_shader_parameter("sun_color", mood[2])
@@ -991,7 +999,7 @@ func _ground() -> void:
 
 ## Two rings of ridges: blue-green foothills and the snowy Himalaya behind.
 func _mountains() -> void:
-	var tint: Color = MOODS[current_round][8]
+	var tint: Color = _mood()[8]
 	_ridge(110.0, 2.0, 7.0, 71, Color("3b5a5e") * tint, Color("6f8f86") * tint, 0.0, 1.3)
 	_ridge(190.0, 10.0, 30.0, 97, Color("6a82a0") * tint, Color("f2f4f8") * tint, 0.6, 3.7)
 

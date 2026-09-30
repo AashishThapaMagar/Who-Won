@@ -33,6 +33,7 @@ var walk_time := 1.0
 func _ready() -> void:
 	Settings.show_fps = false
 	stage = STAGE.new()
+	stage.force_night = true
 	add_child(stage)
 	stage.show_round(0)
 	camera = Camera3D.new()
@@ -41,9 +42,9 @@ func _ready() -> void:
 	add_child(camera)
 	camera.current = true
 	# Ananta alone in the square, facing across it.
+	# On the fighting tile at the centre of the square, where fights happen.
 	hero = _spawn(ANANTA)
-	_place(hero, Vector3(0, 0, -2), 0.0)
-	_wind()
+	_place(hero, Vector3.ZERO, 0.0)
 	_overlay()
 	_timeline()
 
@@ -155,6 +156,12 @@ func _overlay() -> void:
 	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(overlay)
 
+var shake := 0.0
+
+## A short camera kick on a landed strike.
+func _impact(strength := 0.06) -> void:
+	shake = maxf(shake, strength)
+
 func _hit(strength := 0.4) -> void:
 	flash.color.a = strength
 	flash.create_tween().tween_property(flash, "color:a", 0.0, 0.16)
@@ -238,7 +245,7 @@ func _at(time: float, action: Callable) -> void:
 	beats.append([time, action])
 
 func _timeline() -> void:
-	var at := Vector3(0, 0, -2)
+	var at := Vector3.ZERO
 	# 0-4: the square on a long lens, Ananta small in the middle of it, the
 	# pagoda behind him, dust blowing across. He does not move.
 	_at(0.0, func():
@@ -254,35 +261,42 @@ func _timeline() -> void:
 		_wipe(false)
 		_cut({"fov": 34, "eye": at + Vector3(0.9, 1.1, 3.2), "look": at + Vector3(0.5, 1.1, 0), "eye_to": at + Vector3(0.6, 1.05, 2.8), "time": 4.0})
 		_move(hero, "jab"))
+	_at(7.5, func(): _impact(0.035))
+	_at(8.25, func(): _impact(0.04))
 	_at(7.7, func(): _move(hero, "cross"))
 	_at(8.5, func(): _move(hero, "hook"))
+	_at(8.9, func(): _impact(0.045))
 	_at(9.2, func():
 		_move(hero, "finisher")
 		_cut({"fov": 44, "eye": at + Vector3(0.6, 1.6, 5.2), "look": at + Vector3(0.3, 1.2, 0), "eye_to": at + Vector3(0.3, 1.5, 4.8), "time": 2.6}))
-	_at(10.1, func(): _slowmo(0.35, 1.0))
+	_at(10.1, func(): _slowmo(0.35, 1.0); _impact(0.09))
 	# 12-17: the kicks, body kick, front kick, spinning back kick.
 	_at(12.0, func():
 		_wipe()
 		_move(hero, "idle")
 		_cut({"fov": 34, "eye": at + Vector3(-0.8, 0.8, 3.4), "look": at + Vector3(0.3, 0.9, 0), "eye_to": at + Vector3(0.2, 0.9, 3.2), "time": 5.0}))
 	_at(12.4, func(): _move(hero, "kick"))
+	_at(13.1, func(): _impact(0.05))
 	_at(13.8, func(): _move(hero, "kick_front"))
+	_at(14.7, func(): _impact(0.05))
 	_at(15.3, func(): _move(hero, "kick_spin"))
-	_at(15.9, func(): _slowmo(0.35, 0.9))
+	_at(15.9, func(): _slowmo(0.35, 0.9); _impact(0.08))
 	# 17-21: from the ground, the uppercut and the punch combo against the sky.
 	_at(17.2, func():
 		_wipe(false)
 		_move(hero, "idle")
 		_cut({"fov": 30, "follow": "hero", "offset": Vector3(1.4, -1.35, 1.1), "aim": Vector3(0.2, -0.1, 0), "time": 4.0}))
 	_at(17.6, func(): _move(hero, "uppercut"))
+	_at(18.05, func(): _impact(0.06))
 	_at(18.9, func(): _move(hero, "punch_heavy"))
+	_at(19.5, func(): _impact(0.05))
 	# 21-24: silhouette on the long lens, one last spinning kick.
 	_at(21.3, func():
 		_wipe()
 		_move(hero, "idle")
 		_cut({"fov": 13, "eye": at + Vector3(3.0, 0.5, 15), "look": at + Vector3(0, 1.1, 0), "eye_to": at + Vector3(2.4, 0.5, 13.5), "time": 3.0}))
 	_at(21.8, func(): _move(hero, "kick_spin"))
-	_at(22.4, func(): _slowmo(0.4, 0.8))
+	_at(22.4, func(): _slowmo(0.4, 0.8); _impact(0.05))
 	# 24-30: the face, slowly, then his name.
 	_at(24.2, func():
 		_wipe(false)
@@ -301,6 +315,9 @@ func _process(delta: float) -> void:
 		next_beat += 1
 	stage.animate(delta)
 	_update_camera()
+	if shake > 0.0005:
+		camera.position += Vector3(randf_range(-1, 1), randf_range(-1, 1), 0) * shake
+		shake = move_toward(shake, 0.0, delta / maxf(Engine.time_scale, 0.01) * 0.35)
 	if t >= LENGTH:
 		Engine.time_scale = 1.0
 		get_tree().quit()
