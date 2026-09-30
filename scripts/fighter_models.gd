@@ -87,12 +87,6 @@ const MESHY_MOVES := {
 	},
 	# Ananta's Meshy set exports with id names; each is [id, second the blow
 	# lands], measured from the peak reach of the striking hand or foot.
-	"anant": {
-		"jab": ["01a0ebcb", 0.30], "cross": ["01a0ebcf", 0.55], "hook": ["01a0ebd2", 0.45],
-		"uppercut": ["01a0ebd4", 1.05], "punch_heavy": ["01a0ebcd", 0.90],
-		"kick": ["01a0ebd0", 0.80], "kick_spin": ["01a0ebd0", 0.80], "kick_front": ["01a0ebcc", 1.05],
-		"taunt": ["01a0ebc9", 1.95],
-	},
 }
 ## Per-fighter style: body build and tint, plus style clips (file in
 ## style/ -> logical clip) and their timing. Impact times were measured
@@ -131,6 +125,29 @@ const STYLES := {
 		"height": 1.86, "width": 1.02, "tint": [Color("5a2f6a"), Color("d3ac62")],
 		"clips": {"idle": "mma_idle", "kick": "martial_arts_kick", "kick_spin": "martial_arts_kick", "victory": "fireball"},
 		"timing": {"kick": [0.2, 0.73, 1.5], "kick_spin": [0.2, 0.73, 1.5]},
+		# Capoeira: the Mixamo Capoeira Pack (assets/fighters/anant/capoeira/,
+		# kept local). Every move, stance and step included; a missing pack
+		# leaves the clips above.
+		"pack": {
+			"folder": "capoeira/",
+			"moves": {
+				"idle": "ginga_variation_1", "walk": "ginga_forward", "walk_back": "ginga_backward",
+				"sidestep_left": "ginga_sideways_1", "sidestep_right": "ginga_sideways_2",
+				"backdash": "esquiva_3", "block": "esquiva_4", "block_hit": "esquiva_4",
+				"jab": "pontera", "cross": "chapa_2", "hook": "bencao",
+				"uppercut": "meia_lua_de_frente", "punch_heavy": "martelo_do_chau",
+				"kick": "martelo_2", "kick_front": "queshada_2", "kick_spin": "armada",
+				"grapple": "rasteira_1", "taunt": "au", "victory": "capoeira_2",
+			},
+			# [start, impact, end]: impact at the frame the kick or hand
+			# reaches furthest (measured in game).
+			"timing": {
+				"jab": [0.27, 0.67, 1.22], "cross": [0.27, 0.67, 1.22], "hook": [0.23, 0.63, 1.18],
+				"uppercut": [0.43, 0.83, 1.38], "punch_heavy": [0.47, 0.87, 1.42],
+				"kick": [0.07, 0.47, 1.02], "kick_front": [1.30, 1.70, 2.00], "kick_spin": [0.93, 1.33, 1.63],
+				"grapple": [0.30, 0.70, 1.25],
+			},
+		},
 	},
 }
 ## Other entries, kept as examples of the format.
@@ -203,6 +220,18 @@ static func _mixamo(fighter_id: String) -> Dictionary:
 			clips[logical] = "style_" + logical
 	var timing: Dictionary = SHARED_TIMING.duplicate()
 	timing.merge(style.get("timing", {}), true)
+	# A full move pack (a fighting style's whole Mixamo set): its clips cover
+	# stance and steps too, not only strikes.
+	var pack: Dictionary = style.get("pack", {})
+	var pack_folder := "res://assets/fighters/%s/%s" % [fighter_id, pack.get("folder", "")]
+	if not pack.is_empty() and DirAccess.dir_exists_absolute(pack_folder):
+		for logical in pack.moves:
+			var path: String = pack_folder + pack.moves[logical] + ".fbx"
+			if ResourceLoader.exists(path):
+				files["pack_" + logical] = path
+				clips[logical] = "pack_" + logical
+				timing.erase(logical)
+		timing.merge(pack.get("timing", {}), true)
 	var meshy := {}
 	var meshy_file := "res://assets/fighters/%s/meshy_moves.fbx" % fighter_id
 	if not ResourceLoader.exists(meshy_file):
