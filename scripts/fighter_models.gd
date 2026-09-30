@@ -125,27 +125,28 @@ const STYLES := {
 		"height": 1.86, "width": 1.02, "tint": [Color("5a2f6a"), Color("d3ac62")],
 		"clips": {"idle": "mma_idle", "kick": "martial_arts_kick", "kick_spin": "martial_arts_kick", "victory": "fireball"},
 		"timing": {"kick": [0.2, 0.73, 1.5], "kick_spin": [0.2, 0.73, 1.5]},
-		# Capoeira: the Mixamo Capoeira Pack (assets/fighters/anant/capoeira/,
-		# kept local). Every move, stance and step included; a missing pack
-		# leaves the clips above.
+		# MMA: the Mixamo set in assets/fighters/anant/mma/ (kept local),
+		# "With Skin", so it carries his textured body too. Every clip is used.
 		"pack": {
-			"folder": "capoeira/",
+			"folder": "mma/",
+			"body": "mma_idle",
 			"moves": {
-				"idle": "ginga_variation_1", "walk": "ginga_forward", "walk_back": "ginga_backward",
-				"sidestep_left": "ginga_sideways_1", "sidestep_right": "ginga_sideways_2",
-				"backdash": "esquiva_3", "block": "esquiva_4", "block_hit": "esquiva_4",
-				"jab": "pontera", "cross": "chapa_2", "hook": "bencao",
-				"uppercut": "meia_lua_de_frente", "punch_heavy": "martelo_do_chau",
-				"kick": "martelo_2", "kick_front": "queshada_2", "kick_spin": "armada",
-				"grapple": "rasteira_1", "taunt": "au", "victory": "capoeira_2",
+				"idle": "mma_idle", "walk": "unarmed_walk_forward", "walk_back": "unarmed_walk_back",
+				"run": "unarmed_run_forward", "dash": "unarmed_run_forward", "backdash": "unarmed_run_back",
+				"jump": "unarmed_jump",
+				"jab": "punching", "cross": "cross_punch", "hook": "punching_1",
+				"uppercut": "uppercut", "punch_heavy": "punch_combo",
+				"kick": "mma_kick", "kick_front": "mma_kick_2", "kick_spin": "mma_kick_4",
+				"grapple": "flying_knee_punch_combo", "finisher": "flying_knee_punch_combo",
+				"taunt": "mma_idle_1",
 			},
-			# [start, impact, end]: impact at the frame the kick or hand
+			# [start, impact, end] around the frame the fist, knee or foot
 			# reaches furthest (measured in game).
 			"timing": {
-				"jab": [0.27, 0.67, 1.22], "cross": [0.27, 0.67, 1.22], "hook": [0.23, 0.63, 1.18],
-				"uppercut": [0.43, 0.83, 1.38], "punch_heavy": [0.47, 0.87, 1.42],
-				"kick": [0.07, 0.47, 1.02], "kick_front": [1.30, 1.70, 2.00], "kick_spin": [0.93, 1.33, 1.63],
-				"grapple": [0.30, 0.70, 1.25],
+				"jab": [0.2, 0.57, 0.95], "cross": [0.75, 1.13, 1.6], "hook": [0.1, 0.4, 0.85],
+				"uppercut": [0.15, 0.47, 1.0], "punch_heavy": [0.3, 0.63, 1.5],
+				"kick": [0.35, 0.73, 1.3], "kick_front": [0.5, 0.9, 1.5], "kick_spin": [0.25, 0.63, 1.2],
+				"grapple": [0.2, 0.57, 1.2], "finisher": [0.7, 1.33, 2.2],
 			},
 		},
 	},
@@ -223,6 +224,7 @@ static func _mixamo(fighter_id: String) -> Dictionary:
 	# A full move pack (a fighting style's whole Mixamo set): its clips cover
 	# stance and steps too, not only strikes.
 	var pack: Dictionary = style.get("pack", {})
+	var pack_scene := ""
 	var pack_folder := "res://assets/fighters/%s/%s" % [fighter_id, pack.get("folder", "")]
 	if not pack.is_empty() and DirAccess.dir_exists_absolute(pack_folder):
 		for logical in pack.moves:
@@ -232,6 +234,9 @@ static func _mixamo(fighter_id: String) -> Dictionary:
 				clips[logical] = "pack_" + logical
 				timing.erase(logical)
 		timing.merge(pack.get("timing", {}), true)
+		var pack_body: String = pack_folder + str(pack.get("body", "")) + ".fbx"
+		if pack.has("body") and ResourceLoader.exists(pack_body):
+			pack_scene = pack_body
 	var meshy := {}
 	var meshy_file := "res://assets/fighters/%s/meshy_moves.fbx" % fighter_id
 	if not ResourceLoader.exists(meshy_file):
@@ -253,6 +258,8 @@ static func _mixamo(fighter_id: String) -> Dictionary:
 	# A fighter's own rigged body (assets/fighters/<id>/body.fbx, from Mixamo
 	# "With Skin") replaces the X Bot and keeps its real textures untinted.
 	var body := "res://assets/fighters/%s/body.fbx" % fighter_id
+	if pack_scene != "":
+		body = pack_scene
 	var own_body := ResourceLoader.exists(body)
 	var built := "res://assets/fighters/%s/body.glb" % fighter_id
 	var graft := "" if own_body or not ResourceLoader.exists(built) else built

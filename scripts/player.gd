@@ -64,6 +64,8 @@ var block_hold_time: float = 999.0
 var combo_stacks: int = 0
 var hitstop_remaining: float = 0.0
 var controls_enabled: bool = true
+## A practice dummy: takes no input but still takes hits and damage.
+var dummy: bool = false
 var combat_paused: bool = false
 var running: bool = false
 const WALK_SPEED_RATIO := 0.65
@@ -372,13 +374,13 @@ func _consume_action() -> bool:
 	return true
 
 func _next_chain_move(action: String) -> String:
-	if current_move.is_empty() or not attack_connected or chain_step >= 2:
+	if current_move.is_empty() or not attack_connected or chain_step >= 3:
 		return ""
-	if action == "punch":
-		return current_move.next_light
-	if action == "kick":
-		return current_move.next_heavy
-	return ""
+	var next: String = current_move.next_light if action == "punch" else (current_move.next_heavy if action == "kick" else "")
+	# Chains are three hits; only a signature finisher may be the fourth.
+	if chain_step >= 2 and next != "combo_finish":
+		return ""
+	return next
 
 func _start_style_move(move_id: String, step: int = 0) -> void:
 	var data: Dictionary = available_moves()[move_id]
@@ -530,7 +532,7 @@ func _process_hitstun(delta: float) -> void:
 
 ## Returns true only for an unblocked hit; chip and parries cannot grant a cancel.
 func take_hit(damage: int, knockback: float, attacker_facing: int, attacker: Node = null, attack_type: String = "punch") -> bool:
-	if state == State.KO or not controls_enabled:
+	if state == State.KO or not (controls_enabled or dummy):
 		return false
 	var move: Dictionary = attacker.current_move if attacker != null else {}
 	var grapple: bool = move.get("kind", "") == "grapple"

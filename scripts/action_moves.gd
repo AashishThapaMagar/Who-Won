@@ -78,10 +78,24 @@ static func for_fighter(id: String) -> Dictionary:
 			m.breaker.name = "Crown wheel"
 			m.breaker.pose = "spin"
 			m.back_heavy = BASE._move("Sovereign throw", "grapple", "grapple", "hook", 30, -72, 0.30, 0.07, 0.48, 1.5, 1.4, 8)
-			# Signature four-hit combo: jab, straight, backfist, then heavy for
-			# a spinning finisher that launches.
-			m.combo_finish = BASE._move("The Final Word", "spin", "kick", "kick", 72, -72, 0.14, 0.09, 0.38, 1.8, 1.8, 22)
-			m.combo_finish.hitstun = 0.55
+			# Tekken-style strings. 1,1,2 into the flying knee: jab, cross,
+			# hook, then heavy for The Final Word.
+			m.jab.name = "Snap jab"
+			m.cross.name = "Straight cross"
+			m.hook.name = "Rear hook"
+			m.hook.pose = "hook"
+			m.combo_finish = BASE._move("The Final Word", "finisher_clip", "punch", "hook", 70, -92, 0.16, 0.10, 0.42, 2.0, 1.9, 30)
+			m.combo_finish.hitstun = 0.6
+			# 3,3,4 kick string: body kick, front kick, spinning back kick.
+			m.kick.name = "Body kick"
+			m.forward_heavy = BASE._move("Front kick", "front_kick", "kick", "kick", 66, -60, 0.11, 0.07, 0.24, 1.1, 1.2, 10)
+			m.breaker = BASE._move("Spinning back kick", "spin", "kick", "kick", 72, -70, 0.16, 0.09, 0.36, 1.7, 1.8, 16)
+			m.kick.next_heavy = "forward_heavy"
+			m.forward_heavy.next_heavy = "breaker"
+			m.forward_heavy.hitstun = 0.32
+			# Launcher: the uppercut pops the rival up for a follow-up.
+			m.drive = BASE._move("Rising uppercut", "uppercut", "punch", "hook", 45, -96, 0.13, 0.08, 0.34, 1.5, 1.4, 14)
+			m.drive.hitstun = 0.5
 	# Original, character-specific strike routes. Finishers use separate slots
 	# so learning an easy chain does not replace directional signature moves.
 	var finishers := {

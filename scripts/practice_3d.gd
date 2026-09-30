@@ -14,6 +14,7 @@ func _begin_round(index: int) -> void:
 	intro_timer = 0.0
 	_hide_banner()
 	player2.controls_enabled = false
+	player2.dummy = true
 	round_label.text = "FREE PRACTICE"
 	pips1.hide()
 	pips2.hide()

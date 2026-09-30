@@ -8,3 +8,5 @@ style_id = "action"
 display_name = "Action Fight"
 tagline = "Read your rival. Commit to your move. Own the opening."
 perfect_block_window = 0.07
+; A fighting-game hop (~1.1 m, ~0.65 s in the air), not a 2 m leap.
+jump_velocity = -560.0

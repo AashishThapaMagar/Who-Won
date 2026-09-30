@@ -44,7 +44,7 @@ const INJURED_HEALTH := 0.25
 ## a diving catch) would drift away from the body and snap back.
 const TRAVELLING := ["ko"]
 ## Attack-like clips driven by the fighter's attack timer.
-const SCRUBBED := ["jab", "cross", "hook", "punch_heavy", "uppercut", "kick", "kick_spin", "kick_front", "grapple", "taunt"]
+const SCRUBBED := ["jab", "cross", "hook", "punch_heavy", "uppercut", "kick", "kick_spin", "kick_front", "grapple", "taunt", "finisher"]
 ## Meshy's biped skeleton names -> Mixamo bone keys (see _bone_key); every
 ## other bone already shares the Mixamo name.
 const MESHY_BONES := {"spine02": "spine", "spine01": "spine1", "spine": "spine2", "neck": "neck",
@@ -64,6 +64,7 @@ var last_hit_heavy := false
 ## A hit landed this frame: the reaction restarts even mid-hitstun, so every
 ## blow of a combo gets its own flinch.
 var _react := false
+var _jump_rate := 1.0
 ## Metres the attacker is stepped toward the rival so the striking fist or
 ## foot actually meets the body (visual only; see _reach_step).
 var _reach := 0.0
@@ -304,6 +305,8 @@ func _add_clip_files() -> void:
 						animation.track_set_path(track, NodePath(str(to_skeleton) + ":" + path.get_concatenated_subnames()))
 				if not key in TRAVELLING:
 					clip_pace["files/" + key] = _pin_hips(animation)
+				if key.ends_with("jump"):
+					_ground_jump(animation)
 				library.add_animation(key, animation)
 				break
 		scene.free()
@@ -503,6 +506,35 @@ static func _frame(direction: Vector3) -> Quaternion:
 	var z := x.cross(direction).normalized()
 	return Basis(x, direction, z).get_rotation_quaternion()
 
+## Plays a whole jump clip (take-off, tuck, landing) across the time the
+## fighter will actually spend in the air.
+func _jump_speed(fighter: Node, clip: String) -> float:
+	var animation := player.get_animation(clip)
+	var body = fighter.get("body")
+	if animation == null or body == null:
+		return 1.0
+	var gravity: float = absf(float(ProjectSettings.get_setting("physics/3d/default_gravity", 9.8)))
+	var tempo: float = fighter.get_script().get_script_constant_map().get("COMBAT_TEMPO", 1.0)
+	var rise: float = maxf(body.velocity.y, 0.0)
+	var air := 2.0 * rise / maxf(gravity, 0.1) / maxf(tempo, 0.1)
+	if air < 0.2:
+		return 1.0
+	return clampf(animation.length / air, 0.6, 3.0)
+
+## Jump clips lift the hips themselves; the game's physics already does,
+## so the clip keeps only the crouch and tuck (hips never rise above where
+## they start), or the fighter would fly twice as high.
+static func _ground_jump(animation: Animation) -> void:
+	for track in animation.get_track_count():
+		if animation.track_get_type(track) != Animation.TYPE_POSITION_3D:
+			continue
+		if not String(animation.track_get_path(track).get_concatenated_subnames()).to_lower().ends_with("hips"):
+			continue
+		var ground: Vector3 = animation.track_get_key_value(track, 0)
+		for k in animation.track_get_key_count(track):
+			var v: Vector3 = animation.track_get_key_value(track, k)
+			animation.track_set_key_value(track, k, Vector3(v.x, minf(v.y, ground.y), v.z))
+
 static func _node_rotation(skeleton: Skeleton3D, top: Node) -> Quaternion:
 	var rotation := Quaternion.IDENTITY
 	var node: Node = skeleton
@@ -675,6 +707,10 @@ func update(delta: float) -> void:
 			player.seek(0.0, true)
 		current = clip
 	player.speed_scale = 0.0 if frozen else _loop_speed(fighter, logical, clip)
+	if logical == "jump" and not frozen and entered:
+		_jump_rate = _jump_speed(fighter, clip)
+	if logical == "jump" and not frozen:
+		player.speed_scale = _jump_rate
 	if logical in REACTIONS and not frozen:
 		# The recoil plays out inside the short stun instead of being cut
 		# off halfway and snapping back to the stance.
@@ -863,6 +899,9 @@ func _attack_clip(fighter: Node) -> String:
 	var variant: String = fighter.attack_variant
 	if variant in ["grapple"]:
 		return "grapple"
+	# A fighter's signature finisher has its own clip when they have one.
+	if variant == "finisher_clip" and clip_names.has("finisher"):
+		return "finisher"
 	if variant == "taunt":
 		return "taunt"
 	if fighter.state == fighter.State.KICK or variant in ["kick", "finisher", "front_kick"]:
