@@ -23,10 +23,12 @@ const RENDER_SCALES := [0.5, 0.75, 1.0]
 ## time on shadows and arena textures instead.
 ## The fighters get the budget: HIGH smooths their edges with 4x MSAA and
 ## pays for it with low-cost arena shadows and textures.
+## MSAA is the single biggest cost on integrated graphics (about a third of
+## the frame), so LOW swaps it for FXAA, which smooths edges almost free.
 const PRESETS := [
-	[2, 1, 0, false],
+	[2, 0, 0, false],
+	[2, 0, 1, false],
 	[2, 1, 1, false],
-	[2, 2, 1, false],
 ]
 var quality: int = Quality.HIGH
 var render_scale: int = 2
@@ -44,9 +46,11 @@ var input_display: bool = false
 ## Steps the graphics preset down by itself when a fight runs under 30 FPS
 ## for a few seconds (never up, never past LOW, never from CUSTOM).
 var adaptive_quality: bool = true
-const ADAPTIVE_FLOOR_FPS := 30.0
-const ADAPTIVE_WINDOW := 3.0
-const ADAPTIVE_WARMUP := 4.0
+const ADAPTIVE_FLOOR_FPS := 45.0
+const ADAPTIVE_WINDOW := 2.0
+const ADAPTIVE_WARMUP := 2.5
+## True once LOW itself has been cut to 75% resolution for speed.
+var scaled_down := false
 var _adaptive_scene: Node
 var _adaptive_time := 0.0
 var _adaptive_frames := 0
@@ -92,7 +96,7 @@ func _process(delta: float) -> void:
 func _adapt(delta: float) -> void:
 	var scene := get_tree().current_scene
 	var fighting := scene != null and scene.get_script() != null and (str(scene.get_script().resource_path).ends_with("arena_3d.gd") or str(scene.get_script().resource_path).ends_with("practice_3d.gd"))
-	if not adaptive_quality or not fighting or quality == Quality.LOW or quality == Quality.CUSTOM:
+	if not adaptive_quality or not fighting or quality == Quality.CUSTOM or (quality == Quality.LOW and scaled_down):
 		_adaptive_scene = null
 		return
 	if scene != _adaptive_scene:
@@ -111,8 +115,15 @@ func _adapt(delta: float) -> void:
 	_adaptive_frames = 0
 	_adaptive_window = 0.0
 	if average < ADAPTIVE_FLOOR_FPS:
-		set_quality(quality - 1)
-		notify("SMOOTHER PLAY: GRAPHICS SET TO %s  (SETTINGS ▸ GRAPHICS TO CHANGE)" % ["LOW", "MEDIUM", "HIGH", "CUSTOM"][quality])
+		if quality == Quality.LOW:
+			# Already the cheapest preset: trade a little sharpness for speed.
+			scaled_down = true
+			render_scale = 1
+			apply_graphics()
+			notify("SMOOTHER PLAY: RESOLUTION 75%  (SETTINGS ▸ GRAPHICS TO CHANGE)")
+		else:
+			set_quality(quality - 1)
+			notify("SMOOTHER PLAY: GRAPHICS SET TO %s  (SETTINGS ▸ GRAPHICS TO CHANGE)" % ["LOW", "MEDIUM", "HIGH", "CUSTOM"][quality])
 		_adaptive_time = 0.0
 
 ## A short line of gold text over the top of the screen.
@@ -127,6 +138,7 @@ func notify(text: String) -> void:
 
 func set_quality(value: int) -> void:
 	quality = value
+	scaled_down = false
 	if value < PRESETS.size():
 		var preset: Array = PRESETS[value]
 		render_scale = preset[0]
@@ -151,7 +163,11 @@ func apply_graphics() -> void:
 	var viewport := get_tree().root
 	viewport.scaling_3d_scale = RENDER_SCALES[render_scale]
 	viewport.msaa_3d = [Viewport.MSAA_DISABLED, Viewport.MSAA_2X, Viewport.MSAA_4X][anti_aliasing]
-	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if vsync else DisplayServer.VSYNC_DISABLED)
+	viewport.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA if anti_aliasing == 0 else Viewport.SCREEN_SPACE_AA_DISABLED
+	# Adaptive: locked to the display's refresh when the game keeps up, but a
+	# slow frame is shown at once rather than waiting a whole extra refresh
+	# (plain vsync turns 45 FPS into a juddering 30).
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ADAPTIVE if vsync else DisplayServer.VSYNC_DISABLED)
 	RenderingServer.directional_shadow_atlas_set_size(4096 if shadows == 2 else 2048, true)
 	RenderingServer.directional_soft_shadow_filter_set_quality(RenderingServer.SHADOW_QUALITY_SOFT_LOW if shadows == 2 else RenderingServer.SHADOW_QUALITY_HARD)
 	# Scenes with a sun (nepal_stage_3d.gd) listen and update their lights.

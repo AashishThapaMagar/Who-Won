@@ -164,6 +164,8 @@ uniform float disc = 0.9994;
 uniform float stars = 0.0;
 // 1 at night: the disc becomes a moon with a soft halo instead of a sun.
 uniform float moon = 0.0;
+// 0 skips the clouds and stars (the LOW graphics preset).
+uniform float detail = 1.0;
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float hash3(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
 float noise(vec2 p) {
@@ -191,9 +193,11 @@ void sky() {
 		col += sun_color * 0.5 * pow(max(d, 0.0), 18.0);
 		col += sun_color * 0.22 * pow(max(d, 0.0), 4.0);
 	}
+	float cover = 0.0;
+	if (detail > 0.5) {
 	vec2 cloud_uv = EYEDIR.xz / max(y + 0.18, 0.08) * 2.2 + vec2(TIME * 0.006, 0.0);
 	float cloud = noise(cloud_uv) * 0.57 + noise(cloud_uv * 2.1) * 0.28 + noise(cloud_uv * 4.3) * 0.15;
-	float cover = smoothstep(0.51, 0.75, cloud) * smoothstep(0.0, 0.18, y);
+	cover = smoothstep(0.51, 0.75, cloud) * smoothstep(0.0, 0.18, y);
 	// Clouds catch the light on their sunward side.
 	float lit = 0.3 + 0.5 * max(d, 0.0);
 	col = mix(col, mix(horizon_color, sun_color, lit), cover * (0.58 - stars * 0.3));
@@ -208,6 +212,7 @@ void sky() {
 		float dust = noise(EYEDIR.xz * 9.0 + EYEDIR.y * 5.0) * band;
 		col += star_tint * bright * stars * smoothstep(0.02, 0.25, y) * (1.0 - cover);
 		col += vec3(0.5, 0.55, 0.75) * dust * 0.08 * stars * smoothstep(0.05, 0.4, y);
+	}
 	}
 	COLOR = col;
 }
@@ -251,6 +256,12 @@ func _ready() -> void:
 	sky_material.shader.code = SKY_SHADER
 	var sky := Sky.new()
 	sky.sky_material = sky_material
+	# The sky shader reads TIME (drifting clouds, twinkling stars), which
+	# would make Godot rebuild the whole sky lighting cubemap every frame.
+	# It is built once per mood at a small size instead (soft reflections are
+	# all the fighters need) and the clouds still move in the background.
+	sky.radiance_size = Sky.RADIANCE_SIZE_64
+	sky.process_mode = Sky.PROCESS_MODE_QUALITY
 	environment.environment.background_mode = Environment.BG_SKY
 	environment.environment.sky = sky
 	# ACES keeps saturated lamplight and costume colours from clipping to
@@ -312,6 +323,7 @@ func show_round(index: int) -> void:
 func _import_arena(index: int) -> void:
 	var settings := get_node_or_null("/root/Settings")
 	built_detailed = settings == null or settings.detailed_textures
+	built_lite = _lite_scenery()
 	var packed := _load_arena_model(index)
 	if packed == null or not packed.can_instantiate():
 		_build_fallback(index)
@@ -413,10 +425,22 @@ func _surface_kind(texture: Texture2D, bounds: AABB) -> String:
 ## Settings' shadow level drives the sun; switching arena textures
 ## rebuilds the current round so the change shows immediately.
 var built_detailed := true
+var built_lite := false
+## Lighter scenery props on LOW and MEDIUM; only HIGH (and a custom mix with
+## shadows) pays for the full carving.
+func _lite_scenery() -> bool:
+	var settings := get_node_or_null("/root/Settings")
+	if settings == null:
+		return false
+	if settings.quality == settings.Quality.CUSTOM:
+		return settings.shadows < 2 and settings.anti_aliasing < 2
+	return settings.quality != settings.Quality.HIGH
 func _apply_graphics() -> void:
 	var settings := get_node_or_null("/root/Settings")
 	if settings == null or sun == null:
 		return
+	if sky_material != null:
+		sky_material.set_shader_parameter("detail", 0.0 if settings.quality == settings.Quality.LOW else 1.0)
 	sun.shadow_enabled = settings.shadows > 0
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
 	sun.directional_shadow_max_distance = 18.0 if settings.shadows == 2 else 14.0
@@ -425,7 +449,7 @@ func _apply_graphics() -> void:
 	if environment != null and current_round >= 0:
 		environment.environment.glow_enabled = _effects_level() > 0
 		grade_rect.visible = _effects_level() > 0
-	if settings.detailed_textures != built_detailed and current_round >= 0:
+	if (settings.detailed_textures != built_detailed or _lite_scenery() != built_lite) and current_round >= 0:
 		var round_index := current_round
 		current_round = -1
 		show_round(round_index)
@@ -859,12 +883,21 @@ func _heritage_night(floor_y: float) -> void:
 			_ball(0.07, Vector3(side * 6.9, floor_y + 3.05, z), flame, 1.0).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 func _place_prop(path: String, at: Vector3, turn: float, scale := 1.0, tint := Color.WHITE) -> void:
+	# The windows and doorways (dozens of copies of fine carving) have a
+	# hand-reduced *_lite.glb the LOW preset uses instead.
+	var lite_path := path.get_basename() + "_lite.glb"
+	if built_lite and ResourceLoader.exists(lite_path):
+		path = lite_path
 	if not ResourceLoader.exists(path):
 		return
 	var prop := (load(path) as PackedScene).instantiate() as Node3D
 	prop.position = at
 	prop.rotation.y = turn
 	prop.scale = Vector3.ONE * scale
+	if built_lite:
+		for mesh: MeshInstance3D in prop.find_children("*", "MeshInstance3D", true, false):
+			if mesh.mesh is ArrayMesh:
+				mesh.mesh = _lite_mesh(mesh.mesh)
 	if tint != Color.WHITE:
 		for mesh: MeshInstance3D in prop.find_children("*", "MeshInstance3D", true, false):
 			mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -879,6 +912,36 @@ func _place_prop(path: String, at: Vector3, turn: float, scale := 1.0, tint := C
 						_tinted[material] = warm
 					mesh.set_surface_override_material(surface, _tinted[material])
 	content.add_child(prop)
+
+## The LOW preset draws the scenery props (windows, doorways, lions, the
+## pagoda: ~350k triangles between them) with about half their triangles,
+## using the engine's own mesh simplifier. Built once per mesh.
+const LITE_RATIO := 0.5
+static var lite_cache: Dictionary = {}
+static func _lite_mesh(mesh: ArrayMesh) -> ArrayMesh:
+	if lite_cache.has(mesh):
+		return lite_cache[mesh]
+	var importer := ImporterMesh.new()
+	for surface in mesh.get_surface_count():
+		importer.add_surface(Mesh.PRIMITIVE_TRIANGLES, mesh.surface_get_arrays(surface), [], {}, mesh.surface_get_material(surface), "")
+	importer.generate_lods(25.0, 60.0, [])
+	var out := ArrayMesh.new()
+	for surface in importer.get_surface_count():
+		var arrays: Array = importer.get_surface_arrays(surface)
+		var full: int = (arrays[Mesh.ARRAY_INDEX] as PackedInt32Array).size()
+		var best: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+		var best_gap := absf(1.0 - LITE_RATIO)
+		for lod in importer.get_surface_lod_count(surface):
+			var indices := importer.get_surface_lod_indices(surface, lod)
+			var gap := absf(float(indices.size()) / maxf(full, 1.0) - LITE_RATIO)
+			if gap < best_gap:
+				best_gap = gap
+				best = indices
+		arrays[Mesh.ARRAY_INDEX] = best
+		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		out.surface_set_material(surface, mesh.surface_get_material(surface))
+	lite_cache[mesh] = out
+	return out
 
 func _mood() -> Array:
 	return NIGHT_MOOD if force_night else MOODS[current_round]
