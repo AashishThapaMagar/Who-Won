@@ -32,6 +32,8 @@ var stats: Array = [{}, {}]
 var stat_values: Array = [[], []]
 var last_health: Array = [0, 0]
 var ko_label: Label
+var fx: Control
+var title_tags: Array[Label] = []
 ## Practice mode: what the last strike was and what it did.
 var readout: Label
 var readout_pending := -1
@@ -161,7 +163,7 @@ func _ready() -> void:
 	for child in layer.get_children():
 		if child is Button:
 			child.theme = UI.theme()
-			child.position = Vector2(815, 92)
+			child.position = Vector2(815, 462)
 			child.add_theme_font_size_override("font_size", 12)
 	# The move list becomes a full-screen movebook (movebook.gd); the old text
 	# column stays hidden underneath as the data the tests read.
@@ -222,11 +224,12 @@ func _ready() -> void:
 	arena.result_label.z_index = 11
 	result_panel.hide()
 	# "K.O." slams in ahead of the winner callout on a knockout.
-	ko_label = UI.heading(layer, "K.O.", Vector2(180, 150), Vector2(600, 150), 132, UI.CRIMSON, UI.GOLD)
+	ko_label = UI.heading(layer, "K.O.", Vector2(180, 150), Vector2(600, 150), 132, Color("ff3b30"), UI.INK)
 	ko_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	ko_label.add_theme_constant_override("outline_size", 10)
-	ko_label.add_theme_constant_override("shadow_offset_x", 7)
-	ko_label.add_theme_constant_override("shadow_offset_y", 7)
+	ko_label.add_theme_color_override("font_outline_color", UI.GOLD)
+	ko_label.add_theme_constant_override("outline_size", 14)
+	ko_label.add_theme_constant_override("shadow_offset_x", 8)
+	ko_label.add_theme_constant_override("shadow_offset_y", 9)
 	ko_label.z_index = 12
 	ko_label.hide()
 	for i in 2:
@@ -258,6 +261,18 @@ func _ready() -> void:
 	input_display = preload("res://scripts/input_display.gd").new()
 	input_display.hud = self
 	layer.add_child(input_display)
+	fx = preload("res://scripts/fight_fx.gd").new()
+	fx.hud = self
+	fx.arena = arena
+	layer.add_child(fx)
+	# A small title tag under each name plate.
+	for i in 2:
+		var tag := UI.label(layer, "", Vector2(36 if i == 0 else 524, 90), Vector2(400, 14), 10, UI.WHITE)
+		tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if i == 0 else HORIZONTAL_ALIGNMENT_RIGHT
+		tag.add_theme_font_override("font", UI.strong_font())
+		tag.add_theme_constant_override("outline_size", 5)
+		tag.add_theme_color_override("font_outline_color", UI.INK)
+		title_tags.append(tag)
 	var hint: Label = layer.get_node("ControlsHint")
 	hint.position = Vector2(12, 505)
 	hint.size = Vector2(936, 34)
@@ -326,6 +341,25 @@ func _show_clash() -> void:
 	slash.polygon = PackedVector2Array([Vector2(492, 150), Vector2(526, 150), Vector2(434, 358), Vector2(400, 358)])
 	slash.color = Color(UI.CRIMSON, 0.95)
 	clash.add_child(slash)
+	# Each half of the band glows in its fighter's colour, with speed
+	# streaks racing across toward the clash.
+	for i in 2:
+		var tint := Polygon2D.new()
+		tint.polygon = PackedVector2Array([Vector2(0, 178), Vector2(492, 150), Vector2(400, 358), Vector2(0, 358)]) if i == 0 			else PackedVector2Array([Vector2(526, 150), Vector2(960, 150), Vector2(960, 330), Vector2(434, 358)])
+		tint.color = Color(UI.CRIMSON if i == 0 else Color("2f6fd1"), 0.26)
+		clash.add_child(tint)
+		clash.move_child(tint, 1)
+	for k in 9:
+		var streak := Polygon2D.new()
+		var y := 158.0 + 22.0 * k
+		var length := 140.0 + 60.0 * float(k % 3)
+		streak.polygon = PackedVector2Array([Vector2(0, y), Vector2(length, y - 6), Vector2(length - 14, y), Vector2(0, y + 3)])
+		streak.color = Color(1, 1, 1, 0.16)
+		var from_left := k % 2 == 0
+		streak.position = Vector2(-length if from_left else 960.0 + length, 0)
+		streak.scale.x = 1.0 if from_left else -1.0
+		clash.add_child(streak)
+		streak.create_tween().set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT).tween_property(streak, "position:x", (440.0 - length * 0.5) if from_left else 520.0 + length * 0.5, 0.55).set_delay(0.04 * k)
 	var names := [arena.player1.character_profile.name, arena.player2.character_profile.name]
 	var labels: Array[Label] = []
 	for i in 2:
@@ -336,6 +370,11 @@ func _show_clash() -> void:
 		label.add_theme_constant_override("shadow_offset_y", 5)
 		var eyebrow := UI.eyebrow(clash, "PLAYER %d" % (i + 1) if not (MatchSetup.vs_ai and i == 1) else "COMPUTER", Vector2(20 if i == 0 else 580, 290), Vector2(360, 16), color)
 		eyebrow.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if i == 0 else HORIZONTAL_ALIGNMENT_LEFT
+		var fighter_title: String = str((arena.player1 if i == 0 else arena.player2).character_profile.get("title", ""))
+		var subtitle := UI.heading(clash, str(fighter_title).to_upper(), Vector2(20 if i == 0 else 580, 312), Vector2(360, 24), 16, UI.GOLD, UI.INK)
+		subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if i == 0 else HORIZONTAL_ALIGNMENT_LEFT
+		subtitle.modulate.a = 0.0
+		subtitle.create_tween().tween_property(subtitle, "modulate:a", 1.0, 0.25).set_delay(0.5)
 		var home := label.position
 		label.position.x += -520.0 if i == 0 else 520.0
 		label.create_tween().set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT).tween_property(label, "position", home, 0.45).set_delay(0.1 + 0.08 * i)
@@ -417,6 +456,8 @@ func readout_blocked_for(defender: int) -> bool:
 func _knockout(loser: int) -> void:
 	stats[1 - loser].kos += 1
 	_slam("K.O.", 132)
+	if fx != null:
+		fx.knockout()
 
 ## The big callout (K.O., TIME UP) slams in and holds the winner line back
 ## for a beat.
@@ -439,6 +480,15 @@ func _slam(text: String, size: int) -> void:
 	arena.result_label.create_tween().tween_property(arena.result_label, "modulate:a", 1.0, 0.25).set_delay(0.95)
 
 func _process(_delta: float) -> void:
+	# Name plates: the fighter's name alone, the title and player tag below.
+	for i in 2:
+		var fighter: Node = arena.player1 if i == 0 else arena.player2
+		var label: Label = arena.get_node("UI/P1Label" if i == 0 else "UI/P2Label")
+		label.text = str(fighter.character_profile.name)
+		if i < title_tags.size():
+			var who := "P%d" % (i + 1) if not (MatchSetup.vs_ai and i == 1) else "CPU"
+			var title := str(fighter.character_profile.get("title", "")).to_upper()
+			title_tags[i].text = ("%s   /   %s" % [who, title]) if i == 0 else ("%s   /   %s" % [title, who])
 	# The opener plays over round one's intro; a rematch gets a fresh one.
 	if arena.round_index != 0:
 		clash_played = false
@@ -465,7 +515,7 @@ func _process(_delta: float) -> void:
 	var show_result: bool = arena.result_label.visible
 	# Between rounds only the winner callout shows; the panel with Rematch /
 	# Next Rival / Main Menu is kept for the end of the match.
-	var callout: bool = show_result and not arena.match_over
+	var callout: bool = show_result and (not arena.match_over or arena.advancing)
 	if callout != callout_style:
 		_style_result(callout)
 	# A round won without a scratch earns a PERFECT under the callout.
@@ -487,7 +537,7 @@ func _process(_delta: float) -> void:
 	elif not show_result:
 		perfect_label.hide()
 	last_result_visible = show_result
-	show_result = show_result and arena.match_over
+	show_result = show_result and arena.match_over and not arena.advancing
 	if show_result and not result_panel.visible:
 		UI.enter(result_panel)
 	result_panel.visible = show_result

@@ -17,6 +17,7 @@ const LOW_HEALTH := 0.3
 var hud: Node
 var arena: Node
 var elapsed := 0.0
+var _tick := 0
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -24,7 +25,11 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	elapsed += delta
-	queue_redraw()
+	# The gauges are polygons rebuilt on every redraw; 30 times a second
+	# looks identical and halves that work.
+	_tick += 1
+	if _tick % 2 == 0:
+		queue_redraw()
 
 ## A slanted strip between x positions a and b (a is the outer end). The
 ## side argument mirrors it for P2.
@@ -92,7 +97,7 @@ func _draw_gauge(side: int) -> void:
 		Color("ff6b5b") if tired else Color("7ff0dc"), Color("b3121c") if tired else Color("2aa391"))
 	# Round wins: diamonds beside the clock, gold once earned.
 	var wins: int = arena.round_wins[side]
-	var total: int = arena.round_styles.size()
+	var total: int = arena.WINS_NEEDED
 	for i in total:
 		var cx := INNER - 6.0 - i * 20.0
 		if side == 1:
