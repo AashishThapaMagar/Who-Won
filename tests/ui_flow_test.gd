@@ -82,10 +82,10 @@ func _run() -> void:
 	check(arena.round_index == 1, "Next round starts by itself after the callout")
 	check(arena.health_bar2.value == arena.player2.max_health, "New round resets health")
 	check(arena.timer_label.text == "99", "New round resets displayed timer")
-	arena._begin_round(3)
+	arena._begin_round(4)
 	arena.intro_timer = 0.0
 	arena._hide_banner()
-	arena.round_wins = [1, 1]
+	arena.round_wins = [2, 2]
 	arena._end_round(0)
 	check(arena.result_label.text == "MATCH DRAW", "Tied match has a draw result")
 	hud.next_button.pressed.emit()

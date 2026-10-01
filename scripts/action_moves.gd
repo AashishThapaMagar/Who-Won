@@ -29,7 +29,33 @@ static func for_fighter(id: String) -> Dictionary:
 			m.drive.name = "Flash hammer"
 			m.drive.lunge = 46.0
 			m.breaker = BASE._move("Sky hammer", "uppercut", "punch", "hook", 42, -96, 0.25, 0.07, 0.43, 1.8, 1.5, 20)
-			m.combo_finish = BASE._move("Hammer Drop", "uppercut", "punch", "hook", 48, -96, 0.12, 0.08, 0.36, 1.75, 1.7, 24)
+			# The lunging punch-to-elbow from his fight set ends the 1,1,1,3 string.
+			m.combo_finish = BASE._move("Hammer Drop", "finisher_clip", "punch", "hook", 48, -96, 0.12, 0.08, 0.36, 1.75, 1.7, 24)
+			# Button 2 is his elbow; its strings use his own clips.
+			m.rp = BASE._move("Flash elbow", "strike_elbow", "punch", "hook", 40, -92, 0.08, 0.06, 0.24, 1.3, 0.9, 20)
+			m.elbow_upper = BASE._move("Elbow uppercut", "strike_elbow_upper", "punch", "hook", 42, -96, 0.10, 0.07, 0.32, 1.6, 1.4, 16)
+			m.elbow_upper.hitstun = 0.5
+			m.body_elbow = BASE._move("Liver elbow", "strike_body_elbow", "punch", "hook", 45, -80, 0.12, 0.08, 0.34, 1.7, 1.5, 22)
+			m.body_elbow.hitstun = 0.45
+			m.rp.next_rp = "elbow_upper"      # 2,2
+			m.rp.next_light = "body_elbow"    # 2,1
+			m.cross.next_rp = "elbow_upper"   # 1,2,2 and 1,1,2
+			# His MMA kicks: 4 is a high kick, 4,4 adds the roundhouse,
+			# 3,3,4 ends on a side kick, back+3 is a low kick, and the
+			# breaker command is his flying knee.
+			m.rk = BASE._move("High kick", "strike_high_kick", "kick", "kick", 66, -84, 0.13, 0.08, 0.27, 1.2, 1.1, 10)
+			m.rk.hitstun = 0.32
+			m.roundhouse = BASE._move("Roundhouse kick", "strike_roundhouse", "kick", "kick", 68, -76, 0.13, 0.08, 0.28, 1.3, 1.3, 10)
+			m.roundhouse.hitstun = 0.4
+			m.side_kick = BASE._move("Side kick", "strike_side_kick", "kick", "kick", 72, -66, 0.12, 0.08, 0.28, 1.35, 1.6, 12)
+			m.side_kick.hitstun = 0.4
+			m.back_heavy = BASE._move("Low kick", "strike_low_kick", "kick", "kick", 62, -28, 0.11, 0.07, 0.24, 1.1, 0.8, 8)
+			m.forward_heavy = BASE._move("Front snap kick", "front_kick", "kick", "kick", 66, -60, 0.11, 0.07, 0.24, 1.1, 1.2, 10)
+			m.forward_heavy.hitstun = 0.32
+			m.breaker = BASE._move("Flying knee", "strike_flying_knee", "kick", "kick", 60, -80, 0.2, 0.09, 0.4, 1.8, 1.7, 36)
+			m.rk.next_rk = "roundhouse"             # 4,4
+			m.kick.next_heavy = "forward_heavy"      # 3,3
+			m.forward_heavy.next_rk = "side_kick"    # 3,3,4
 		"sab":
 			m.jab.name = "Iron check"
 			m.hook.name = "Anvil hook"
@@ -56,7 +82,23 @@ static func for_fighter(id: String) -> Dictionary:
 			m.drive.pose = "overhand"
 			m.back_heavy = BASE._move("Big talk / recover 24 stamina", "taunt", "punch", "punch", 0, -88, 0.22, 0.02, 0.66, 0, 0)
 			m.back_heavy.utility = "taunt"
-			m.combo_finish = BASE._move("Thunderclap", "overhand", "punch", "hook", 55, -92, 0.14, 0.09, 0.40, 1.8, 1.8, 22)
+			m.combo_finish = BASE._move("Thunderclap", "finisher_clip", "punch", "hook", 55, -92, 0.14, 0.09, 0.40, 1.8, 1.8, 22)
+			# Tekken buttons: 2 is a short hook into the jab-elbow, 4 a lead
+			# front kick into the rear front kick; the sweeps go low.
+			m.rp = BASE._move("Short hook", "strike_short_hook", "punch", "hook", 46, -92, 0.09, 0.06, 0.24, 1.2, 0.9, 18)
+			m.elbow = BASE._move("Jab elbow", "strike_jab_elbow", "punch", "hook", 42, -92, 0.12, 0.07, 0.30, 1.5, 1.2, 18)
+			m.elbow.hitstun = 0.4
+			m.rp.next_rp = "elbow"       # 2,2
+			m.cross.next_rp = "elbow"    # 1,2,2
+			m.rk = BASE._move("Lead front kick", "strike_lead_front", "kick", "kick", 68, -62, 0.14, 0.08, 0.30, 1.2, 1.3, 14)
+			m.rk.hitstun = 0.34
+			m.rear_front = BASE._move("Rear front kick", "strike_rear_front", "kick", "kick", 70, -66, 0.14, 0.08, 0.32, 1.45, 1.5, 20)
+			m.rear_front.hitstun = 0.42
+			m.rk.next_rk = "rear_front"  # 4,4
+			m.forward_heavy = BASE._move("Front leg sweep", "strike_front_sweep", "kick", "kick", 60, -26, 0.12, 0.08, 0.30, 1.0, 0.8, 12)
+			m.forward_heavy.hitstun = 0.45
+			m.breaker = BASE._move("Back leg sweep", "strike_back_sweep", "kick", "kick", 66, -24, 0.15, 0.09, 0.36, 1.3, 1.0, 16)
+			m.breaker.hitstun = 0.5
 		"sup":
 			m.jab.name = "Swaying palm"
 			m.kick = BASE._move("Low spiral", "sweep", "kick", "kick", 62, -28, 0.17, 0.08, 0.30, 0.95, 0.8)
@@ -96,6 +138,17 @@ static func for_fighter(id: String) -> Dictionary:
 			# Launcher: the uppercut pops the rival up for a follow-up.
 			m.drive = BASE._move("Rising uppercut", "uppercut", "punch", "hook", 45, -96, 0.13, 0.08, 0.34, 1.5, 1.4, 14)
 			m.drive.hitstun = 0.5
+			# His own kicks on buttons 2/4 strings (clips from his MMA set).
+			m.rk = BASE._move("Roundhouse kick", "strike_roundhouse", "kick", "kick", 68, -78, 0.13, 0.08, 0.27, 1.25, 1.2, 10)
+			m.rk.hitstun = 0.32
+			m.side_kick = BASE._move("Side kick", "strike_side_kick", "kick", "kick", 72, -66, 0.12, 0.08, 0.28, 1.35, 1.6, 12)
+			m.side_kick.hitstun = 0.4
+			m.snap_advance = BASE._move("Advancing snap kick", "strike_advancing_snap", "kick", "kick", 70, -62, 0.14, 0.08, 0.30, 1.4, 1.5, 30)
+			m.snap_advance.hitstun = 0.4
+			m.back_heavy = BASE._move("Low kick", "strike_low_kick", "kick", "kick", 62, -28, 0.11, 0.07, 0.24, 1.1, 0.8, 8)
+			m.rk.next_rk = "side_kick"             # 4,4
+			m.forward_heavy.next_rk = "side_kick"  # 3,3,4
+			m.cross.next_rk = "snap_advance"       # 1,2,4
 	# Original, character-specific strike routes. Finishers use separate slots
 	# so learning an easy chain does not replace directional signature moves.
 	var finishers := {
@@ -129,6 +182,24 @@ static func for_fighter(id: String) -> Dictionary:
 	if m.has("combo_finish"):
 		m.combo_finish.hitstun = maxf(float(m.combo_finish.get("hitstun", 0.25)), 0.5)
 		m.hook.next_heavy = "combo_finish"
+	# Tekken's buttons 2 and 4 (right punch, right kick) for everyone, with
+	# the classic strings 1,2 / 1,2,4 / 3,4. A fighter's own "rp" (set above)
+	# replaces the plain straight on 2.
+	if not m.has("rp"):
+		m.rp = m.cross.duplicate(true)
+		m.rp.name = "Right straight"
+		m.rp.next_light = "hook"
+	# Fighters with their own spinning kick throw it; the rest a high front kick.
+	var own_spin: bool = id in ["anug", "bib", "sup", "anant"]
+	if not m.has("rk"):
+		m.rk = BASE._move("Right roundhouse" if own_spin else "Right high kick", "spin" if own_spin else "front_kick", "kick", "kick", 66, -78, 0.13, 0.08, 0.27, 1.2, 1.2, 10)
+		m.rk.hitstun = 0.32
+	m.jab.next_rp = "cross"
+	if not m.cross.has("next_rp"):
+		m.cross.next_rp = ""
+	for key in ["cross", "rp", "kick"]:
+		if str(m[key].get("next_rk", "")) == "":
+			m[key].next_rk = "rk"
 	# Every character has a short-range throw, with different commitment/payoff.
 	var throws := {
 		"anug": ["Keeper catch", "clinch_shove", 0.24, 1.15, 1.25],
@@ -142,11 +213,15 @@ static func for_fighter(id: String) -> Dictionary:
 	var g: Array = throws.get(id, throws.anug)
 	m.grapple = BASE._move(g[0], g[1], "grapple", "hook", 32, -72, g[2], 0.07, 0.42, g[3], g[4], 6)
 	m.grapple.hitstun = 0.48
+	if id in ["ish", "anant", "abhi"]:
+		# Their double-leg takedown clip.
+		m.grapple.name = {"ish": "Flash takedown", "anant": "Crown takedown", "abhi": "Thunder takedown"}[id]
+		m.grapple.pose = "grapple"
 	# Stamina costs are assigned by move slot/kind here rather than per-move
 	# above, so every fighter's moves stay priced consistently even though
 	# their reach/damage/timing differ.
 	for key in m:
-		m[key].cost = 5.0 if key in ["jab", "cross", "hook", "chain_bridge"] else (18.0 if key in ["drive", "breaker"] else 11.0)
+		m[key].cost = 5.0 if key in ["jab", "cross", "hook", "chain_bridge", "rp"] else (18.0 if key in ["drive", "breaker"] else 11.0)
 		if m[key].get("utility", "") == "taunt":
 			m[key].cost = 0.0
 		if m[key].kind == "grapple":

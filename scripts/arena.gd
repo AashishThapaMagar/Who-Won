@@ -30,7 +30,9 @@ const ROSTER := preload("res://scripts/fighter_roster.gd")
 const ROUND_TIME := 99.0
 const INTRO_TIME := 2.2
 
-var round_styles: Array = [ACTION, ACTION, ACTION, ACTION]
+## Up to five rounds; the first fighter to win three takes the match.
+var round_styles: Array = [ACTION, ACTION, ACTION, ACTION, ACTION]
+const WINS_NEEDED := 3
 var round_index: int = 0          # 0-based into round_styles
 var round_wins: Array = [0, 0]    # [player1 wins, player2 wins]
 var time_remaining: float = ROUND_TIME
@@ -43,6 +45,10 @@ const ROUND_PAUSE := 2.2
 ## round's call (the animated KO takes ~2.5 s to reach the floor).
 const KO_PAUSE := 1.8
 var advance_timer := 0.0
+## After an arcade win the game moves straight on to the next rival (its VS
+## intro) instead of stopping on the results panel.
+var advancing := false
+var advance_match_timer := 0.0
 ## The round just ended was won without taking damage (HUD callout).
 var perfect_round := false
 
@@ -195,6 +201,11 @@ func _process(delta: float) -> void:
 		timer_label.text = str(int(ceil(time_remaining)))
 		if time_remaining <= 0.0:
 			_time_up()
+	elif advancing:
+		advance_match_timer -= delta
+		if advance_match_timer <= 0.0:
+			advancing = false
+			_start_new_match()
 	else:
 		if Input.is_action_just_pressed("restart"):
 			if match_over:
@@ -247,19 +258,32 @@ func _end_round(winner: int) -> void:
 	elif winner == 2:
 		winner_text = "%s WINS" % player2.character_profile.name
 
-	if round_no >= round_styles.size():
+	if round_wins[0] >= WINS_NEEDED or round_wins[1] >= WINS_NEEDED or round_no >= round_styles.size():
 		match_over = true
 		var match_winner := "DRAW"
 		if round_wins[0] > round_wins[1]:
 			match_winner = player1.character_profile.name
 		elif round_wins[1] > round_wins[0]:
 			match_winner = player2.character_profile.name
-		result_label.text = "MATCH DRAW" if match_winner == "DRAW" else match_winner + " TAKES THE MATCH"
+		result_label.text = "MATCH DRAW" if match_winner == "DRAW" else match_winner + " WINS"
 		if records != null:
 			var outcome := 0 if match_winner == "DRAW" else (1 if round_wins[0] > round_wins[1] else 2)
 			records.record_match(records.mode_key(MatchSetup), player1.character_profile.id, player2.character_profile.id, outcome, round_wins)
 			if outcome == 1 and MatchSetup.arcade and MatchSetup.is_final_boss():
 				records.record_arcade_clear()
+		# A won match moves the journey on to its next arena (a loss replays
+		# the same one).
+		if round_wins[0] > round_wins[1] or (not MatchSetup.arcade and round_wins[1] > round_wins[0]):
+			MatchSetup.journey_stage += 1
+		# A decided match moves straight on to the next fight's VS intro:
+		# Arcade/Story to the next rival after a win, versus to the rematch.
+		# An Arcade loss, a draw or the final boss stop on the results panel.
+		var decided: bool = round_wins[0] != round_wins[1]
+		var arcade_win: bool = MatchSetup.arcade and round_wins[0] > round_wins[1] and not MatchSetup.is_final_boss()
+		if arcade_win or (not MatchSetup.arcade and decided):
+			advancing = true
+			var knocked: bool = player1.state == player1.State.KO or player2.state == player2.State.KO
+			advance_match_timer = ROUND_PAUSE + 0.8 + (KO_PAUSE if knocked else 0.0)
 	else:
 		result_label.text = winner_text
 		var knockout: bool = player1.state == player1.State.KO or player2.state == player2.State.KO
@@ -304,6 +328,7 @@ func _start_new_match() -> void:
 		return
 	round_wins = [0, 0]
 	match_over = false
+	advancing = false
 	_update_pips()
 	_begin_round(0)
 
@@ -326,7 +351,7 @@ func _begin_round(index: int) -> void:
 
 	time_remaining = float(MatchSetup.round_seconds)
 	timer_label.text = str(MatchSetup.round_seconds)
-	round_label.text = "ROUND %d / %d" % [index + 1, round_styles.size()]
+	round_label.text = "ROUND %d" % (index + 1)
 	result_label.visible = false
 	round_active = false
 
@@ -414,14 +439,14 @@ func _update_combo_ui() -> void:
 		var text := ""
 		if fighter.state in [fighter.State.PUNCH, fighter.State.KICK]:
 			text = fighter.move_name()
-		if fighter.combo_hits > 1 and fighter.combat_time - fighter._last_land_time < 1.1:
-			text += "\n%d HITS / %d DAMAGE" % [fighter.combo_hits, fighter.combo_damage]
+		# The hit count itself is the big counter in fight_fx.gd.
 		if fighter.combat_time < fighter.notice_until:
 			text += "\n" + fighter.combat_notice
 		combo_labels[i].text = text
 
 func _show_banner(index: int, fight_style: FightStyle) -> void:
-	banner_round.text = "FINAL ROUND" if index == round_styles.size() - 1 else "ROUND %d" % (index + 1)
+	var deciding: bool = round_wins[0] == WINS_NEEDED - 1 and round_wins[1] == WINS_NEEDED - 1
+	banner_round.text = "FINAL ROUND" if deciding or index == round_styles.size() - 1 else "ROUND %d" % (index + 1)
 	banner_name.text = "%s  VS  %s" % [player1.character_profile.name, player2.character_profile.name]
 	banner_name.modulate = fight_style.accent_color
 	banner_tagline.text = fight_style.tagline
@@ -478,7 +503,7 @@ func _flash_fight() -> void:
 	burst.tween_callback(call.queue_free)
 
 func _update_pips() -> void:
-	var total := round_styles.size()
+	var total := WINS_NEEDED
 	var p1_text := ""
 	var p2_text := ""
 	for i in total:

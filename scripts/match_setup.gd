@@ -6,6 +6,9 @@ var selected_arena: int = 0
 ## journey, 0-3 fixes every round to that arena, RANDOM_STAGE draws one per
 ## match. Arcade and Story always play the journey.
 const JOURNEY_STAGE := -1
+## The journey's current arena: it holds for a whole match and moves on to
+## the next one once a match is won.
+var journey_stage: int = 0
 const RANDOM_STAGE := 4
 var stage_choice: int = JOURNEY_STAGE
 var vs_ai: bool = false
@@ -24,6 +27,7 @@ var story: bool = false
 ## 0-5) except the one the player picked, in roster order, with Anant
 ## (index 6, always the final boss) appended last.
 func begin_arcade() -> void:
+	journey_stage = 0
 	arcade_opponents.clear()
 	for i in 6:
 		if i != selected_fighters[0]:
@@ -42,6 +46,9 @@ func _ready() -> void:
 		["far", KEY_W, KEY_UP], ["near", KEY_S, KEY_DOWN],
 		["jump", KEY_SPACE, KEY_ENTER], ["block", KEY_E, KEY_O],
 		["punch", KEY_F, KEY_K], ["kick", KEY_G, KEY_L],
+		# Tekken's four limbs: punch/kick above are 1 and 3 (left punch,
+		# left kick); these are 2 and 4 (right punch, right kick).
+		["rpunch", KEY_V, KEY_COMMA], ["rkick", KEY_B, KEY_PERIOD],
 		["grapple", KEY_H, KEY_J],
 		["run", KEY_SHIFT, KEY_CTRL]]
 	for binding in bindings_3d:
@@ -75,6 +82,7 @@ const PAD := {
 	"far": [JOY_AXIS_LEFT_Y, -1.0, JOY_BUTTON_DPAD_UP], "near": [JOY_AXIS_LEFT_Y, 1.0, JOY_BUTTON_DPAD_DOWN],
 	"jump": [JOY_BUTTON_Y], "block": [JOY_BUTTON_RIGHT_SHOULDER], "punch": [JOY_BUTTON_A], "kick": [JOY_BUTTON_X],
 	"grapple": [JOY_AXIS_TRIGGER_RIGHT, 1.0], "run": [JOY_BUTTON_LEFT_SHOULDER],
+	"rpunch": [JOY_AXIS_TRIGGER_LEFT, 1.0], "rkick": [JOY_BUTTON_RIGHT_STICK],
 }
 
 static func _map_gamepads() -> void:

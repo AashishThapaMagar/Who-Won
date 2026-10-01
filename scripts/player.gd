@@ -282,12 +282,12 @@ func _capture_input() -> void:
 	var horizontal := int(_movement_axis()) * facing
 	var down := Input.is_action_pressed(input_prefix + "block")
 	motion_input.record((2 + horizontal) if down else (5 + horizontal), combat_time)
-	for action in ["jump", "punch", "kick"]:
-		if Input.is_action_just_pressed(input_prefix + action):
+	for action in ["jump", "punch", "kick", "rpunch", "rkick"]:
+		if InputMap.has_action(input_prefix + action) and Input.is_action_just_pressed(input_prefix + action):
 			_buffered_action = action
 			_buffer_remaining = input_buffer_time
 			_buffered_direction = int(_movement_axis()) * facing
-			_buffered_move = motion_input.consume(combat_time) if action == "kick" else ""
+			_buffered_move = motion_input.consume(combat_time) if action in ["kick", "rkick"] else ""
 	for direction in [-1, 1]:
 		var action: String = "left" if direction < 0 else "right"
 		if Input.is_action_just_pressed(input_prefix + action):
@@ -364,6 +364,11 @@ func _consume_action() -> bool:
 			_start_style_move(command, chain_step + 1 if state in [State.PUNCH, State.KICK] else 0)
 		elif not next_id.is_empty():
 			_start_style_move(next_id, chain_step + 1)
+		elif action in ["rpunch", "rkick"]:
+			# Buttons 2 and 4: the fighter's right punch / right kick.
+			var moves := available_moves()
+			var own := "rp" if action == "rpunch" else "rk"
+			_start_style_move(own if moves.has(own) else ("cross" if action == "rpunch" else "forward_heavy"))
 		else:
 			var move_id := "jab" if action == "punch" else "kick"
 			if direction > 0:
@@ -377,6 +382,12 @@ func _next_chain_move(action: String) -> String:
 	if current_move.is_empty() or not attack_connected or chain_step >= 3:
 		return ""
 	var next: String = current_move.next_light if action == "punch" else (current_move.next_heavy if action == "kick" else "")
+	if action == "rpunch":
+		next = str(current_move.get("next_rp", ""))
+	elif action == "rkick":
+		next = str(current_move.get("next_rk", ""))
+	if next != "" and not available_moves().has(next):
+		return ""
 	# Chains are three hits; only a signature finisher may be the fourth.
 	if chain_step >= 2 and next != "combo_finish":
 		return ""

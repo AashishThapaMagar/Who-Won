@@ -431,6 +431,90 @@ def free_the_sides(model, arm):
                 by_name[target].add([vert.index], moved, "ADD")
 
 
+def clear_the_armpits(model, arm):
+    """Stricter than free_the_sides, for a clean T-pose (Mixamo uploads):
+    seen from the front, anything below a shoulder that hangs closer to
+    straight down than to the arm's own line is torso or coat, not sleeve,
+    so its arm weights go to the spine. The arm keeps everything along its
+    line, and weights ease across a band between the two (and stay near the
+    shoulder joint) so nothing tears."""
+    spine = [(bone_head(arm, n).z, "mixamorig:" + n) for n in ("Hips", "Spine", "Spine1", "Spine2")]
+    for _, bone in spine:
+        if bone not in model.vertex_groups:
+            model.vertex_groups.new(name=bone)
+    groups = {g.index: g.name for g in model.vertex_groups}
+    by_name = {g.name: g for g in model.vertex_groups}
+    moved_count = 0
+    neighbours = [[] for _ in model.data.vertices]
+    for edge in model.data.edges:
+        a, b = edge.vertices
+        neighbours[a].append(b)
+        neighbours[b].append(a)
+    for side, name in ((1, "Left"), (-1, "Right")):
+        # The real forearm and hand: the largest connected patch weighted
+        # mostly to them. Stray hem vertices touching the hand in the A-pose
+        # carry hand weight too, but sit in small patches of their own.
+        lower_bones = ("mixamorig:" + name + "ForeArm", "mixamorig:" + name + "Hand")
+        mostly_lower = set()
+        for vert in model.data.vertices:
+            if sum(e.weight for e in vert.groups if groups.get(e.group, "").startswith(lower_bones)) >= 0.5:
+                mostly_lower.add(vert.index)
+        hand = set()
+        seen = set()
+        for start in mostly_lower:
+            if start in seen:
+                continue
+            patch = {start}
+            stack = [start]
+            seen.add(start)
+            while stack:
+                for other in neighbours[stack.pop()]:
+                    if other in mostly_lower and other not in seen:
+                        seen.add(other)
+                        patch.add(other)
+                        stack.append(other)
+            if len(patch) > len(hand):
+                hand = patch
+        shoulder = bone_head(arm, name + "Arm")
+        elbow = bone_head(arm, name + "ForeArm")
+        along = elbow - shoulder
+        arm_angle = math.atan2(side * along.x, -along.z)  # from straight down
+        wrist = bone_head(arm, name + "Hand")
+        fingertips = wrist + (wrist - elbow).normalized() * 0.22
+        for vert in model.data.vertices:
+            co = model.matrix_world @ vert.co
+            if side * co.x <= 0.02:
+                continue
+            # The forearm and hand hang in close to the hips in an A-pose;
+            # they always stay the arm's.
+            if _segment_distance(co, elbow, wrist) < 0.08 or _segment_distance(co, wrist, fingertips) < 0.09:
+                continue
+            if vert.index in hand:
+                continue
+            u = Vector((side * (co.x - shoulder.x), co.z - shoulder.z))
+            if u.y > 0.0 or u.length < 0.02:
+                continue
+            angle = math.atan2(u.x, -u.y)
+            keep = min(1.0, max(0.0, (angle - arm_angle * 0.45) / (arm_angle * 0.3)))
+            keep = keep * keep * (3.0 - 2.0 * keep)
+            # The armpit itself blends, so the joint never splits.
+            near = min(1.0, max(0.0, (0.1 - u.length) / 0.06))
+            keep = max(keep, near)
+            if keep >= 1.0:
+                continue
+            moved = 0.0
+            for element in vert.groups:
+                bone = groups.get(element.group, "")
+                if any(bone.endswith(name + part) or bone.startswith("mixamorig:" + name + "Hand") for part in ARM_CHAIN):
+                    moved += element.weight * (1.0 - keep)
+                    element.weight *= keep
+            if moved > 0.0:
+                target = min(spine, key=lambda s: abs(s[0] - co.z))[1]
+                by_name[target].add([vert.index], moved, "ADD")
+                moved_count += 1
+    print("ARMPITS CLEARED", moved_count)
+
+
 def unbend(model, arm, rest_arm):
     """Deforms the model from the fitted pose back to the rest T-pose: a copy
     of the skeleton takes the fitted pose as its rest, is posed back to the
@@ -574,6 +658,8 @@ def main():
         claim_the_arms(model, fit_arm)
     if "--coat" in args:
         loosen_the_coat(model, fit_arm)
+    if "--clean-sides" in args:
+        clear_the_armpits(model, fit_arm)
     if "--open-hands" not in args:
         # Fists for the game; --open-hands keeps them relaxed (for Mixamo).
         make_fists(model, fit_arm)

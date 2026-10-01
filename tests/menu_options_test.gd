@@ -35,7 +35,10 @@ func run() -> void:
 			select._toggle_ready(0)
 			check(select.editing_player == 0, "Campaign keeps editing the human fighter")
 		await capture(mode)
-		select.queue_free()
+		# Readying a campaign fighter can already have swapped the select
+		# screen for the arena (which frees it).
+		if is_instance_valid(select):
+			select.queue_free()
 		await process_frame
 	setup.ai_difficulty = 1
 	print("MENU_OPTIONS_TEST: ", "ALL PASS" if failures.is_empty() else failures)

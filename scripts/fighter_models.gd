@@ -100,6 +100,43 @@ const STYLES := {
 		"height": 1.8, "width": 1.0, "tint": [Color("a2322c"), Color("2a2227")],
 		"clips": {"idle": "bouncing_fight_idle", "punch_heavy": "hook_punch", "uppercut": "uppercut"},
 		"timing": {"punch_heavy": [0.55, 1.13, 1.75], "uppercut": [0.05, 0.47, 1.0]},
+		# His 50-clip Mixamo set (Downloads/Ish_MMA) in assets/fighters/ish/fight/
+		# (kept local), "With Skin" on his cleaned-up, fisted T-pose body.
+		# No victory celebration: after a win he stays in his stance.
+		"pack": {
+			"folder": "fight/",
+			"reversed": ["walk"],
+			"body": "mma_standing_idle",
+			"moves": {
+				"idle": "bouncing_fight_idle", "walk": "boxing_walk_backward", "walk_back": "boxing_walk_backward",
+				"sidestep_left": "walk_strafe_left", "sidestep_right": "walk_strafe_right",
+				"run": "unarmed_run_forward", "dash": "boxing_dodge_advance", "backdash": "boxing_dodge_retreat",
+				"jump": "jump_in_place",
+				"jab": "jab_punch", "cross": "cross_punch", "hook": "rear_hand_hook",
+				"uppercut": "left_uppercut", "punch_heavy": "four_punch_combo",
+				"kick": "mma_medium_kick", "kick_front": "lead_foot_front_snap_kick", "kick_spin": "mma_spinning_back_kick",
+				"grapple": "double_leg_takedown_attacker", "finisher": "punch_to_elbow_combo",
+				"block": "high_right_block", "block_hit": "block_reaction",
+				"hit": "light_head_hit", "hit_heavy": "livershot_knockdown", "ko": "defeated",
+				"taunt": "boxing_taunt", "victory": "bouncing_fight_idle",
+				# Extra strikes, played by moves whose pose names them.
+				"strike_elbow": "elbow_punch", "strike_elbow_upper": "elbow_uppercut_combo",
+				"strike_body_elbow": "punch_to_elbow_combo", "strike_flying_knee": "flying_knee_punch_combo",
+				"strike_high_kick": "mma_high_kick", "strike_roundhouse": "mma_roundhouse_kick",
+				"strike_side_kick": "mma_side_kick", "strike_low_kick": "mma_low_kick",
+			},
+			# [start, impact, end], read off the clips frame by frame.
+			"timing": {
+				"jab": [0.25, 0.57, 0.95], "cross": [0.75, 1.13, 1.6], "hook": [0.1, 0.4, 0.85],
+				"uppercut": [0.15, 0.47, 1.0], "punch_heavy": [0.3, 0.63, 1.5],
+				"kick": [0.3, 0.67, 1.2], "kick_front": [0.6, 1.1, 1.5], "kick_spin": [0.45, 0.97, 1.5],
+				"grapple": [0.1, 0.9, 1.5], "finisher": [0.15, 0.6, 1.4],
+				"strike_elbow": [0.2, 0.65, 1.2], "strike_elbow_upper": [0.75, 1.3, 1.9],
+				"strike_body_elbow": [1.5, 2.35, 3.2], "strike_flying_knee": [0.7, 1.33, 2.2],
+				"strike_high_kick": [0.35, 0.73, 1.3], "strike_roundhouse": [0.35, 0.77, 1.3],
+				"strike_side_kick": [0.25, 0.63, 1.2], "strike_low_kick": [0.25, 0.6, 1.1],
+			},
+		},
 	},
 	"sab": {
 		"height": 1.92, "width": 1.22, "tint": [Color("27375a"), Color("c48f49")],
@@ -115,6 +152,40 @@ const STYLES := {
 		"height": 1.82, "width": 1.1, "tint": [Color("5c2f78"), Color("dbb258")],
 		"clips": {"idle": "idle", "punch_heavy": "punching_haymaker", "taunt": "taunt", "victory": "victory"},
 		"timing": {"punch_heavy": [0.0, 0.4, 1.0], "taunt": [0.0, 0.8, 1.63]},
+		# His 46-clip Mixamo set (Downloads/Abhi_MMA) in assets/fighters/abhi/fight/
+		# (kept local), "With Skin" on his fisted T-pose body.
+		"pack": {
+			"folder": "fight/",
+			"reversed": ["walk"],
+			"body": "regular_mma_idle",
+			"moves": {
+				"idle": "regular_mma_idle", "walk": "boxing_walk_back", "walk_back": "boxing_walk_back",
+				"sidestep_left": "strafe_left", "sidestep_right": "strafe_right",
+				"run": "run_forward", "dash": "run_forward", "backdash": "dodge_back",
+				"jump": "jump",
+				"jab": "jab", "cross": "cross", "hook": "lead_hook",
+				"uppercut": "long_body_hook", "punch_heavy": "right_hook",
+				"kick": "rear_roundhouse", "kick_front": "double_front_kick", "kick_spin": "advancing_roundhouse",
+				"grapple": "double_leg_takedown_attacker", "finisher": "eight_punch_combo",
+				"block": "chest_block", "block_hit": "block_reaction",
+				"hit": "body_hit", "hit_heavy": "liver_shot_knockdown", "ko": "defeated",
+				"victory": "victory", "taunt": "boxing_taunt",
+				# Extra strikes, played by moves whose pose names them.
+				"strike_short_hook": "short_head_hook", "strike_jab_elbow": "jab_elbow_combo",
+				"strike_front_sweep": "front_leg_sweep", "strike_back_sweep": "back_leg_sweep",
+				"strike_lead_front": "lead_front_kick", "strike_rear_front": "rear_front_kick",
+			},
+			# [start, impact, end], measured from each clip.
+			"timing": {
+				"jab": [0.3, 0.57, 0.95], "cross": [0.15, 0.37, 0.8], "hook": [0.25, 0.57, 1.1],
+				"uppercut": [0.8, 1.2, 2.0], "punch_heavy": [0.1, 0.33, 0.9],
+				"kick": [0.35, 0.67, 1.3], "kick_front": [0.3, 0.63, 1.2], "kick_spin": [0.7, 1.0, 1.7],
+				"grapple": [0.1, 0.9, 1.5], "finisher": [0.9, 1.23, 2.1],
+				"strike_short_hook": [0.15, 0.4, 1.0], "strike_jab_elbow": [1.5, 2.0, 2.8],
+				"strike_front_sweep": [0.5, 0.87, 1.4], "strike_back_sweep": [0.6, 1.07, 1.7],
+				"strike_lead_front": [0.9, 1.37, 2.0], "strike_rear_front": [0.9, 1.2, 1.9],
+			},
+		},
 	},
 	"sup": {
 		"height": 1.8, "width": 1.0, "tint": [Color("c29a3c"), Color("2f8a86")],
@@ -125,28 +196,40 @@ const STYLES := {
 		"height": 1.86, "width": 1.02, "tint": [Color("5a2f6a"), Color("d3ac62")],
 		"clips": {"idle": "mma_idle", "kick": "martial_arts_kick", "kick_spin": "martial_arts_kick", "victory": "fireball"},
 		"timing": {"kick": [0.2, 0.73, 1.5], "kick_spin": [0.2, 0.73, 1.5]},
-		# MMA: the Mixamo set in assets/fighters/anant/mma/ (kept local),
-		# "With Skin", so it carries his textured body too. Every clip is used.
+		# MMA: his 47-clip Mixamo set (Downloads/Ananta_MMA) in
+		# assets/fighters/anant/fight/ (kept local), "With Skin" on his
+		# cleaned-up T-pose body. Every fighting clip is used.
 		"pack": {
-			"folder": "mma/",
-			"body": "mma_idle",
+			"folder": "fight/",
+			"reversed": ["walk"],
+			"body": "boxing_victory",
 			"moves": {
-				"idle": "mma_idle", "walk": "unarmed_walk_forward", "walk_back": "unarmed_walk_back",
-				"run": "unarmed_run_forward", "dash": "unarmed_run_forward", "backdash": "unarmed_run_back",
-				"jump": "unarmed_jump",
-				"jab": "punching", "cross": "cross_punch", "hook": "punching_1",
-				"uppercut": "uppercut", "punch_heavy": "punch_combo",
-				"kick": "mma_kick", "kick_front": "mma_kick_2", "kick_spin": "mma_kick_4",
-				"grapple": "flying_knee_punch_combo", "finisher": "flying_knee_punch_combo",
-				"taunt": "mma_idle_1",
+				"idle": "mma_standing_idle", "walk": "boxing_walk_backward", "walk_back": "boxing_walk_backward",
+				"sidestep_left": "walk_strafe_left", "sidestep_right": "walk_strafe_right",
+				"run": "unarmed_run_forward", "dash": "unarmed_run_forward", "backdash": "unarmed_run_backward",
+				"jump": "jump_in_place",
+				"jab": "jab_punch", "cross": "cross_punch", "hook": "rear_hand_hook",
+				"uppercut": "left_uppercut", "punch_heavy": "four_punch_combo",
+				"kick": "mma_medium_kick", "kick_front": "lead_foot_front_snap_kick", "kick_spin": "mma_spinning_back_kick",
+				"grapple": "double_leg_takedown_attacker", "finisher": "four_punch_combo",
+				"block": "high_right_block", "block_hit": "block_reaction",
+				# Body-shot reactions: the head-hit clips whip his head so far
+				# back that the collar and neck stretch.
+				"hit": "body_hit_by_straight_punch", "hit_heavy": "livershot_knockdown", "ko": "defeated",
+				"victory": "boxing_victory", "taunt": "boxing_taunt",
+				# Extra strikes, played by moves whose pose names them.
+				"strike_roundhouse": "mma_roundhouse_kick", "strike_side_kick": "mma_side_kick",
+				"strike_low_kick": "mma_low_kick", "strike_advancing_snap": "rear_foot_advancing_front_snap_kick",
 			},
 			# [start, impact, end] around the frame the fist, knee or foot
-			# reaches furthest (measured in game).
+			# reaches furthest (measured from each clip).
 			"timing": {
-				"jab": [0.2, 0.57, 0.95], "cross": [0.75, 1.13, 1.6], "hook": [0.1, 0.4, 0.85],
+				"jab": [0.25, 0.57, 0.95], "cross": [0.75, 1.13, 1.6], "hook": [0.1, 0.4, 0.85],
 				"uppercut": [0.15, 0.47, 1.0], "punch_heavy": [0.3, 0.63, 1.5],
-				"kick": [0.35, 0.73, 1.3], "kick_front": [0.5, 0.9, 1.5], "kick_spin": [0.25, 0.63, 1.2],
-				"grapple": [0.2, 0.57, 1.2], "finisher": [0.7, 1.33, 2.2],
+				"kick": [0.35, 0.73, 1.3], "kick_front": [0.6, 1.1, 1.5], "kick_spin": [0.45, 0.97, 1.5],
+				"grapple": [0.1, 0.9, 1.5], "finisher": [0.95, 1.37, 2.1],
+				"strike_roundhouse": [0.35, 0.77, 1.3], "strike_side_kick": [0.25, 0.63, 1.2],
+				"strike_low_kick": [0.25, 0.6, 1.1], "strike_advancing_snap": [0.9, 1.37, 1.9],
 			},
 		},
 	},
@@ -275,4 +358,5 @@ static func _mixamo(fighter_id: String) -> Dictionary:
 		"clips": clips,
 		"timing": timing,
 		"meshy": meshy,
+		"reversed": pack.get("reversed", []),
 	} if ResourceLoader.exists(SHARED + "idle.fbx") else {}

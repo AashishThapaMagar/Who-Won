@@ -17,6 +17,9 @@ var camera_yaw := 0.0
 var impact_meshes: Array[Dictionary] = []
 var shake_3d := 0.0
 var fov_kick := 0.0
+## Lens push-in held through a knockout (field-of-view degrees, eased).
+var ko_push := 0.0
+var ko_hold := 0.0
 ## Dash and heavy-attack afterimages, per fighter: {mesh, age, life}.
 var ghosts: Array[Dictionary] = []
 var ghost_clock: Array[float] = [0.0, 0.0]
@@ -133,7 +136,8 @@ func _resolve_stage() -> int:
 	return clampi(MatchSetup.stage_choice, 0, nepal_stage.ROUNDS.size() - 1)
 
 func _begin_round(index: int) -> void:
-	var stage := index if fixed_stage < 0 else fixed_stage
+	# One arena for the whole match; the journey moves on after a won match.
+	var stage: int = fixed_stage if fixed_stage >= 0 else MatchSetup.journey_stage % nepal_stage.ROUNDS.size()
 	nepal_stage.show_round(stage)
 	super._begin_round(index)
 	# One short comment under the round call: where the fight is, plus the
@@ -142,7 +146,7 @@ func _begin_round(index: int) -> void:
 	if MatchSetup.arcade:
 		place += "   /   " + ("FINAL BOSS" if MatchSetup.is_final_boss() else "RIVAL %d OF %d" % [MatchSetup.arcade_index + 1, MatchSetup.arcade_opponents.size()])
 	banner_tagline.text = place
-	$UI/ControlsHint.text = "P1  A/D move  W/S sidestep  |  F punch  G kick  E guard     |     P2  Left/Right move  Up/Down sidestep  |  K punch  L kick  O guard\nH / J grapple   |   Space / Enter jump   |   F1 combos     |     Esc pause"
+	$UI/ControlsHint.text = "P1  A/D move  W/S sidestep  |  F 1  V 2  G 3  B 4  E guard     |     P2  Left/Right move  Up/Down sidestep  |  K 1  , 2  L 3  . 4  O guard\nH / J grapple   |   Space / Enter jump   |   F1 combos     |     Esc pause"
 	guide_text.text = guide_text.text.replace("Down is S (P1) / Down arrow (P2).", "Hold E (P1) / O (P2) for the command's down input.")
 	guide_text.text = "MOVEMENT: A/D or Left/Right approach and retreat. W/S or Up/Down make short sidesteps. Space / Enter jump. E / O guard.\nForward and back are relative to your opponent. Sidestep committed strikes to evade them.\n\n" + guide_text.text
 	camera_target = Vector3(0, CAMERA_HEIGHT, 0)
@@ -251,7 +255,9 @@ func _update_fight_camera(delta: float) -> void:
 		var orbit := Basis(Vector3.UP, ease_in * 0.22)
 		eye = camera_target + orbit * (back * camera_distance * (1.0 + 0.55 * ease_in)) + Vector3.UP * (1.6 * ease_in)
 	# A heavy hit kicks the lens in for a few frames.
-	camera_3d.fov = CAMERA_FOV - (fov_kick if MatchSetup.camera_shake else 0.0)
+	ko_hold = maxf(0.0, ko_hold - delta)
+	ko_push = move_toward(ko_push, 8.0 if ko_hold > 0.0 else 0.0, delta * (40.0 if ko_hold > 0.0 else 16.0))
+	camera_3d.fov = CAMERA_FOV - (fov_kick if MatchSetup.camera_shake else 0.0) - ko_push
 	camera_3d.position = eye
 	camera_3d.look_at(camera_target)
 
@@ -418,9 +424,19 @@ func _footwork_dust() -> void:
 				_dust(fighter.body.position - fighter.forward * 0.2, 6, Color(0.6, 0.54, 0.46, 0.35), 0.5)
 		last_states[i] = state
 
+## Never leave the game in slow motion when the scene is left mid-knockout.
+func _exit_tree() -> void:
+	Engine.time_scale = 1.0
+
 func _ko_3d(fighter: Node) -> void:
 	shake_3d = 0.07
 	fov_kick = 2.2
+	# The knockout plays in slow motion with the camera pushed in on the
+	# fall (real-time timer, so the slow-mo itself is not slowed down).
+	if DisplayServer.get_name() != "headless" and MatchSetup.camera_shake:
+		Engine.time_scale = 0.3
+		get_tree().create_timer(0.7, true, false, true).timeout.connect(func(): Engine.time_scale = 1.0)
+		ko_hold = 0.6
 	nepal_stage.flash(Color(1.0, 0.96, 0.88), 0.35, 0.45)
 	_dust(fighter.body.position, 16, Color(0.6, 0.54, 0.46, 0.5), 0.9)
 

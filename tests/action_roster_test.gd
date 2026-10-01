@@ -134,14 +134,14 @@ func run() -> void:
 	check(not p1.hitbox.active, "Taunt never creates an attacking hitbox")
 	p1.take_hit(10, 0, -1, p2)
 	check(p1.stamina == 20 and p1.state == p1.State.HITSTUN, "Interrupting a taunt prevents recovery")
-	for round_index in 4:
+	for round_index in 3:
 		arena._begin_round(round_index)
-		check(p1.is_action_fight() and p1.character_profile.id == "abhi", "Fighter and action moves persist all four rounds")
+		check(p1.is_action_fight() and p1.character_profile.id == "abhi", "Fighter and action moves persist every round")
 		check(p1.stamina == p1.character_profile.stamina, "Round reset replenishes stamina")
 		arena.intro_timer = 0
 		arena._hide_banner()
 		arena._end_round(1)
-	check(arena.match_over, "Match finishes after exactly four rounds")
+	check(arena.match_over, "First to three round wins takes the match")
 	setup.arcade = true
 	setup.selected_fighters[0] = 0
 	setup.begin_arcade()

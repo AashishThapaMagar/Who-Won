@@ -36,7 +36,14 @@ func run() -> void:
 	touch._input(keyboard)
 	check(not touch.using_touch and not Input.is_action_pressed("p1_3d_punch"), "Keyboard hides touch controls and releases held actions")
 	var nights := 0
+	var setup_journey: Node = root.get_node("MatchSetup")
+	# The journey holds one arena for a whole match and moves on per match.
+	setup_journey.journey_stage = 0
+	arena._begin_round(0)
+	arena._begin_round(2)
+	check(arena.nepal_stage.current_round == 0, "Every round of a match stays in the same arena")
 	for index in 4:
+		setup_journey.journey_stage = index
 		arena._begin_round(index)
 		arena.intro_timer = 0
 		arena._hide_banner()
@@ -46,7 +53,7 @@ func run() -> void:
 		var stage: Node = arena.nepal_stage
 		if stage.night:
 			nights += 1
-		check(stage.current_round == index, "Round transition switches the 3D scenery")
+		check(stage.current_round == index, "The next match switches the 3D scenery")
 		check(stage.find_children("HeritageScenery", "Node3D", false, false).size() == 1, "Only the active scenery stays in the world")
 		check(arena.player1._is_grounded(), "Scenery change keeps the solid arena floor")
 		check(stage.sky_material.get_shader_parameter("top_color") != null and stage.floor_material.get_shader_parameter("pattern") == 5, "Each arena has its own sky and a modelled flagstone floor")
@@ -73,6 +80,7 @@ func run() -> void:
 	await frames(5)
 	check(is_equal_approx(clock_before, arena.nepal_stage.elapsed), "Move guide pauses the stage clock")
 	arena._toggle_move_guide()
+	setup_journey.journey_stage = 0
 	arena._begin_round(0)
 	check(not arena.nepal_stage.night and arena.nepal_stage.current_round == 0, "Rematch returns to the Heritage Square opening")
 	# A versus arena choice holds every round in that arena.

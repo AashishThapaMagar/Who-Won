@@ -557,10 +557,10 @@ func _show_controls() -> void:
 		var color := UI.GOLD if player == 0 else UI.VIOLET
 		UI.panel(modal_content, Vector2(x, 96), Vector2(270, 212), Color(color, 0.08), Color(color, 0.6), 0.06)
 		UI.heading(modal_content, "PLAYER %d" % (player + 1), Vector2(x + 14, 100), Vector2(240, 28), 20, color, Color(0, 0, 0, 0.6))
-		var keys := [["A / D", "APPROACH / RETREAT"], ["W / S", "SIDESTEP"], ["SPACE", "JUMP"], ["E", "GUARD"], ["F", "PUNCH"], ["G", "KICK"], ["H", "GRAPPLE"], ["SHIFT", "RUN"]] if player == 0 \
-			else [["← / →", "APPROACH / RETREAT"], ["↑ / ↓", "SIDESTEP"], ["ENTER", "JUMP"], ["O", "GUARD"], ["K", "PUNCH"], ["L", "KICK"], ["J", "GRAPPLE"], ["CTRL", "RUN"]]
+		var keys := [["A / D", "APPROACH / RETREAT"], ["W / S", "SIDESTEP"], ["SPACE", "JUMP"], ["E", "GUARD"], ["F", "1  LEFT PUNCH"], ["V", "2  RIGHT PUNCH"], ["G", "3  LEFT KICK"], ["B", "4  RIGHT KICK"], ["H", "GRAPPLE"], ["SHIFT", "RUN"]] if player == 0 \
+			else [["← / →", "APPROACH / RETREAT"], ["↑ / ↓", "SIDESTEP"], ["ENTER", "JUMP"], ["O", "GUARD"], ["K", "1  LEFT PUNCH"], [",", "2  RIGHT PUNCH"], ["L", "3  LEFT KICK"], [".", "4  RIGHT KICK"], ["J", "GRAPPLE"], ["CTRL", "RUN"]]
 		for k in keys.size():
-			UI.key_hint(modal_content, keys[k][0], keys[k][1], Vector2(x + 14, 134 + k * 21))
+			UI.key_hint(modal_content, keys[k][0], keys[k][1], Vector2(x + 14, 132 + k * 17))
 	var tip := UI.label(modal_content, "Double-tap forward to dash, back to backdash. Punch + Kick together grapples; the same tap just before contact escapes a throw.\nF1 movebook  /  Esc pause  /  R next round or rematch.", Vector2(28, 314), Vector2(400, 46), 11, UI.MUTED)
 	tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 

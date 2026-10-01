@@ -12,17 +12,19 @@ const PORTRAIT := preload("res://scripts/roster_portrait.gd")
 ## [move id, input chips, one-line role]. L = light, H = heavy, arrows are
 ## relative to the opponent.
 const STRIKES := [
-	["jab", ["L"], "Fastest button. Interrupts, pokes and starts every chain."],
-	["cross", ["→", "L"], "Longer reach follow-up that steps in."],
-	["hook", ["←", "L"], "Close-range swing that pushes the rival back."],
-	["kick", ["H"], "Heavy mid kick. Lands as a heavy hit."],
-	["forward_heavy", ["→", "H"], "Long heavy that drives the rival away."],
-	["back_heavy", ["←", "H"], "Short, sturdy heavy for close range."],
+	["jab", ["1"], "Fastest button. Interrupts, pokes and starts every chain."],
+	["cross", ["→", "1"], "Longer reach follow-up that steps in."],
+	["hook", ["←", "1"], "Close-range swing that pushes the rival back."],
+	["kick", ["3"], "Heavy mid kick. Lands as a heavy hit."],
+	["forward_heavy", ["→", "3"], "Long heavy that drives the rival away."],
+	["back_heavy", ["←", "3"], "Short, sturdy heavy for close range."],
+	["rp", ["2"], "Right punch. Links off 1 and into 4."],
+	["rk", ["4"], "Right kick. Ends the 1,2,4 and 3,4 strings."],
 ]
 const SPECIALS := [
-	["drive", ["↓", "↘", "→", "H"], "Command ender. Big damage; cancel into it from a landed jab or cross."],
-	["breaker", ["↓", "↙", "←", "H"], "Command ender. Big damage; cancel into it from a landed jab or cross."],
-	["grapple", ["L", "+", "H"], "Throw. Beats a blocking rival; tap L+H just before contact to escape."],
+	["drive", ["↓", "↘", "→", "3"], "Command ender. Big damage; cancel into it from a landed jab or cross."],
+	["breaker", ["↓", "↙", "←", "3"], "Command ender. Big damage; cancel into it from a landed jab or cross."],
+	["grapple", ["1", "+", "3"], "Throw. Beats a blocking rival; tap 1+3 just before contact to escape."],
 ]
 ## Fighter-specific tips that frame data doesn't show.
 const NOTES := {
@@ -267,13 +269,42 @@ func _build_cards(fighter: Node) -> void:
 		if moves.has(row[0]):
 			_card(moves[row[0]], row[1], row[2])
 	_section("COMBOS")
-	_combo(["L", "›", "L", "›", "L"], "%s › %s › %s" % [moves.jab.name, moves.cross.name, moves.hook.name], "Punch chain. Tap each button as the last hit connects.")
-	_combo(["L", "›", "L", "›", "H"], "%s › %s › %s" % [moves.jab.name, moves.cross.name, moves[moves.cross.next_heavy].name], "Mixed chain: two punches into a heavy finisher.")
+	_combo(["1", "›", "1", "›", "1"], "%s › %s › %s" % [moves.jab.name, moves.cross.name, moves.hook.name], "Punch chain. Tap each button as the last hit connects.")
+	_combo(["1", "›", "1", "›", "3"], "%s › %s › %s" % [moves.jab.name, moves.cross.name, moves[moves.cross.next_heavy].name], "Mixed chain: two punches into a heavy finisher.")
 	if moves.has("combo_finish"):
-		_combo(["L", "›", "L", "›", "L", "›", "H"], "%s › %s › %s › %s" % [moves.jab.name, moves.cross.name, moves.hook.name, moves.combo_finish.name], "Signature combo. Three punches, then heavy for the spinning finisher.")
+		_combo(["1", "›", "1", "›", "1", "›", "3"], "%s › %s › %s › %s" % [moves.jab.name, moves.cross.name, moves.hook.name, moves.combo_finish.name], "Signature combo. Three punches, then heavy for the spinning finisher.")
 	if moves.has("chain_bridge"):
-		_combo(["H", "›", "L", "›", "H"], "%s › %s › %s" % [moves.kick.name, moves.chain_bridge.name, moves.chain_finish.name], "Kick route. Release directions and tap each strike on contact.")
-	_combo(["L", "›", "L", "›", "↓", "↘", "→", "H"], "Command combo", "Land two punches, then roll the motion into the ender within 0.4 s.")
+		_combo(["3", "›", "1", "›", "3"], "%s › %s › %s" % [moves.kick.name, moves.chain_bridge.name, moves.chain_finish.name], "Kick route. Release directions and tap each strike on contact.")
+	_combo(["1", "›", "1", "›", "↓", "↘", "→", "3"], "Command combo", "Land two punches, then roll the motion into the ender within 0.4 s.")
+	# Strings on the Tekken buttons (1 2 / 3 4), read from the move table
+	# (live fights; the old per-style tables have no buttons 2 and 4).
+	if not moves.has("rp") or not moves.has("rk"):
+		if NOTES.has(fighter.character_profile.id):
+			_combo(["!"], "Fighter tip", NOTES[fighter.character_profile.id])
+		return
+	_section("STRINGS")
+	var strings := [[["jab", "1"], ["cross", "2"]], [["jab", "1"], ["cross", "2"], [moves.cross.get("next_rk", "rk"), "4"]], [["kick", "3"], [moves.kick.get("next_rk", "rk"), "4"]], [["rp", "2"], [moves.rp.get("next_rk", "rk"), "4"]]]
+	if str(moves.rk.get("next_rk", "")) != "":
+		strings.append([["rk", "4"], [moves.rk.next_rk, "4"]])
+	if str(moves.kick.get("next_heavy", "")) == "forward_heavy" and str(moves.forward_heavy.get("next_rk", "")) != "":
+		strings.append([["kick", "3"], ["forward_heavy", "3"], [moves.forward_heavy.next_rk, "4"]])
+	if str(moves.rp.get("next_rp", "")) != "":
+		strings.append([["rp", "2"], [moves.rp.next_rp, "2"]])
+	if str(moves.rp.get("next_light", "")) != "":
+		strings.append([["rp", "2"], [moves.rp.next_light, "1"]])
+	if str(moves.cross.get("next_rp", "")) != "":
+		strings.append([["jab", "1"], ["cross", "2"], [moves.cross.next_rp, "2"]])
+	for string in strings:
+		var keys := []
+		var names := []
+		for step in string:
+			if not moves.has(step[0]):
+				continue
+			if not keys.is_empty():
+				keys.append("›")
+			keys.append(step[1])
+			names.append(moves[step[0]].name)
+		_combo(keys, " › ".join(names), "Tap each button as the last hit connects.")
 	if NOTES.has(fighter.character_profile.id):
 		_combo(["!"], "Fighter tip", NOTES[fighter.character_profile.id])
 
@@ -301,7 +332,7 @@ func _chip(parent: Control, key: String) -> void:
 	else:
 		chip.custom_minimum_size = Vector2(24, 24)
 		chip.add_theme_color_override("font_color", UI.INK)
-		var face := UI.box(UI.GOLD if key in ["L", "H", "!"] else UI.WHITE, UI.INK, 0)
+		var face := UI.box(UI.GOLD if key in ["1", "2", "3", "4", "!"] else UI.WHITE, UI.INK, 0)
 		face.set_corner_radius_all(4)
 		face.content_margin_left = 4
 		face.content_margin_right = 4

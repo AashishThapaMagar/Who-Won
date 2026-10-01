@@ -34,9 +34,9 @@ const GUARDED := ["walk", "walk_back", "sidestep", "sidestep_left", "sidestep_ri
 const UPPER_BODY := ["Spine", "Neck", "Head", "Shoulder", "Arm", "Hand"]
 ## Playback speed limits for locomotion: beyond these the legs look frantic
 ## (too fast) or floaty (too slow), so a little foot slide is accepted.
-const MOVE_SPEED_RANGE := {"walk": [0.7, 1.7], "walk_back": [0.7, 1.7], "sidestep": [0.7, 1.7],
-	"sidestep_left": [0.7, 1.7], "sidestep_right": [0.7, 1.7],
-	"run": [0.7, 1.5], "injured": [0.7, 1.6], "dash": [1.0, 1.9], "backdash": [1.0, 2.2]}
+const MOVE_SPEED_RANGE := {"walk": [0.7, 2.2], "walk_back": [0.7, 2.2], "sidestep": [0.7, 2.2],
+	"sidestep_left": [0.7, 2.2], "sidestep_right": [0.7, 2.2],
+	"run": [0.7, 2.0], "injured": [0.7, 1.6], "dash": [1.0, 2.2], "backdash": [1.0, 2.4]}
 ## Health fraction at or below which forward movement limps.
 const INJURED_HEALTH := 0.25
 ## Clips allowed to move the hips across the floor. Everything else plays in
@@ -75,6 +75,7 @@ const MAX_REACH_STEP := 0.3
 ## Metres per second each locomotion clip travels at normal speed, keyed by
 ## animation name (measured before its hips are pinned).
 var clip_pace: Dictionary = {}
+var _react_speed := 0.0
 var skeleton: Skeleton3D
 var guard_clip: Animation
 ## [track, bone] pairs of the idle clip's upper-body rotation tracks.
@@ -303,6 +304,12 @@ func _add_clip_files() -> void:
 					var path := animation.track_get_path(track)
 					if path.get_subname_count() > 0:
 						animation.track_set_path(track, NodePath(str(to_skeleton) + ":" + path.get_concatenated_subnames()))
+				# Same bone names but maybe another unit scale (a body exported
+				# in metres, clips from a centimetre rig): positions follow
+				# the ratio of hip heights, or the fighter sinks to the floor.
+				var source_skeletons := scene.find_children("*", "Skeleton3D", true, false)
+				if not source_skeletons.is_empty():
+					_scale_positions(animation, _hips_height(skeleton[0]) / maxf(_hips_height(source_skeletons[0]), 0.0001))
 				if not key in TRAVELLING:
 					clip_pace["files/" + key] = _pin_hips(animation)
 				if key.ends_with("jump"):
@@ -402,7 +409,7 @@ func _add_meshy_clips(library: AnimationLibrary, path: String, wanted: Dictionar
 		out.track_set_path(hips_track, NodePath(str(to_skeleton) + ":" + target.get_bone_name(target_hips)))
 		# Whole-move strike clips (no timing given) get their impact measured
 		# at the frame the hands or feet reach furthest from the hips.
-		var measure: bool = logical in SCRUBBED and not config.get("timing", {}).has(logical)
+		var measure: bool = _is_strike(logical) and not config.get("timing", {}).has(logical)
 		var limbs: Array[int] = []
 		for key in ["lefthand", "righthand", "leftfoot", "rightfoot"]:
 			if target_keys.has(key):
@@ -520,6 +527,20 @@ func _jump_speed(fighter: Node, clip: String) -> float:
 	if air < 0.2:
 		return 1.0
 	return clampf(animation.length / air, 0.6, 3.0)
+
+static func _hips_height(skeleton: Skeleton3D) -> float:
+	for bone in skeleton.get_bone_count():
+		if _bone_key(skeleton.get_bone_name(bone)) == "hips":
+			return skeleton.get_bone_global_rest(bone).origin.length()
+	return 0.0
+
+static func _scale_positions(animation: Animation, ratio: float) -> void:
+	if ratio <= 0.0 or absf(ratio - 1.0) < 0.05:
+		return
+	for track in animation.get_track_count():
+		if animation.track_get_type(track) == Animation.TYPE_POSITION_3D:
+			for k in animation.track_get_key_count(track):
+				animation.track_set_key_value(track, k, (animation.track_get_key_value(track, k) as Vector3) * ratio)
 
 ## Jump clips lift the hips themselves; the game's physics already does,
 ## so the clip keeps only the crouch and tuck (hips never rise above where
@@ -690,10 +711,11 @@ func update(delta: float) -> void:
 		return
 	var entered := state != _last_state
 	_last_state = state
-	if logical in SCRUBBED and pose_override == "":
+	if _is_strike(logical) and pose_override == "":
 		guard_weight = 0.0
 		_scrub_attack(fighter, logical, clip, delta, frozen)
 		_procedural(fighter, logical, delta, frozen)
+		_lock_hips()
 		_reach_step(fighter, delta, true)
 		return
 	_reach_step(fighter, delta, false)
@@ -712,15 +734,39 @@ func update(delta: float) -> void:
 	if logical == "jump" and not frozen:
 		player.speed_scale = _jump_rate
 	if logical in REACTIONS and not frozen:
-		# The recoil plays out inside the short stun instead of being cut
-		# off halfway and snapping back to the stance.
-		player.speed_scale = 1.25 if logical == "hit_heavy" else 1.6
+		# The recoil plays out inside the stun instead of being cut off
+		# halfway and snapping back to the stance: the first ~0.9 s of the
+		# clip (its flinch and recovery) is fitted to the stun length,
+		# worked out once as the reaction starts.
+		if restart or entered or _react_speed <= 0.0:
+			var stun: float = float(fighter.get("stun_timer")) if fighter.get("stun_timer") != null else 0.3
+			var useful := minf(player.get_animation(clip).length, 0.9)
+			_react_speed = clampf(useful / maxf(stun, 0.18), 1.0, 2.4)
+		player.speed_scale = _react_speed
+	else:
+		_react_speed = 0.0
 	player.advance(delta)
 	if not frozen:
 		guard_time += delta
 		guard_weight = move_toward(guard_weight, 1.0 if logical in GUARDED else 0.0, delta * 8.0)
 	_apply_guard()
 	_procedural(fighter, logical, delta, frozen)
+
+## Keeps the hips over the fighter's physics body through a strike. Some
+## clips (spinning and jumping kicks especially) drift the hips sideways or
+## forward on their own, which would put the foot or fist metres from where
+## the game lands the hit; the whole model slides back under the body.
+func _lock_hips() -> void:
+	var hips := _bone("hips")
+	if hips < 0 or skeleton == null or root == null:
+		return
+	var at: Vector3 = skeleton.global_transform * skeleton.get_bone_global_pose(hips).origin
+	var home: Vector3 = root.global_position
+	var drift := Vector3(at.x - home.x, 0.0, at.z - home.z)
+	if drift.length() < 0.02:
+		return
+	var parent := root.get_parent() as Node3D
+	root.position -= parent.global_transform.basis.inverse() * drift
 
 ## Steps the attacker in during a strike so the fist or foot meets the
 ## rival's body instead of stopping short of it (gameplay reach and hit
@@ -740,9 +786,11 @@ func _reach_step(fighter: Node, delta: float, attacking: bool) -> void:
 			var apart := direction.length()
 			if apart > 0.01 and apart < 1.6:
 				direction /= apart
-				# The limb furthest forward is the one striking.
+				# The limb furthest forward is the one striking: feet and
+				# shins for a kick, hands and elbows for a punch.
 				var tip := -INF
-				for key in ["lefthand", "righthand", "leftfoot", "rightfoot"]:
+				var kicking: bool = fighter.state == fighter.State.KICK
+				for key in (["leftfoot", "rightfoot", "leftleg", "rightleg"] if kicking else ["lefthand", "righthand", "leftforearm", "rightforearm"]):
 					var bone := _bone(key)
 					if bone >= 0:
 						var at: Vector3 = skeleton.global_transform * skeleton.get_bone_global_pose(bone).origin
@@ -755,7 +803,7 @@ func _reach_step(fighter: Node, delta: float, attacking: bool) -> void:
 				var startup: float = maxf(fighter.attack_startup(), 0.01)
 				var total: float = maxf(fighter.attack_duration(), startup + 0.01)
 				var envelope := smoothstep(0.0, startup * 0.8, t) * (1.0 - smoothstep(startup + (total - startup) * 0.45, total, t))
-				goal = clampf(short, 0.0, MAX_REACH_STEP) * envelope
+				goal = clampf(short, 0.0, MAX_REACH_STEP * (1.5 if kicking else 1.0)) * envelope
 	_reach = lerpf(_reach, goal, 1.0 - exp(-30.0 * delta))
 	if _reach > 0.001 and direction != Vector3.ZERO:
 		var parent := root.get_parent() as Node3D
@@ -895,8 +943,15 @@ func _apply_guard() -> void:
 		var pose := skeleton.get_bone_pose_rotation(pair[1])
 		skeleton.set_bone_pose_rotation(pair[1], pose.slerp(guard, guard_weight))
 
+## Attack clips, played scrubbed against the move's timing. "strike_*"
+## are a fighter's own extra moves (a move whose pose names one plays it).
+func _is_strike(logical: String) -> bool:
+	return logical in SCRUBBED or logical.begins_with("strike_")
+
 func _attack_clip(fighter: Node) -> String:
 	var variant: String = fighter.attack_variant
+	if variant.begins_with("strike_") and clip_names.has(variant):
+		return variant
 	if variant in ["grapple"]:
 		return "grapple"
 	# A fighter's signature finisher has its own clip when they have one.
@@ -951,9 +1006,15 @@ func _loop_speed(fighter: Node, logical: String, clip: String) -> float:
 	var tempo: float = fighter.get_script().get_script_constant_map().get("COMBAT_TEMPO", 1.0)
 	var pace: float = Vector3(body.velocity.x, 0.0, body.velocity.z).length() * tempo
 	var native: float = clip_pace.get(clip, 0.0)
+	# Mixamo FBX clips carry centimetres: no walk is 20 m/s.
+	if native > 20.0:
+		native *= 0.01
 	var limits: Array = MOVE_SPEED_RANGE[logical]
 	var speed: float = clampf(pace / native if native > 0.2 else pace / 1.6, limits[0], limits[1])
 	var reversed: bool = logical in ["walk_back", "backdash"] and clip_names.get(logical) == clip_names.get("walk")
+	# A guarded forward walk made by playing the boxing walk-back in reverse.
+	if logical in config.get("reversed", []):
+		reversed = true
 	return -speed if reversed else speed
 
 ## Maps attack_timer onto the clip: wind-up covers the clip up to its
