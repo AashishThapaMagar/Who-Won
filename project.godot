@@ -14,7 +14,7 @@ config/name="Who Won?"
 config/description="A 3D arena fighting game with free movement and physics-driven characters."
 run/main_scene="res://scenes/Splash.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
-config/icon="res://icon.svg"
+config/icon="res://icon.png"
 
 [autoload]
 

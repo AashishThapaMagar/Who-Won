@@ -112,7 +112,7 @@ Interface code lives in `scripts/main_menu.gd`, `character_select.gd`, `match_hu
 ## Project layout
 
 ```
-pixel-duel/
+Who-Won/
   project.godot        Engine/project settings + input map
   icon.svg              Project icon
   scenes/
@@ -170,7 +170,7 @@ git commit -m "Initial 2D fighting game prototype"
 Then on GitHub.com, create a new empty repository (don't initialize it with a README), and run the two commands it shows you, e.g.:
 
 ```bash
-git remote add origin https://github.com/<your-username>/pixel-duel.git
+git remote add origin https://github.com/<your-username>/Who-Won.git
 git branch -M main
 git push -u origin main
 ```
