@@ -48,6 +48,7 @@ func run() -> void:
 	await punishes()
 	await ground_punches()
 	await downed_rival()
+	await wake_ups()
 	await ai_versus_ai()
 	print("AI_SKILLS_TEST: ", "ALL PASS" if failures.is_empty() else failures)
 	quit(0 if failures.is_empty() else 1)
@@ -124,6 +125,28 @@ func downed_rival() -> void:
 			swung = true
 	check(not swung, "AI does not attack a downed, invulnerable rival")
 	p1.state = p1.State.IDLE
+
+## Knocked down on challenging, the AI mixes how it gets up.
+func wake_ups() -> void:
+	root.get_node("MatchSetup").ai_difficulty = 2
+	var seen := {}
+	for trial in 12:
+		await reset(1.2)
+		p2.state = p2.State.KNOCKDOWN
+		p2.knockdown_time = 0.0
+		p2.throw_partner = null
+		var attacked := false
+		for frame in 140:
+			await frames(1)
+			if p2.wake_choice != "":
+				seen[p2.wake_choice] = true
+			if p2.wake_attack != "":
+				attacked = true
+			if p2.state != p2.State.KNOCKDOWN:
+				if attacked or p2.state in [p2.State.PUNCH, p2.State.KICK]:
+					seen["attack"] = true
+				break
+	check(seen.size() >= 2, "Challenging AI mixes its wake-ups (saw %s)" % [seen.keys()])
 
 ## Two AIs fight a stretch of every difficulty without errors.
 func ai_versus_ai() -> void:

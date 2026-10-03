@@ -69,7 +69,8 @@ func run() -> void:
 		await frames(100)
 		check(p2.health < 100 and p1.combo_hits == 1, "Fighter %d can grapple a guarding opponent" % index)
 		check(p2.state == p2.State.KNOCKDOWN and not p2.take_hit(10, 100, 1, p1), "Fighter %d throw ends in an invulnerable knockdown (state %d)" % [index, p2.state])
-		await frames(110)
+		# The defender still holds guard, so it stays down the extra beat.
+		await frames(150)
 		check(p1.state == p1.State.IDLE and p2.state in [p2.State.IDLE, p2.State.BLOCK], "Fighter %d both fighters recover from the throw (%d, %d)" % [index, p1.state, p2.state])
 	await reset(0)
 	Input.action_press("p1_3d_punch")

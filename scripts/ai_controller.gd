@@ -27,6 +27,10 @@ const TURTLE_GRAB := [0.2, 0.45, 0.75]
 const GROUND_PUNCHES := [1, 2, 3]
 ## Stepping off the line of a heavy strike (3D only, see ai_controller_3d).
 const SIDESTEP_CHANCE := [0.0, 0.12, 0.25]
+## Getting up from a knockdown: roll clear, stay down, or rise striking.
+const WAKE_ROLL := [0.1, 0.3, 0.35]
+const WAKE_LATE := [0.0, 0.15, 0.25]
+const WAKE_ATTACK := [0.05, 0.2, 0.3]
 
 var _prefix: String = "p2_"
 var _reaction_cooldown: float = 0.0
@@ -41,6 +45,8 @@ var _punish_plan: int = -1
 var _tech_judged: bool = false
 var _rival_guard_time: float = 0.0
 var _ground_delay: float = 0.0
+## This knockdown's plan: "" undecided, then "stand", "roll", "late" or "attack".
+var _wake_plan: String = ""
 
 func skill() -> int:
 	var level: int = MatchSetup.ai_difficulty
@@ -60,13 +66,19 @@ func _physics_process(delta: float) -> void:
 		_release_all()
 		return
 
-	# Locked in a throw or lying down: nothing to press but ground punches.
+	# Locked in a throw or lying down: ground punches or a way to get up.
 	if fighter.state in _locked_states():
-		_set_block(false)
-		_set_move(0)
+		if fighter.state != _state(fighter, "KNOCKDOWN"):
+			_set_block(false)
+			_set_move(0)
 		if fighter.state == _state(fighter, "THROWING"):
 			_ground_pound(delta)
+		elif fighter.state == _state(fighter, "KNOCKDOWN"):
+			_wake_up()
+		else:
+			_wake_plan = ""
 		return
+	_wake_plan = ""
 	_jump_cooldown = maxf(0.0, _jump_cooldown - delta)
 	_reaction_cooldown = maxf(0.0, _reaction_cooldown - delta)
 	_decision_timer -= delta
@@ -174,6 +186,30 @@ func _state(who: Node, name: String) -> int:
 
 func _locked_states() -> Array:
 	return [_state(fighter, "THROWING"), _state(fighter, "THROWN"), _state(fighter, "KNOCKDOWN")]
+
+## Picks how to get up once per knockdown and holds the matching input:
+## back to roll, guard to stay down, an attack while rising.
+func _wake_up() -> void:
+	if _wake_plan == "":
+		var roll: float = randf()
+		var level := skill()
+		if roll < WAKE_ROLL[level]:
+			_wake_plan = "roll"
+		elif roll < WAKE_ROLL[level] + WAKE_LATE[level]:
+			_wake_plan = "late"
+		elif roll < WAKE_ROLL[level] + WAKE_LATE[level] + WAKE_ATTACK[level]:
+			_wake_plan = "attack"
+		else:
+			_wake_plan = "stand"
+	var away: int = -1 if _opponent_distance() > 0.0 else 1
+	match _wake_plan:
+		"roll":
+			_set_move(away)
+		"late":
+			_set_block(true)
+		"attack":
+			if fighter.knockdown_time > fighter.THROW.LIE_TIME and fighter.wake_attack == "":
+				_request_move("kick")
 
 ## Ground punches from the mount, spaced like a human pressing the button.
 func _ground_pound(delta: float) -> void:

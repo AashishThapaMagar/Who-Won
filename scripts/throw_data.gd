@@ -35,6 +35,13 @@ const GETUP_TIME := 0.9
 const GETUP_START := 3.9
 const GETUP_END := 5.9
 const STEP := 0.05
+## Getting up: hold back while down to roll clear (the get-up plays at
+## ROLL_RATE while the body slides ROLL_DISTANCE metres away), hold guard
+## to stay down LATE_EXTRA longer, or press an attack while rising to
+## strike the moment the fighter is up.
+const ROLL_RATE := 2.0
+const ROLL_DISTANCE := 1.5
+const LATE_EXTRA := 0.45
 ## Ground punches from the mount (fighters whose grapple has ground_pound):
 ## each press throws one, up to GROUND_MAX, landing GROUND_IMPACT into a
 ## GROUND_PUNCH_TIME swing. Left alone for MOUNT_WAIT, the attacker rises.

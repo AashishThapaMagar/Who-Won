@@ -252,7 +252,18 @@ func _place_throw() -> void:
 		var rise := smoothstep(0.0, THROW.RECOVERY_TIME, throw_time - throw_rise_at)
 		to = to.lerp(_throw_rest, rise)
 	_set_placed(to)
+	# A victim rolling clear moves itself (see _roll_away).
+	if victim.wake_choice == "roll":
+		return
 	victim._set_placed(_throw_victim_anchor + _throw_forward * THROW.travel(THROW.VICTIM, t) + _throw_shift * settle)
+
+func _roll_away(distance: float) -> void:
+	var away: Vector3 = -forward
+	away.y = 0.0
+	var to: Vector3 = body.position + away.normalized() * distance
+	to.x = clampf(to.x, -LANE_HALF_WIDTH, LANE_HALF_WIDTH)
+	to.z = clampf(to.z, -LANE_HALF_DEPTH, LANE_HALF_DEPTH)
+	_set_placed(to)
 
 func _set_placed(to: Vector3) -> void:
 	to.y = body.position.y

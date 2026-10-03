@@ -131,6 +131,10 @@ var _mount_idle: float = 0.0
 var knockdown_time: float = 0.0
 ## Knocked out by a slam: the body stays where it landed.
 var thrown_down: bool = false
+## How this knockdown ends: "" (stand up in place), "roll" or "late", plus
+## an attack pressed while rising, thrown the moment the fighter is up.
+var wake_choice: String = ""
+var wake_attack: String = ""
 var stamina_delay: float = 0.0
 var taunt_ready_at: float = 0.0
 var throw_tech_until: float = -1.0
@@ -601,8 +605,18 @@ func take_hit(damage: int, knockback: float, attacker_facing: int, attacker: Nod
 			combat_notice = "THROW ESCAPE"
 			notice_until = combat_time + 0.9
 			throw_tech_until = -1.0
+			# The clinch breaks: both are shoved apart into a guard reaction,
+			# a guarded-hit spark and thud between them.
 			attacker.apply_parry_punish()
-			velocity.x = attacker_facing * 140.0
+			hitbox.set_active(false)
+			current_move = {}
+			state = State.BLOCKSTUN
+			stun_timer = 0.2
+			velocity.x = attacker_facing * 180.0
+			hitstop_remaining = 0.05
+			attacker.hitstop_remaining = 0.05
+			impact.emit(global_position + Vector2(-attacker_facing * 16.0, -88.0), true, false)
+			_update_animation()
 			return false
 		if attacker != null and attacker.has_method("start_throw"):
 			attacker.start_throw(self, damage)
@@ -867,12 +881,44 @@ func _slam() -> void:
 
 func _process_knockdown(delta: float) -> void:
 	velocity = Vector2.ZERO
-	knockdown_time += delta
+	# Choices open once the attacker has let go (it rises off a mount).
+	var free: bool = throw_partner == null or not is_inf(throw_partner.throw_rise_at)
+	var lying: bool = knockdown_time < THROW.LIE_TIME
+	if free and lying and wake_choice == "" and controls_enabled:
+		if _movement_axis() * facing < 0.0:
+			# Roll clear: the get-up starts now, fast, sliding away.
+			wake_choice = "roll"
+			knockdown_time = THROW.LIE_TIME
+			lying = false
+		elif Input.is_action_pressed(input_prefix + "block"):
+			wake_choice = "late"
+	var rate := 1.0
+	if wake_choice == "late" and lying:
+		rate = THROW.LIE_TIME / (THROW.LIE_TIME + THROW.LATE_EXTRA)
+	elif wake_choice == "roll":
+		rate = THROW.ROLL_RATE
+		_roll_away(THROW.ROLL_DISTANCE * THROW.ROLL_RATE / THROW.GETUP_TIME * delta)
+	knockdown_time += delta * rate
+	# An attack pressed while rising is held until the fighter is up.
+	if not lying and _buffered_action in ["punch", "kick", "rpunch", "rkick"]:
+		wake_attack = _buffered_action
+		_buffered_action = ""
 	if knockdown_time >= THROW.LIE_TIME + THROW.GETUP_TIME:
 		knockdown_time = 0.0
+		wake_choice = ""
 		state = State.IDLE
+		if wake_attack != "":
+			_buffered_action = wake_attack
+			_buffered_direction = 0
+			_buffered_move = ""
+			_buffer_remaining = input_buffer_time
+			wake_attack = ""
 		if controls_enabled:
 			_process_move_and_actions(delta)
+
+## Spatial hook: slides a rolling fighter `distance` away from its rival.
+func _roll_away(distance: float) -> void:
+	global_position.x -= facing * distance * 64.0
 
 func apply_parry_punish() -> void:
 	if state == State.KO:
@@ -908,6 +954,8 @@ func reset_for_new_round() -> void:
 	throw_slammed = false
 	knockdown_time = 0.0
 	thrown_down = false
+	wake_choice = ""
+	wake_attack = ""
 	hurtbox.set_deferred("monitorable", true)
 	hitbox.set_active(false)
 	visual.modulate = Color.WHITE
