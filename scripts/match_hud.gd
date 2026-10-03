@@ -39,6 +39,8 @@ var readout: Label
 var readout_pending := -1
 var readout_move := ""
 var readout_blocked := false
+## Damage of the combo the readout is following, per defender.
+var readout_combo: Array = [0, 0]
 
 func _ready() -> void:
 	arena = get_parent()
@@ -240,7 +242,7 @@ func _ready() -> void:
 		last_health[i] = fighter.health
 	_reset_stats()
 	if str(arena.get_script().resource_path).ends_with("practice_3d.gd"):
-		readout = UI.label(layer, "", Vector2(36, 470), Vector2(420, 20), 12, UI.GOLD)
+		readout = UI.label(layer, "", Vector2(36, 470), Vector2(640, 20), 12, UI.GOLD)
 		readout.add_theme_font_override("font", UI.strong_font())
 		readout.add_theme_constant_override("outline_size", 4)
 		readout.add_theme_color_override("font_outline_color", UI.INK)
@@ -431,7 +433,19 @@ func _track_damage(health: int, _maximum: int, player: int) -> void:
 		if readout != null and readout_pending == player:
 			var attacker: Node = arena.player2 if player == 0 else arena.player1
 			var verdict := "BLOCKED" if readout_blocked else ("COUNTER HIT" if attacker.combat_notice == "COUNTER HIT" and attacker.combat_time < attacker.notice_until else "HIT")
-			readout.text = "LAST STRIKE   %s   /   %d DMG   /   %s" % [readout_move.to_upper().replace("_", " "), last_health[player] - health, verdict]
+			var dealt: int = last_health[player] - health
+			readout.text = "LAST STRIKE   %s   /   %d DMG   /   %s" % [readout_move.to_upper().replace("_", " "), dealt, verdict]
+			var defender: Node = arena.player1 if player == 0 else arena.player2
+			# Frame advantage: who acts first once this blow is over, in
+			# 60ths of a second (+ the attacker, - the defender).
+			if attacker.state in [attacker.State.PUNCH, attacker.State.KICK] and defender.state in [defender.State.HITSTUN, defender.State.BLOCKSTUN]:
+				var advantage := roundi((defender.stun_timer - maxf(0.0, attacker.attack_duration() - attacker.attack_timer)) * 60.0)
+				readout.text += "   %+d" % advantage
+			# Combo so far: hits in this string and their total damage.
+			var hits: int = defender.get("_received_hits") if defender.get("_received_hits") != null else 1
+			readout_combo[player] = dealt if hits <= 1 or readout_blocked else readout_combo[player] + dealt
+			if hits >= 2 and not readout_blocked:
+				readout.text += "   /   COMBO %d HITS  %d DMG" % [hits, readout_combo[player]]
 			readout.modulate.a = 1.0
 			readout.create_tween().tween_property(readout, "modulate:a", 0.0, 0.6).set_delay(2.4)
 			readout_pending = -1

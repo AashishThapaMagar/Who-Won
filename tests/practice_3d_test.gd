@@ -22,7 +22,7 @@ func run() -> void:
 	current_scene = arena
 	await frames(10)
 	var p = arena.player1
-	check(p.controls_enabled and not arena.player2.controls_enabled, "Practice enables player and keeps dummy passive")
+	check(p.controls_enabled and arena.player2.dummy and arena.player2.input_prefix == arena.DUMMY_PREFIX, "Practice enables player and keeps dummy passive")
 	check(arena.ai_controller == null and root.get_node("MatchSetup").vs_ai, "Practice preserves match settings without spawning AI")
 	p.body.position.x = -3.5
 	arena.player2.body.position.x = 3.5
@@ -45,7 +45,7 @@ func run() -> void:
 	Input.action_release("p1_3d_run")
 	arena._end_round(1)
 	await frames(3)
-	check(p.health == p.max_health and not arena.player2.controls_enabled and arena.round_active, "Knockout resets practice and retains passive dummy")
+	check(p.health == p.max_health and arena.player2.dummy and arena.round_active, "Knockout resets practice and retains passive dummy")
 	check(arena.timer_label.text == "--" and arena.time_remaining > 9900, "Practice has no countdown")
 	print("PRACTICE_3D_TEST: ", "ALL PASS" if failures.is_empty() else failures)
 	quit(0 if failures.is_empty() else 1)
