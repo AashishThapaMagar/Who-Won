@@ -17,6 +17,7 @@ extends RefCounted
 ## ground speed (measured from how far each clip travels) so feet don't skate.
 const MODELS := preload("res://scripts/fighter_models.gd")
 const THROW := preload("res://scripts/throw_data.gd")
+const SUPERS := preload("res://scripts/super_moves.gd")
 ## Missing logical clips fall back along these links until one exists.
 const FALLBACK := {
 	"walk_back": "walk", "sidestep": "walk", "run": "walk", "dash": "run", "backdash": "walk_back",
@@ -895,8 +896,10 @@ func update(delta: float) -> void:
 			logical = "block"
 		S.BLOCKSTUN:
 			logical = "block_hit"
-		S.HITSTUN:
+		S.HITSTUN, S.STRUCK:
 			logical = _reaction if _reaction != "" else ("hit_heavy" if last_hit_heavy else "hit")
+		S.SUPER:
+			logical = "super_combo"
 		S.KO:
 			logical = "downed" if fighter.get("thrown_down") else "ko"
 		S.THROWING:
@@ -917,6 +920,16 @@ func update(delta: float) -> void:
 	var entered := state != _last_state
 	_last_state = state
 	_posture = 0.0
+	if state == S.PUNCH and fighter.attack_variant == "super":
+		logical = "super_open"
+	if logical in ["super_open", "super_combo"] and _play_super(fighter, logical, delta, frozen):
+		guard_weight = 0.0
+		_procedural(fighter, logical, delta, frozen)
+		_reach_step(fighter, delta, false)
+		return
+	if logical in ["super_open", "super_combo"]:
+		logical = "punch_heavy"
+		clip = clip_names.get(logical, clip_names.get("idle", ""))
 	if logical in ["throw", "thrown", "downed"] or (logical == "getup" and _has_own("getup")):
 		guard_weight = 0.0
 		_play_throw(fighter, logical, delta, frozen)
@@ -966,6 +979,26 @@ func update(delta: float) -> void:
 		guard_weight = move_toward(guard_weight, 1.0 if logical in GUARDED else 0.0, delta * 8.0)
 	_apply_guard()
 	_procedural(fighter, logical, delta, frozen)
+
+## The super on the fighter's combo clip. The opening strike plays the run-up
+## so the clip reaches the super's start just as the strike connects, then
+## carries on (a whiff) or hands over to the combo on the super's own clock.
+## False when the rig has no clip for it.
+func _play_super(fighter: Node, logical: String, delta: float, frozen: bool) -> bool:
+	var data := SUPERS.get_super(str(fighter.character_profile.id))
+	var clip: String = clip_names.get(str(data.get("clip", "")), "")
+	if data.is_empty() or clip == "":
+		return false
+	var start := float(data.start)
+	var time: float = fighter.super_clip_time() if logical == "super_combo" else 0.0
+	if logical == "super_open":
+		var startup: float = maxf(fighter.attack_startup(), 0.01)
+		var t: float = fighter.attack_timer
+		time = lerpf(maxf(0.0, start - 0.35), start, clampf(t / startup, 0.0, 1.0))
+		if t > startup:
+			time = start + 0.45 * clampf((t - startup) / maxf(fighter.attack_duration() - startup, 0.01), 0.0, 1.0)
+	_scrub_clip(clip, time, delta, frozen)
+	return true
 
 ## Whether the rig has its own clip for `logical`, not a fallback.
 func _has_own(logical: String) -> bool:

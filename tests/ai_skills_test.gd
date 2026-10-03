@@ -49,6 +49,7 @@ func run() -> void:
 	await ground_punches()
 	await downed_rival()
 	await wake_ups()
+	await supers()
 	await ai_versus_ai()
 	print("AI_SKILLS_TEST: ", "ALL PASS" if failures.is_empty() else failures)
 	quit(0 if failures.is_empty() else 1)
@@ -117,12 +118,17 @@ func downed_rival() -> void:
 	await reset(1.0)
 	p1.state = p1.State.KNOCKDOWN
 	p1.knockdown_time = 0.0
+	# Only attacks started while the rival is down count: one begun in the
+	# frames before the knockdown may still be finishing.
 	var swung := false
+	var was_attacking: bool = p2.state in [p2.State.PUNCH, p2.State.KICK]
 	for frame in 40:
 		await frames(1)
 		p1.knockdown_time = 0.0
-		if p2.state in [p2.State.PUNCH, p2.State.KICK]:
+		var attacking: bool = p2.state in [p2.State.PUNCH, p2.State.KICK]
+		if attacking and not was_attacking:
 			swung = true
+		was_attacking = attacking
 	check(not swung, "AI does not attack a downed, invulnerable rival")
 	p1.state = p1.State.IDLE
 
@@ -147,6 +153,22 @@ func wake_ups() -> void:
 					seen["attack"] = true
 				break
 	check(seen.size() >= 2, "Challenging AI mixes its wake-ups (saw %s)" % [seen.keys()])
+
+## With a full meter and the rival in reach, the AI fires its super.
+func supers() -> void:
+	root.get_node("MatchSetup").ai_difficulty = 2
+	var fired := false
+	for trial in 6:
+		await reset(0.7)
+		p2.super_meter = 100.0
+		for frame in 120:
+			await frames(1)
+			if p2.state == p2.State.SUPER or p2.attack_variant == "super":
+				fired = true
+				break
+		if fired:
+			break
+	check(fired, "Challenging AI fires its super when the meter is full")
 
 ## Two AIs fight a stretch of every difficulty without errors.
 func ai_versus_ai() -> void:

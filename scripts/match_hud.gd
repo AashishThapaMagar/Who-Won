@@ -9,6 +9,10 @@ var result_panel: Panel
 var next_button: Button
 var result_detail: Label
 var stamina_bars: Array[ProgressBar] = []
+## Gold super meters under the names (fighters with a super only), and the
+## SUPER READY tag that pulses beside a full one.
+var super_bars: Array[ProgressBar] = []
+var super_tags: Array[Label] = []
 var callout_style := false
 ## Hand-drawn gauges and clock plate (hud_gauges.gd); the ProgressBars
 ## below stay as invisible data holders for combat code and tests.
@@ -114,6 +118,24 @@ func _ready() -> void:
 		stamina_bar.set_deferred("size", Vector2(145, 6))
 		stamina_bar.visible = false
 		stamina_bars.append(stamina_bar)
+		var meter := ProgressBar.new()
+		meter.position = Vector2(x if i == 0 else x + 372 - 170, 103)
+		meter.size = Vector2(170, 5)
+		meter.max_value = fighter.SUPERS.METER_MAX
+		meter.show_percentage = false
+		meter.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		meter.fill_mode = ProgressBar.FILL_BEGIN_TO_END if i == 0 else ProgressBar.FILL_END_TO_BEGIN
+		meter.add_theme_stylebox_override("background", UI.box(Color(0.02, 0.02, 0.05, 0.85), UI.LINE, 0))
+		meter.add_theme_stylebox_override("fill", UI.box(UI.GOLD, UI.GOLD, 0))
+		layer.add_child(meter)
+		meter.set_deferred("size", Vector2(170, 5))
+		super_bars.append(meter)
+		var tag := UI.label(layer, "", Vector2(x + 176 if i == 0 else x + 372 - 170 - 186, 97), Vector2(180, 16), 10, UI.GOLD)
+		tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if i == 0 else HORIZONTAL_ALIGNMENT_RIGHT
+		tag.add_theme_font_override("font", UI.strong_font())
+		tag.add_theme_constant_override("outline_size", 4)
+		tag.add_theme_color_override("font_outline_color", UI.INK)
+		super_tags.append(tag)
 		UI.label(layer, "", Vector2(x + 90, 66), Vector2(145, 13), 8, UI.MUTED)
 		fighter.health_changed.connect(_health_changed.bind(i))
 		arena.combo_labels[i].position.y = 110
@@ -526,6 +548,14 @@ func _process(_delta: float) -> void:
 		stamina_bars[i].max_value = fighter.character_profile.stamina
 		stamina_bars[i].value = fighter.stamina
 		stamina_bars[i].modulate = UI.RED if fighter.stamina < 18.0 else Color.WHITE
+		var has_super: bool = fighter.has_super()
+		super_bars[i].visible = has_super
+		super_bars[i].value = fighter.super_meter
+		var full: bool = has_super and fighter.super_meter >= fighter.SUPERS.METER_MAX
+		var pulse := 0.65 + 0.35 * sin(Time.get_ticks_msec() * 0.009)
+		super_bars[i].modulate = Color(1.25, 1.15, 0.9) * pulse if full else Color.WHITE
+		super_tags[i].text = "SUPER READY  2+4" if full else ""
+		super_tags[i].modulate.a = pulse
 	var show_result: bool = arena.result_label.visible
 	# Between rounds only the winner callout shows; the panel with Rematch /
 	# Next Rival / Main Menu is kept for the end of the match.

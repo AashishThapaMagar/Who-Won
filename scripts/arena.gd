@@ -235,7 +235,7 @@ func _end_round(winner: int) -> void:
 		fighter.controls_enabled = false
 		fighter.hitbox.set_active(false)
 		# A finishing slam plays out; the thrower rises off the body itself.
-		if fighter.state not in [fighter.State.KO, fighter.State.THROWING]:
+		if fighter.state not in [fighter.State.KO, fighter.State.THROWING, fighter.State.SUPER]:
 			fighter.state = fighter.State.IDLE
 
 	if winner == 1:
@@ -347,6 +347,9 @@ func _begin_round(index: int) -> void:
 	guide_text.text = "STAMINA: strikes and dashes spend it; moving or resting restores it. Empty guard can break.\nTHROWS: jump, interrupt startup, or tap Light + Heavy together within 0.16s before contact.\nISH: low strikes deal +25% damage to his weak knee.\nABHI: Back + Heavy taunts; finish uninterrupted for +24 stamina (5s cooldown).\nSUP: Back + Heavy retreats; it is not invincible.\n\n"
 	for fighter in [player1, player2]:
 		guide_text.text += "%s / %s\n%s\n\n%s\n\n" % [fighter.character_profile.name, fighter.character_profile.title, fighter.character_profile.trait, MOVES.guide("action", fighter.available_moves())]
+		if fighter.has_method("has_super") and fighter.has_super():
+			var data: Dictionary = fighter.SUPERS.get_super(str(fighter.character_profile.id))
+			guide_text.text += "SUPER: %s  —  buttons 2 + 4 together when the gold meter is full\nThe meter fills as you deal and take damage. If the opening strike lands, the full combo plays out and the last blow launches the rival. Guarded or whiffed, the meter is spent and you are open.\n\n" % data.name
 	player1.reset_for_new_round()
 	player2.reset_for_new_round()
 

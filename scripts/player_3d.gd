@@ -34,7 +34,10 @@ const WALL_STUN := 0.42
 var _wall_hit_done := false
 ## Fighters locked in a throw or lying after one are placed directly, not
 ## moved by physics, and are not pushboxes.
-const PLACED_STATES := [State.THROWING, State.THROWN, State.KNOCKDOWN]
+const PLACED_STATES := [State.THROWING, State.THROWN, State.KNOCKDOWN, State.SUPER, State.STRUCK]
+## The super's line, fixed when its opening strike lands (see _begin_super).
+var _super_anchor := Vector3.ZERO
+var _super_forward := Vector3.RIGHT
 
 func _physics_process(delta: float) -> void:
 	super._physics_process(delta * COMBAT_TEMPO)
@@ -276,6 +279,38 @@ func _roll_away(distance: float) -> void:
 	to.x = clampf(to.x, -LANE_HALF_WIDTH, LANE_HALF_WIDTH)
 	to.z = clampf(to.z, -LANE_HALF_DEPTH, LANE_HALF_DEPTH)
 	_set_placed(to)
+
+func _begin_super() -> void:
+	var victim: Node = super_partner
+	_super_anchor = body.position
+	var line: Vector3 = victim.body.position - body.position
+	line.y = 0.0
+	_super_forward = line.normalized() if line.length() > 0.05 else forward
+	forward = _super_forward
+	victim.forward = -_super_forward
+	_super_gap = clampf(line.length(), 0.55, 1.0)
+
+## The attacker drives forward through the combo; the victim, locked until
+## the last blow, is kept in front of it and driven back a step per blow.
+func _place_super() -> void:
+	var data := SUPERS.get_super(str(character_profile.id))
+	var span: float = maxf(float(data.end) - float(data.start), 0.01)
+	var progress := clampf((super_clip_time() - float(data.start)) / span, 0.0, 1.0)
+	var to: Vector3 = _super_anchor + _super_forward * float(data.travel) * smoothstep(0.0, 1.0, progress)
+	to.x = clampf(to.x, -LANE_HALF_WIDTH, LANE_HALF_WIDTH)
+	_set_placed(to)
+	var victim: Node = super_partner
+	if victim != null and victim.state == State.STRUCK:
+		var back: Vector3 = to + _super_forward * (_super_gap + SUPERS.STEP_BACK * super_hits)
+		back.x = clampf(back.x, -LANE_HALF_WIDTH, LANE_HALF_WIDTH)
+		victim._set_placed(back)
+
+func _super_hit(index: int) -> void:
+	super._super_hit(index)
+	var victim: Node = super_partner
+	# The launch may carry the victim into a railing.
+	if victim != null and victim.state in [State.HITSTUN, State.KO]:
+		victim._wall_hit_done = false
 
 func _set_placed(to: Vector3) -> void:
 	to.y = body.position.y

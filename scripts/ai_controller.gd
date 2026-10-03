@@ -27,6 +27,8 @@ const TURTLE_GRAB := [0.2, 0.45, 0.75]
 const GROUND_PUNCHES := [1, 2, 3]
 ## Stepping off the line of a heavy strike (3D only, see ai_controller_3d).
 const SIDESTEP_CHANCE := [0.0, 0.12, 0.25]
+## Firing a ready super when the rival is in reach (per decision).
+const SUPER_CHANCE := [0.15, 0.35, 0.6]
 ## Getting up from a knockdown: roll clear, stay down, or rise striking.
 const WAKE_ROLL := [0.1, 0.3, 0.35]
 const WAKE_LATE := [0.0, 0.15, 0.25]
@@ -90,8 +92,11 @@ func _physics_process(delta: float) -> void:
 	# React to an incoming attack: hold guard while it stays in range.
 	# Grabs can't be guarded: they're escaped (below) or eaten.
 	var rival_grab: bool = opponent.state in [opponent.State.PUNCH, opponent.State.KICK] and opponent.current_move.get("kind", "") == "grapple"
+	# A threat from mid wind-up until its active frames end; the recovery
+	# after is an opening to punish, not something to keep guarding.
 	var opponent_attacking: bool = opponent.state in [opponent.State.PUNCH, opponent.State.KICK] \
-		and opponent.attack_timer >= opponent.attack_startup() * 0.5 and not rival_grab
+		and opponent.attack_timer >= opponent.attack_startup() * 0.5 and not rival_grab \
+		and opponent.attack_timer < opponent.attack_startup() + opponent.attack_active_time() + 0.03
 	_escape_grab(rival_grab)
 	_rival_guard_time = _rival_guard_time + delta if opponent.state in [opponent.State.BLOCK, opponent.State.BLOCKSTUN] else 0.0
 	# _attack_seen_time requires an attack to stay visible for a beat before
@@ -158,6 +163,9 @@ func _physics_process(delta: float) -> void:
 		_set_move(-toward)
 	else:
 		_set_move(0)
+		if fighter.has_method("super_ready") and fighter.super_ready() and abs_distance <= ATTACK_RANGE * 0.8 and randf() < SUPER_CHANCE[skill()]:
+			_request_move("super")
+			return
 		if fighter.state in [fighter.State.IDLE, fighter.State.WALK] and randf() < 0.6:
 			var move_id := "jab"
 			# Sab's forward_heavy is his grab, so he reaches for it in close
@@ -185,7 +193,7 @@ func _state(who: Node, name: String) -> int:
 	return who.State.get(name, -1)
 
 func _locked_states() -> Array:
-	return [_state(fighter, "THROWING"), _state(fighter, "THROWN"), _state(fighter, "KNOCKDOWN")]
+	return [_state(fighter, "THROWING"), _state(fighter, "THROWN"), _state(fighter, "KNOCKDOWN"), _state(fighter, "SUPER"), _state(fighter, "STRUCK")]
 
 ## Picks how to get up once per knockdown and holds the matching input:
 ## back to roll, guard to stay down, an attack while rising.
@@ -267,7 +275,7 @@ func _try_evade(_attacking: bool, _abs_distance: float) -> bool:
 
 func _request_move(id: String) -> void:
 	# AI decisions enter the same expiring buffer and hit-confirm rules as input.
-	fighter._buffered_action = "grapple" if id == "grapple" else ("punch" if id == "jab" else "kick")
+	fighter._buffered_action = id if id in ["grapple", "super"] else ("punch" if id == "jab" else "kick")
 	fighter._buffered_direction = 1 if id == "forward_heavy" else (-1 if id == "back_heavy" else 0)
 	fighter._buffered_move = id if id in ["drive", "breaker"] else ""
 	fighter._buffer_remaining = fighter.input_buffer_time

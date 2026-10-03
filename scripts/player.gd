@@ -5,14 +5,17 @@ signal ko
 signal impact(point: Vector2, blocked: bool, heavy: bool)
 ## Fired on the attacker when its blow lands (or is guarded), for follow-through.
 signal strike_connected(blocked: bool, force: float)
+## A super's opening strike landed: the cinematic begins (see super_moves.gd).
+signal super_started
 
 const ROSTER := preload("res://scripts/fighter_roster.gd")
 const MOVES := preload("res://scripts/move_catalog.gd")
 const MOTIONS := preload("res://scripts/motion_input.gd")
 const ACTION_MOVES := preload("res://scripts/action_moves.gd")
 const THROW := preload("res://scripts/throw_data.gd")
+const SUPERS := preload("res://scripts/super_moves.gd")
 
-enum State { IDLE, WALK, JUMP, PUNCH, KICK, BLOCK, HITSTUN, KO, BLOCKSTUN, DASH, JUMP_START, LAND, THROWING, THROWN, KNOCKDOWN }
+enum State { IDLE, WALK, JUMP, PUNCH, KICK, BLOCK, HITSTUN, KO, BLOCKSTUN, DASH, JUMP_START, LAND, THROWING, THROWN, KNOCKDOWN, SUPER, STRUCK }
 
 @export var player_id: int = 1
 @export var max_health: int = 100
@@ -134,6 +137,13 @@ var thrown_down: bool = false
 ## How this knockdown ends: "" (stand up in place), "roll" or "late", plus
 ## an attack pressed while rising, thrown the moment the fighter is up.
 var wake_choice: String = ""
+## Super meter (0..SUPERS.METER_MAX), the running super's clock, how many of
+## its blows have landed, and the rival locked in it.
+var super_meter: float = 0.0
+var super_time: float = 0.0
+var super_hits: int = 0
+var super_partner: Node = null
+var _super_gap: float = 0.0
 var wake_attack: String = ""
 var stamina_delay: float = 0.0
 var taunt_ready_at: float = 0.0
@@ -234,6 +244,10 @@ func _physics_process(delta: float) -> void:
 				velocity = Vector2.ZERO
 			State.KNOCKDOWN:
 				_process_knockdown(delta)
+			State.SUPER:
+				_process_super(delta)
+			State.STRUCK:
+				velocity = Vector2.ZERO
 			State.PUNCH, State.KICK:
 				_process_attack(delta)
 			State.BLOCK:
@@ -322,6 +336,14 @@ func _capture_input() -> void:
 			_buffered_direction = 0
 			_buffer_remaining = input_buffer_time
 		return
+	# Super: buttons 2 and 4 together with a full meter.
+	if super_ready() and InputMap.has_action(input_prefix + "rpunch") and Input.is_action_pressed(input_prefix + "rpunch") and Input.is_action_pressed(input_prefix + "rkick") \
+			and (Input.is_action_just_pressed(input_prefix + "rpunch") or Input.is_action_just_pressed(input_prefix + "rkick")):
+		_buffered_action = "super"
+		_buffered_move = ""
+		_buffered_direction = 0
+		_buffer_remaining = input_buffer_time
+		return
 	if facing != _motion_facing:
 		motion_input.reset()
 		_motion_facing = facing
@@ -359,7 +381,7 @@ func _update_animation() -> void:
 		visual.sync_pose(self)
 	elif visual is AnimatedSprite2D:
 		visual.flip_h = facing < 0
-		var names := ["idle", "walk", "jump", "punch", "kick", "block", "hitstun", "ko", "block", "walk", "jump", "idle", "punch", "hitstun", "ko"]
+		var names := ["idle", "walk", "jump", "punch", "kick", "block", "hitstun", "ko", "block", "walk", "jump", "idle", "punch", "hitstun", "ko", "punch", "hitstun"]
 		var anim: String = names[state]
 		if state == State.PUNCH and attack_variant == "hook":
 			anim = "hook"
@@ -399,7 +421,9 @@ func _consume_action() -> bool:
 	_buffered_action = ""
 	_buffered_move = ""
 	_buffer_remaining = 0.0
-	if action == "grapple":
+	if action == "super":
+		_start_super_strike()
+	elif action == "grapple":
 		_start_style_move("grapple")
 	elif action == "jump":
 		state = State.JUMP_START
@@ -593,7 +617,7 @@ func _process_hitstun(delta: float) -> void:
 
 ## Returns true only for an unblocked hit; chip and parries cannot grant a cancel.
 func take_hit(damage: int, knockback: float, attacker_facing: int, attacker: Node = null, attack_type: String = "punch") -> bool:
-	if state in [State.KO, State.THROWN, State.KNOCKDOWN] or not (controls_enabled or dummy):
+	if state in [State.KO, State.THROWN, State.KNOCKDOWN, State.STRUCK] or not (controls_enabled or dummy):
 		return false
 	var move: Dictionary = attacker.current_move if attacker != null else {}
 	var grapple: bool = move.get("kind", "") == "grapple"
@@ -673,6 +697,10 @@ func take_hit(damage: int, knockback: float, attacker_facing: int, attacker: Nod
 		if attacker != null and attacker.has_method("apply_parry_punish"):
 			attacker.apply_parry_punish()
 		return false
+	# A super's opening strike landed clean: into the cinematic.
+	if not blocked and move.get("super", false) and attacker != null and attacker.has_method("start_super"):
+		attacker.start_super(self)
+		return true
 	if attacker != null and attacker.has_signal("strike_connected"):
 		attacker.strike_connected.emit(blocked, force)
 	var dealt := damage
@@ -706,6 +734,7 @@ func take_hit(damage: int, knockback: float, attacker_facing: int, attacker: Nod
 		if guard_broken:
 			stun_timer = maxf(stun_timer, 0.55)
 	health = maxi(0, health - dealt)
+	_gain_meter(attacker, dealt, blocked)
 	velocity.x = attacker_facing * knockback * (0.3 if blocked else (1.3 if last_hit_stagger else 1.0))
 	_knockback_start = absf(velocity.x)
 	health_changed.emit(health, max_health)
@@ -719,6 +748,125 @@ func take_hit(damage: int, knockback: float, attacker_facing: int, attacker: Nod
 		ko.emit()
 	_update_animation()
 	return not blocked
+
+func has_super() -> bool:
+	return is_action_fight() and SUPERS.has(str(character_profile.id))
+
+func super_ready() -> bool:
+	return has_super() and super_meter >= SUPERS.METER_MAX and state in [State.IDLE, State.WALK, State.BLOCK] and _is_grounded()
+
+## Damage dealt builds the attacker's meter and, a little slower, the
+## victim's. Guarded chip builds only a sliver.
+func _gain_meter(attacker: Node, dealt: int, blocked: bool) -> void:
+	if attacker == null or attacker.get("super_meter") == null or attacker.state == State.SUPER:
+		return
+	var share := 0.3 if blocked else 1.0
+	attacker.super_meter = minf(SUPERS.METER_MAX, attacker.super_meter + dealt * SUPERS.GAIN_DEALT * share)
+	super_meter = minf(SUPERS.METER_MAX, super_meter + dealt * SUPERS.GAIN_TAKEN * share)
+
+## The opening strike: the meter is spent whether it lands or not.
+func _start_super_strike() -> void:
+	super_meter = 0.0
+	_start_attack(State.PUNCH, "super")
+	current_move = SUPERS.opener(str(character_profile.id))
+	chain_step = 0
+	_update_animation()
+
+## Locks `victim` into the super: a held freeze while it is announced, then
+## the combo plays out on the super's own clock.
+func start_super(victim: Node) -> void:
+	hitbox.set_active(false)
+	state = State.SUPER
+	super_partner = victim
+	super_time = 0.0
+	super_hits = 0
+	velocity = Vector2.ZERO
+	victim.state = State.STRUCK
+	victim.super_partner = self
+	victim.stun_timer = 0.4
+	victim.velocity = Vector2.ZERO
+	victim.hitbox.set_active(false)
+	victim.current_move = {}
+	victim.attack_connected = false
+	victim.chain_step = 0
+	victim._combo_attacker = self
+	victim._received_hits = 1
+	hitstop_remaining = SUPERS.FREEZE
+	victim.hitstop_remaining = SUPERS.FREEZE
+	combat_notice = str(SUPERS.get_super(str(character_profile.id)).get("name", "SUPER"))
+	notice_until = combat_time + 1.6
+	_begin_super()
+	super_started.emit()
+	_update_animation()
+	victim._update_animation()
+
+## Spatial hook: the 3D fighter fixes the line the super travels along.
+func _begin_super() -> void:
+	pass
+
+## Spatial hook: places both fighters along the super for the current time.
+func _place_super() -> void:
+	pass
+
+func super_clip_time() -> float:
+	var data := SUPERS.get_super(str(character_profile.id))
+	return minf(float(data.get("start", 0.0)) + super_time, float(data.get("end", 1.0)))
+
+func _process_super(delta: float) -> void:
+	var victim: Node = super_partner
+	var data := SUPERS.get_super(str(character_profile.id))
+	if victim == null or data.is_empty():
+		state = State.IDLE
+		return
+	super_time += delta
+	var hits: Array = data.hits
+	while super_hits < hits.size() and super_clip_time() >= float(hits[super_hits]):
+		_super_hit(super_hits)
+		super_hits += 1
+		if hitstop_remaining > 0.0:
+			break
+	_place_super()
+	if super_clip_time() >= float(data.end) and super_hits >= hits.size():
+		victim.super_partner = null
+		super_partner = null
+		current_move = {}
+		state = State.IDLE
+		if controls_enabled:
+			_process_move_and_actions(delta)
+
+## One blow of the super: its damage, an impact and a reaction; the last
+## launches the victim (into the railing when it is close).
+func _super_hit(index: int) -> void:
+	var victim: Node = super_partner
+	var data := SUPERS.get_super(str(character_profile.id))
+	var last: bool = index == data.hits.size() - 1
+	var dealt: int = data.damage[index]
+	victim.health = maxi(0, victim.health - dealt)
+	victim.health_changed.emit(victim.health, victim.max_health)
+	combo_hits = index + 1
+	combo_damage += dealt
+	victim._received_hits = index + 1
+	victim.last_hit_height = "high" if index % 2 == 1 else "mid"
+	victim.last_hit_force = 1.0 if last else 0.6
+	victim.last_hit_counter = false
+	victim.last_hit_stagger = last
+	victim.stun_timer = 0.4
+	var freeze := 0.15 if last else 0.06
+	hitstop_remaining = freeze
+	victim.hitstop_remaining = freeze
+	victim.impact.emit(victim.global_position + Vector2(-facing * 16.0, -88.0), false, last)
+	victim._flash(Color(1.0, 0.65, 0.55))
+	if victim.health <= 0:
+		victim.state = State.KO
+		victim.hurtbox.set_deferred("monitorable", false)
+		victim.velocity.x = -victim.facing * SUPERS.LAUNCH
+		victim.ko.emit()
+	elif last:
+		victim.state = State.HITSTUN
+		victim.stun_timer = SUPERS.LAUNCH_STUN
+		victim.velocity.x = -victim.facing * SUPERS.LAUNCH
+		victim._knockback_start = SUPERS.LAUNCH
+	victim._update_animation()
 
 ## Locks `victim` into this fighter's throw. Escapes and range were already
 ## checked by the victim's take_hit; `damage` is dealt on the slam.
@@ -952,6 +1100,10 @@ func reset_for_new_round() -> void:
 	throw_partner = null
 	throw_time = 0.0
 	throw_slammed = false
+	super_meter = 0.0
+	super_time = 0.0
+	super_hits = 0
+	super_partner = null
 	knockdown_time = 0.0
 	thrown_down = false
 	wake_choice = ""

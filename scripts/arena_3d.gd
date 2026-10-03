@@ -18,6 +18,10 @@ var impact_meshes: Array[Dictionary] = []
 var shake_3d := 0.0
 ## Metres the lens is shoved along a heavy blow; eases back to rest.
 var camera_nudge := Vector3.ZERO
+## The super cinematic: who is performing it, and how far the camera has
+## swung into its close-up (0 = fight camera, 1 = full close-up).
+var super_fighter: Node = null
+var cinematic := 0.0
 var fov_kick := 0.0
 ## Lens push-in held through a knockout (field-of-view degrees, eased).
 var ko_push := 0.0
@@ -27,6 +31,7 @@ var ghosts: Array[Dictionary] = []
 var ghost_clock: Array[float] = [0.0, 0.0]
 var last_states: Array[int] = [-1, -1]
 var contact_shadows: Array[MeshInstance3D] = []
+const UI_KIT := preload("res://scripts/ui_kit.gd")
 const RING_SHADER := preload("res://scripts/impact_ring.gdshader")
 const CONTACT_SHADOW := preload("res://scripts/contact_shadow.gdshader")
 ## Motion-trail tint per player: barely tinted so trails read as blur.
@@ -111,6 +116,7 @@ func _ready() -> void:
 	for fighter in [player1, player2]:
 		fighter.impact.connect(func(_point: Vector2, blocked: bool, heavy: bool): _impact_3d(fighter, blocked, heavy))
 		fighter.wall_hit.connect(_wall_impact)
+		fighter.super_started.connect(_super_cinematic.bind(fighter))
 	health_bar1.max_value = player1.max_health
 	health_bar2.max_value = player2.max_health
 	player1.health_changed.connect(func(h, _mh): health_bar1.value = h)
@@ -159,6 +165,8 @@ func _begin_round(index: int) -> void:
 	_update_fight_camera(0.0)
 	shake_3d = 0
 	camera_nudge = Vector3.ZERO
+	super_fighter = null
+	cinematic = 0.0
 	fov_kick = 0
 	for spark in impact_meshes:
 		spark.mesh.queue_free()
@@ -264,8 +272,25 @@ func _update_fight_camera(delta: float) -> void:
 	ko_push = move_toward(ko_push, 8.0 if ko_hold > 0.0 else 0.0, delta * (40.0 if ko_hold > 0.0 else 16.0))
 	camera_3d.fov = CAMERA_FOV - (fov_kick if MatchSetup.camera_shake else 0.0) - ko_push
 	var nudge := camera_nudge if MatchSetup.camera_shake else Vector3.ZERO
+	var look: Vector3 = camera_target
+	# Super: swing to a low close-up from the attacker's front quarter and
+	# ease back out once the combo is over.
+	var performing: bool = is_instance_valid(super_fighter) and super_fighter.state == super_fighter.State.SUPER
+	cinematic = move_toward(cinematic, 1.0 if performing else 0.0, delta * (2.6 if performing else 1.4))
+	if cinematic > 0.001 and is_instance_valid(super_fighter):
+		var rival: Node = super_fighter.opponent
+		var middle: Vector3 = (super_fighter.body.position + rival.body.position) * 0.5 + Vector3.UP * 1.05
+		var toward_face: float = signf(super_fighter.forward.dot(along)) if absf(super_fighter.forward.dot(along)) > 0.01 else 1.0
+		# A low profile shot, turned a little toward the attacker's front so
+		# both fighters stay in frame with the attacker's face toward us.
+		var swing: Vector3 = (turn * Vector3.BACK).rotated(Vector3.UP, 0.35 * toward_face)
+		var close: Vector3 = middle + swing * 3.4 + Vector3.UP * -0.25
+		var k := smoothstep(0.0, 1.0, cinematic)
+		eye = eye.lerp(close, k)
+		look = look.lerp(middle, k)
+		camera_3d.fov -= 8.0 * k
 	camera_3d.position = eye + nudge
-	camera_3d.look_at(camera_target + nudge * 0.6)
+	camera_3d.look_at(look + nudge * 0.6)
 
 ## Fight Options can switch the sparks, dust, trails and punch off.
 func _effects_on() -> bool:
@@ -307,6 +332,28 @@ func _impact_3d(fighter: Node, blocked: bool, heavy: bool) -> void:
 		var size := get_viewport().get_visible_rect().size
 		var screen := camera_3d.unproject_position(point) / size
 		nepal_stage.punch(screen, 0.25 if blocked else (1.0 if heavy else 0.45))
+
+## A super's opening strike landed: the scene darkens, the move's name
+## slams onto the screen, and the camera swings into its close-up.
+func _super_cinematic(fighter: Node) -> void:
+	super_fighter = fighter
+	preload("res://scripts/sfx.gd").fire("hit_heavy")
+	nepal_stage.flash(Color(0.08, 0.02, 0.02), 0.55, 0.6)
+	shake_3d = 0.03
+	var data: Dictionary = fighter.SUPERS.get_super(str(fighter.character_profile.id))
+	var ui := get_node_or_null("UI")
+	if ui == null:
+		return
+	var title := UI_KIT.heading(ui, str(data.get("name", "SUPER")), Vector2(130, 196), Vector2(700, 90), 58, UI_KIT.GOLD, UI_KIT.CRIMSON)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.z_index = 12
+	title.pivot_offset = title.size * 0.5
+	title.scale = Vector2.ONE * 1.8
+	var show := title.create_tween()
+	show.tween_property(title, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	show.tween_interval(0.55)
+	show.tween_property(title, "modulate:a", 0.0, 0.3)
+	show.tween_callback(title.queue_free)
 
 ## A fighter slammed into a railing: a heavy thud, stone dust bursting off
 ## the balustrade, sparks where the back meets it and a hard camera knock.
