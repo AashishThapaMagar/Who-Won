@@ -59,6 +59,10 @@ func run() -> void:
 	p1 = arena.player1
 	p2 = arena.player2
 	await frames(5)
+	if not p2.WALL_HITS:
+		print("WALL_HIT_TEST: SKIPPED (wall hits are switched off)")
+		quit(0)
+		return
 	check(await knock(420.0, 0.6) == 1, "A hard blow near the railing slams the fighter into it, once")
 	check(await knock(90.0, 0.25) == 0, "A soft push into the railing is not a wall hit")
 	check(await knock(420.0, 0.6, true) == 0, "A guarded blow is not a wall hit")

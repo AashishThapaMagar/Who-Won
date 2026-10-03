@@ -10,6 +10,10 @@ uniform vec3 highlight_tint : source_color = vec3(1.0);
 uniform float saturation = 1.0;
 uniform float contrast = 1.0;
 uniform float vignette = 0.3;
+// Unsharp mask: crisper costume and stone detail, like a console capture.
+uniform float sharpen = 0.0;
+// Fine moving film grain, strongest in the mid-tones.
+uniform float grain = 0.0;
 // Impact punch: a soft ring of light spreading out from the hit, fading
 // with `punch` (1 at the moment of contact).
 uniform float punch = 0.0;
@@ -25,6 +29,12 @@ void fragment() {
 	vec2 from_hit = uv - punch_center;
 	from_hit.x *= 1.777;
 	vec3 col = texture(screen, uv).rgb;
+	if (sharpen > 0.001) {
+		vec2 px = SCREEN_PIXEL_SIZE;
+		vec3 around = texture(screen, uv + vec2(px.x, 0.0)).rgb + texture(screen, uv - vec2(px.x, 0.0)).rgb
+			+ texture(screen, uv + vec2(0.0, px.y)).rgb + texture(screen, uv - vec2(0.0, px.y)).rgb;
+		col = max(col + (col - around * 0.25) * sharpen, vec3(0.0));
+	}
 	if (punch > 0.002) {
 		// A soft, brief pressure ring spreading from the hit: no colour
 		// fringing or glitching, just a breath of light across the scene.
@@ -38,6 +48,10 @@ void fragment() {
 	col *= mix(shadow_tint, highlight_tint, smoothstep(0.0, 0.85, luma));
 	vec2 centred = (uv - 0.5) * vec2(1.2, 1.0);
 	col *= 1.0 - vignette * smoothstep(0.42, 0.98, length(centred));
+	if (grain > 0.001) {
+		float n = fract(sin(dot(uv * 1000.0 + fract(TIME * 7.3) * 37.0, vec2(12.9898, 78.233))) * 43758.5453);
+		col += (n - 0.5) * grain * (1.0 - abs(luma - 0.5) * 1.4);
+	}
 	col = mix(col, flash_color, flash);
 	COLOR = vec4(col, 1.0);
 }

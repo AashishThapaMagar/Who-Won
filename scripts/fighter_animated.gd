@@ -1330,9 +1330,10 @@ func _polish_materials() -> void:
 			material.metallic = minf(material.metallic, 0.12)
 			material.roughness = maxf(material.roughness, 0.72)
 			material.metallic_specular = 0.28
+			# A strong edge light lifts each fighter off the arena behind.
 			material.rim_enabled = true
-			material.rim = 0.12
-			material.rim_tint = 0.5
+			material.rim = 0.24
+			material.rim_tint = 0.75
 			material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 
 ## Restarts the current clip on the next update (cutscenes repeating a move).

@@ -51,21 +51,25 @@ const AMBIENCE := [
 ]
 ## Sky and light per round: [sky top, horizon, sun colour, sun energy,
 ## ambient colour, ambient energy, sun pitch, sun yaw, mountain tint].
+## Cinematic light: a lower, warmer sun rakes across the fighters for long
+## shadows and sculpted shading, against a cooler, dimmer sky fill.
 const MOODS := [
-	[Color("3f7fd0"), Color("cfe2f2"), Color("fff1dc"), 0.7, Color("b9c9dc"), 0.36, -48.0, -35.0, Color(1, 1, 1)],
-	[Color("4a86d0"), Color("e6ecf2"), Color("fff4e0"), 0.72, Color("c3cbd6"), 0.36, -42.0, 30.0, Color(1, 1, 1)],
-	[Color("3d7fd4"), Color("d7e7f5"), Color("fff0d8"), 0.75, Color("bfcad8"), 0.36, -50.0, 28.0, Color(1, 1, 1)],
-	[Color("3a78cf"), Color("d2e4f4"), Color("fffaf0"), 0.72, Color("c0cbdc"), 0.36, -45.0, -25.0, Color(1, 1, 1)],
+	[Color("3a74c6"), Color("f0dcc4"), Color("ffd9a8"), 0.95, Color("9fb4d4"), 0.27, -30.0, -35.0, Color(1, 1, 1)],
+	[Color("4580cc"), Color("f2e2cc"), Color("ffdcae"), 0.95, Color("a6b7d2"), 0.27, -28.0, 30.0, Color(1, 1, 1)],
+	[Color("3876ca"), Color("f0d9bf"), Color("ffd29c"), 1.0, Color("a2b4d4"), 0.26, -26.0, 28.0, Color(1, 1, 1)],
+	[Color("3570c4"), Color("eedfcc"), Color("ffe0b8"), 0.95, Color("a4b6d6"), 0.27, -30.0, -25.0, Color(1, 1, 1)],
 ]
 ## Finishing grade per round (arena_grade.gdshader): [shadow tint,
 ## highlight tint, saturation, contrast, vignette, exposure, glow intensity,
 ## glow threshold]. Night squares lean teal in the darks and amber in the
 ## lamplight; the sunset warms everything; the stupa finale is cold and clean.
+## Arcade-fighter look: rich colour, firm contrast, cool teal shadows
+## against warm highlights, and a vignette that frames the fight.
 const GRADES := [
-	[Color(0.97, 0.99, 1.03), Color(1.03, 1.0, 0.96), 1.08, 1.04, 0.22, 1.0, 0.5, 0.95],
-	[Color(0.97, 0.99, 1.03), Color(1.04, 1.0, 0.95), 1.08, 1.04, 0.22, 1.0, 0.5, 0.95],
-	[Color(0.97, 0.99, 1.03), Color(1.03, 1.0, 0.96), 1.1, 1.04, 0.2, 1.02, 0.5, 0.95],
-	[Color(0.96, 0.99, 1.04), Color(1.02, 1.0, 0.98), 1.06, 1.05, 0.22, 1.0, 0.5, 0.95],
+	[Color(0.9, 0.98, 1.08), Color(1.05, 1.0, 0.93), 1.22, 1.1, 0.32, 1.0, 0.75, 0.96],
+	[Color(0.9, 0.98, 1.08), Color(1.06, 1.0, 0.92), 1.22, 1.1, 0.32, 1.0, 0.75, 0.96],
+	[Color(0.9, 0.98, 1.08), Color(1.05, 1.0, 0.93), 1.24, 1.1, 0.3, 1.02, 0.75, 0.96],
+	[Color(0.88, 0.98, 1.1), Color(1.04, 1.0, 0.95), 1.2, 1.11, 0.32, 1.0, 0.75, 0.96],
 ]
 ## Night version of any arena (cinematics set force_night): the starlit sky,
 ## lamp glow and teal-and-amber grade Heritage Square used to have.
@@ -313,7 +317,8 @@ func show_round(index: int) -> void:
 	content.add_child(HIMALAYA.build(_mood()[1], night, index == 2))
 	_fight_lighting()
 	_arena_inlay()
-	_railings()
+	if RAILINGS:
+		_railings()
 	_batch_static()
 	_ambience()
 	if changing:
@@ -324,6 +329,8 @@ func show_round(index: int) -> void:
 ## pyramid caps, in the temple stone. Their inner face is the invisible wall
 ## arena_3d.gd stops the fighters at, so a fighter knocked into it is seen
 ## to hit stone.
+## Switched off for now: the arena ends stay open and invisible.
+const RAILINGS := false
 const RAIL_X := 4.76
 ## The strip runs z -1.4 (far) to 0.85 (near): stopping short on the camera
 ## side keeps the near post from filling the corner of the screen.
@@ -1002,10 +1009,11 @@ func _lighting() -> void:
 	env.fog_enabled = true
 	env.fog_light_color = mood[1]
 	env.fog_light_energy = 0.65
-	env.fog_density = 0.0025 if night else 0.0018
+	# Aerial haze: the far ridges and roofs fade warm into the light.
+	env.fog_density = 0.0025 if night else 0.0034
 	env.fog_sky_affect = 0.12
 	# Sunlight scattered into the haze, so fog glows toward the sun.
-	env.fog_sun_scatter = 0.0 if night else 0.35
+	env.fog_sun_scatter = 0.0 if night else 0.6
 	# A thin ground mist pools on the night squares: it catches the
 	# lamplight low around the dais without dulling the fighters.
 	env.fog_height = 0.35 if night else -20.0
@@ -1028,6 +1036,8 @@ func _lighting() -> void:
 	grade.set_shader_parameter("saturation", look[2])
 	grade.set_shader_parameter("contrast", look[3])
 	grade.set_shader_parameter("vignette", look[4])
+	grade.set_shader_parameter("sharpen", 0.35)
+	grade.set_shader_parameter("grain", 0.025)
 	grade.set_shader_parameter("punch_color", Color("ffd9a0") if current_round != 3 else Color("cfe4ff"))
 
 ## 0 on the LOW preset (or custom settings with everything off), 1 otherwise:

@@ -29,6 +29,9 @@ var _throw_rest := Vector3.ZERO
 ## Knocked into a railing hard enough, a fighter slams into it, bounces
 ## off and stays stunned a beat longer: a follow-up chance (see _wall_hit).
 signal wall_hit(point: Vector3)
+## Off while the arena ends have no visible railing (nepal_stage_3d RAILINGS):
+## a fighter slamming into thin air would look broken.
+const WALL_HITS := false
 const WALL_SPEED := 150.0
 const WALL_STUN := 0.42
 var _wall_hit_done := false
@@ -179,7 +182,7 @@ func _move_combat_body(delta: float) -> void:
 	var pressed := body.is_on_wall() or absf(body.position.x) >= LANE_HALF_WIDTH - 0.01
 	var into_wall := pressed and absf(body.position.x) > LANE_HALF_WIDTH - 0.25 and signf(planar.x) == signf(body.position.x)
 	body.position.x = clampf(body.position.x, -LANE_HALF_WIDTH, LANE_HALF_WIDTH)
-	if into_wall and not _wall_hit_done and state in [State.HITSTUN, State.KO] and absf(velocity.x) >= WALL_SPEED:
+	if WALL_HITS and into_wall and not _wall_hit_done and state in [State.HITSTUN, State.KO] and absf(velocity.x) >= WALL_SPEED:
 		_wall_hit()
 	body.position.z = clampf(body.position.z, -LANE_HALF_DEPTH, LANE_HALF_DEPTH)
 	if absf(body.position.z) >= LANE_HALF_DEPTH:
