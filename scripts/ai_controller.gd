@@ -9,8 +9,10 @@ extends Node
 var fighter: Node
 var opponent: Node
 
-const ATTACK_RANGE := 92.0
-const CLOSE_RANGE := 58.0
+## Units between bodies (64 per metre) a jab really reaches across: strikes
+## only land when the fist touches (hit_detection_3d.gd).
+const ATTACK_RANGE := 72.0
+const CLOSE_RANGE := 50.0
 const APPROACH_RANGE := 230.0
 const BLOCK_REACTION_TIME := 0.14
 const DECISION_INTERVAL := 0.32

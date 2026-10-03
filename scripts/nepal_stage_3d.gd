@@ -51,25 +51,26 @@ const AMBIENCE := [
 ]
 ## Sky and light per round: [sky top, horizon, sun colour, sun energy,
 ## ambient colour, ambient energy, sun pitch, sun yaw, mountain tint].
-## Cinematic light: a lower, warmer sun rakes across the fighters for long
-## shadows and sculpted shading, against a cooler, dimmer sky fill.
+## Clear Himalayan daylight: a deep blue sky over white peaks, a clean,
+## nearly white sun high enough to light faces, and a soft sky-blue fill.
 const MOODS := [
-	[Color("3a74c6"), Color("f0dcc4"), Color("ffd9a8"), 0.95, Color("9fb4d4"), 0.27, -30.0, -35.0, Color(1, 1, 1)],
-	[Color("4580cc"), Color("f2e2cc"), Color("ffdcae"), 0.95, Color("a6b7d2"), 0.27, -28.0, 30.0, Color(1, 1, 1)],
-	[Color("3876ca"), Color("f0d9bf"), Color("ffd29c"), 1.0, Color("a2b4d4"), 0.26, -26.0, 28.0, Color(1, 1, 1)],
-	[Color("3570c4"), Color("eedfcc"), Color("ffe0b8"), 0.95, Color("a4b6d6"), 0.27, -30.0, -25.0, Color(1, 1, 1)],
+	[Color("2f6fd6"), Color("bcd8f2"), Color("fff6ea"), 0.9, Color("b4c8e4"), 0.34, -40.0, -35.0, Color(1, 1, 1)],
+	[Color("3a7ad8"), Color("c4dcf2"), Color("fff7ec"), 0.9, Color("b8cbe4"), 0.34, -38.0, 30.0, Color(1, 1, 1)],
+	[Color("2c6cd4"), Color("b8d6f2"), Color("fff4e4"), 0.92, Color("b2c6e2"), 0.33, -42.0, 28.0, Color(1, 1, 1)],
+	[Color("2a68d0"), Color("bad6f2"), Color("fffaf2"), 0.9, Color("b6c9e6"), 0.34, -40.0, -25.0, Color(1, 1, 1)],
 ]
 ## Finishing grade per round (arena_grade.gdshader): [shadow tint,
 ## highlight tint, saturation, contrast, vignette, exposure, glow intensity,
 ## glow threshold]. Night squares lean teal in the darks and amber in the
 ## lamplight; the sunset warms everything; the stupa finale is cold and clean.
-## Arcade-fighter look: rich colour, firm contrast, cool teal shadows
-## against warm highlights, and a vignette that frames the fight.
+## Bright, vivid and clean: prayer-flag colour, red brick and green hills
+## at full strength, neutral highlights (no yellow cast), a hint of cool in
+## the shadows and a light vignette.
 const GRADES := [
-	[Color(0.9, 0.98, 1.08), Color(1.05, 1.0, 0.93), 1.22, 1.1, 0.32, 1.0, 0.75, 0.96],
-	[Color(0.9, 0.98, 1.08), Color(1.06, 1.0, 0.92), 1.22, 1.1, 0.32, 1.0, 0.75, 0.96],
-	[Color(0.9, 0.98, 1.08), Color(1.05, 1.0, 0.93), 1.24, 1.1, 0.3, 1.02, 0.75, 0.96],
-	[Color(0.88, 0.98, 1.1), Color(1.04, 1.0, 0.95), 1.2, 1.11, 0.32, 1.0, 0.75, 0.96],
+	[Color(0.96, 0.99, 1.04), Color(1.01, 1.0, 0.98), 1.2, 1.07, 0.2, 1.04, 0.6, 0.95],
+	[Color(0.96, 0.99, 1.04), Color(1.01, 1.0, 0.98), 1.2, 1.07, 0.2, 1.04, 0.6, 0.95],
+	[Color(0.96, 0.99, 1.04), Color(1.01, 1.0, 0.98), 1.22, 1.07, 0.18, 1.05, 0.6, 0.95],
+	[Color(0.95, 0.99, 1.05), Color(1.0, 1.0, 0.99), 1.18, 1.08, 0.2, 1.04, 0.6, 0.95],
 ]
 ## Night version of any arena (cinematics set force_night): the starlit sky,
 ## lamp glow and teal-and-amber grade Heritage Square used to have.
@@ -1009,11 +1010,11 @@ func _lighting() -> void:
 	env.fog_enabled = true
 	env.fog_light_color = mood[1]
 	env.fog_light_energy = 0.65
-	# Aerial haze: the far ridges and roofs fade warm into the light.
-	env.fog_density = 0.0025 if night else 0.0034
+	# Thin mountain air: only the far ridges soften, into blue.
+	env.fog_density = 0.0025 if night else 0.0016
 	env.fog_sky_affect = 0.12
 	# Sunlight scattered into the haze, so fog glows toward the sun.
-	env.fog_sun_scatter = 0.0 if night else 0.6
+	env.fog_sun_scatter = 0.0 if night else 0.2
 	# A thin ground mist pools on the night squares: it catches the
 	# lamplight low around the dais without dulling the fighters.
 	env.fog_height = 0.35 if night else -20.0
@@ -1037,7 +1038,7 @@ func _lighting() -> void:
 	grade.set_shader_parameter("contrast", look[3])
 	grade.set_shader_parameter("vignette", look[4])
 	grade.set_shader_parameter("sharpen", 0.35)
-	grade.set_shader_parameter("grain", 0.025)
+	grade.set_shader_parameter("grain", 0.012)
 	grade.set_shader_parameter("punch_color", Color("ffd9a0") if current_round != 3 else Color("cfe4ff"))
 
 ## 0 on the LOW preset (or custom settings with everything off), 1 otherwise:

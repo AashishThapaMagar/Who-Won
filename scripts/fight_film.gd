@@ -1,8 +1,8 @@
 extends Node
-## A 40-second fight film introducing Ish, against Ananta, shot and graded the way Kung Fu
-## Hustle is: golden-olive colour with crushed blacks, letterboxed, low wide
-## lenses, crash zooms and whip pans, speed ramps on the big blows and
-## freeze frames that stamp each fighter's name on screen.
+## A 40-second fight film introducing Ish, against Ananta, shot the way Kung
+## Fu Hustle is (letterboxed, low wide lenses, crash zooms and whip pans,
+## speed ramps on the big blows, freeze frames that stamp the name on
+## screen) in bright Himalayan colour: blue sky, white peaks, prayer flags.
 ##
 ## Record it with Godot's movie maker (30 fps, 1920x1080):
 ##   godot --path . --fixed-fps 30 --resolution 1920x1080 --write-movie fight_film.avi res://scenes/FightFilm.tscn
@@ -61,16 +61,16 @@ func _ready() -> void:
 	ish.impact.connect(func(_p, blocked, _h): _on_impact(ish, blocked))
 	ananta.impact.connect(func(_p, blocked, _h): _on_impact(ananta, blocked))
 
-## Kung Fu Hustle colour: olive-teal shadows under amber-gold highlights,
-## crushed blacks, heavy vignette and grain.
+## Film colour on top of the game's daylight: vivid and clean, firmer
+## contrast and a cinema vignette, no colour cast.
 func _grade() -> void:
 	var grade: ShaderMaterial = arena.nepal_stage.grade
-	grade.set_shader_parameter("shadow_tint", Color(0.78, 0.93, 0.84))
-	grade.set_shader_parameter("highlight_tint", Color(1.16, 1.03, 0.74))
-	grade.set_shader_parameter("saturation", 0.92)
-	grade.set_shader_parameter("contrast", 1.32)
-	grade.set_shader_parameter("vignette", 0.6)
-	grade.set_shader_parameter("grain", 0.06)
+	grade.set_shader_parameter("shadow_tint", Color(0.94, 0.98, 1.06))
+	grade.set_shader_parameter("highlight_tint", Color(1.02, 1.0, 0.97))
+	grade.set_shader_parameter("saturation", 1.24)
+	grade.set_shader_parameter("contrast", 1.14)
+	grade.set_shader_parameter("vignette", 0.38)
+	grade.set_shader_parameter("grain", 0.03)
 	grade.set_shader_parameter("sharpen", 0.3)
 
 func _hide_hud() -> void:
