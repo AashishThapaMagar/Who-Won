@@ -25,85 +25,42 @@ const NEPALI := {"arcade": "आर्केड", "story": "कथा", "local": 
 ## Order the arrow keys walk through the list.
 const ENTRIES := ["arcade", "story", "local", "ai", "practice", "records", "settings", "exit"]
 ## Gold light sweeping across the title, arcade attract-mode style.
-## Dhaka: the woven pattern of the Nepali topi, a field of stepped
-## diamonds in crimson, saffron, white and black, for the panel's edge.
-const DHAKA := """shader_type canvas_item;
-uniform vec2 size = vec2(12.0, 500.0);
-void fragment() {
-	vec2 p = UV * size / 12.0;
-	vec2 id = floor(p);
-	vec2 c = fract(p) - 0.5;
-	float d = abs(c.x) + abs(c.y);
-	vec3 ink = vec3(0.06, 0.04, 0.07);
-	vec3 col = ink;
-	float band = mod(id.y, 3.0);
-	vec3 tone = band < 1.0 ? vec3(0.82, 0.09, 0.14) : (band < 2.0 ? vec3(0.98, 0.62, 0.14) : vec3(0.12, 0.3, 0.62));
-	col = d < 0.46 ? tone : col;
-	col = d < 0.3 ? vec3(0.97, 0.94, 0.86) : col;
-	col = d < 0.14 ? ink : col;
-	COLOR = vec4(col, 1.0);
-}
-"""
-## A diyo's flame: a flickering teardrop, white at the wick through gold.
-const DIYO_FLAME := """shader_type canvas_item;
-uniform float seed = 0.0;
-void fragment() {
-	float t = TIME * 9.0 + seed * 13.0;
-	float sway = sin(t) * 0.05 + sin(t * 1.7) * 0.03;
-	vec2 p = vec2((UV.x - 0.5 - sway * (1.0 - UV.y)) * 2.2, UV.y);
-	float body = 1.0 - smoothstep(0.0, 1.0, length(vec2(p.x / max(0.05, 1.0 - p.y * 0.95), (p.y - 0.62) * 1.6)));
-	body *= smoothstep(0.0, 0.2, 1.0 - UV.y);
-	float flicker = 0.85 + 0.15 * sin(t * 2.3);
-	vec3 col = mix(vec3(1.0, 0.45, 0.08), vec3(1.0, 0.95, 0.75), smoothstep(0.35, 0.9, body));
-	COLOR = vec4(col, smoothstep(0.08, 0.5, body) * flicker);
-}
-"""
-## Menu geometry: one column down the panel on the left.
-const ROW_TOP := 176.0
-const ROW_STEP := 30.0
-const ROW_HEIGHT := 28.0
-const GROUP_GAP := 10.0
+## Menu geometry: a quiet column down the left of the screen.
+const ROW_TOP := 196.0
+const ROW_STEP := 31.0
+const ROW_HEIGHT := 30.0
+const GROUP_GAP := 12.0
 const ROW_WIDTH := 300.0
-const PANEL_WIDTH := 360.0
 const PORTRAIT := preload("res://scripts/roster_portrait.gd")
-## Dusk over Kathmandu: the arena stays in view on the right under a deep
-## indigo sky; darker toward the bottom where the text sits.
+## The logo's finish: brushed gold at the top warming to white-hot through
+## the middle and back to deep gold, with a slow glint crossing it. Graded
+## by screen height (a label's UV is per glyph).
+const LOGO_METAL := """shader_type canvas_item;
+uniform float top = 0.07;
+uniform float bottom = 0.21;
+void fragment() {
+	vec4 glyph = texture(TEXTURE, UV);
+	float y = clamp((SCREEN_UV.y - top) / (bottom - top), 0.0, 1.0);
+	vec3 metal = mix(vec3(1.0, 0.86, 0.48), vec3(1.0, 0.99, 0.94), smoothstep(0.1, 0.45, y));
+	metal = mix(metal, vec3(0.92, 0.62, 0.2), smoothstep(0.55, 1.0, y));
+	float sweep = fract(TIME * 0.12) * 3.2 - 1.1;
+	float glint = 1.0 - smoothstep(0.0, 0.035, abs(SCREEN_UV.x * 0.8 + SCREEN_UV.y * 0.6 - sweep));
+	float fill = step(0.98, min(COLOR.r, min(COLOR.g, COLOR.b)));
+	COLOR = vec4(mix(COLOR.rgb, metal + glint * 0.5, fill), glyph.a * COLOR.a);
+}
+"""
+## Film grade over the live arena: dark on the left where the menu reads,
+## open in the middle where the fighter stands, a soft vignette all round.
 const BACKDROP_GRADE := """shader_type canvas_item;
 void fragment() {
 	vec2 uv = UV;
-	float a = 0.34 + smoothstep(0.55, 1.0, uv.y) * 0.4 + (1.0 - smoothstep(0.0, 0.25, uv.y)) * 0.25;
-	vec3 sky = mix(vec3(0.06, 0.05, 0.2), vec3(0.03, 0.02, 0.06), uv.y);
-	COLOR = vec4(sky, clamp(a, 0.0, 0.9));
+	float left = 1.0 - smoothstep(0.05, 0.5, uv.x);
+	vec2 c = (uv - vec2(0.62, 0.5)) * vec2(1.3, 1.0);
+	float vignette = smoothstep(0.35, 0.95, length(c));
+	float a = clamp(0.28 + left * 0.64 + vignette * 0.5 + smoothstep(0.75, 1.0, uv.y) * 0.45, 0.0, 0.95);
+	COLOR = vec4(0.012, 0.014, 0.03, a);
 }
 """
-## Prayer flags strung across the top of the arena, each lifting and
-## swinging a little on the wind: blue, white, red, green, yellow.
-class PrayerFlags extends Control:
-	const COLOURS := [Color("2f6fd6"), Color("f2efe6"), Color("d8333b"), Color("2e9e5b"), Color("f2c230")]
-	var time := 0.0
-	func _ready() -> void:
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-	func _process(delta: float) -> void:
-		time += delta
-		queue_redraw()
-	func _draw() -> void:
-		var from := Vector2(0, 6)
-		var to := Vector2(size.x, 14)
-		var count := 26
-		var points := PackedVector2Array()
-		for i in count + 1:
-			var t := float(i) / count
-			points.append(from.lerp(to, t) + Vector2(0, sin(t * PI) * 26.0))
-		draw_polyline(points, Color(0.85, 0.8, 0.7, 0.6), 1.0, true)
-		for i in count:
-			var t := (i + 0.5) / count
-			var top: Vector2 = from.lerp(to, t) + Vector2(0, sin(t * PI) * 26.0)
-			var swing := sin(time * 2.2 + i * 0.7) * 3.0
-			var lift := sin(time * 3.1 + i * 1.3) * 1.5
-			var w := size.x / count * 0.72
-			var flag := PackedVector2Array([top - Vector2(w * 0.5, 0), top + Vector2(w * 0.5, 0),
-				top + Vector2(w * 0.5 + swing, 17 + lift), top + Vector2(-w * 0.5 + swing, 17 - lift)])
-			draw_colored_polygon(flag, Color(COLOURS[i % 5], 0.92))
 var backdrop: Control
 var extra_rows: Dictionary = {}
 ## Highlighted non-mode entry (a key from EXTRAS), or "" when a mode is.
@@ -140,57 +97,28 @@ func _ready() -> void:
 	grade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	grade.material = _shader_material(BACKDROP_GRADE)
 	add_child(grade)
-	var flags := PrayerFlags.new()
-	flags.position = Vector2(PANEL_WIDTH + 12, 0)
-	flags.size = Vector2(960 - PANEL_WIDTH - 12, 60)
-	add_child(flags)
 	_build_showcase()
-	# The panel: deep indigo with the dhaka weave down its edge.
-	var panel := ColorRect.new()
-	panel.color = Color(0.05, 0.04, 0.12, 0.9)
-	panel.position = Vector2.ZERO
-	panel.size = Vector2(PANEL_WIDTH, 506)
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(panel)
-	var weave := ColorRect.new()
-	weave.position = Vector2(PANEL_WIDTH, 0)
-	weave.size = Vector2(12, 506)
-	weave.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	weave.material = _shader_material(DHAKA)
-	weave.material.set_shader_parameter("size", weave.size)
-	add_child(weave)
-	var tagline := UI.eyebrow(self, "KATHMANDU FIGHTING CHAMPIONSHIP", Vector2(34, 24), Vector2(310, 14), Color(UI.GOLD, 0.8))
-	tagline.add_theme_font_size_override("font_size", 11)
-	# The name is Nepali first: को जित्यो? large, WHO WON? beneath it.
-	var nepali := UI.label(self, "को जित्यो?", Vector2(28, 34), Vector2(320, 84), 66, Color("ffc53d"))
-	nepali.name = "NepaliTitle"
-	nepali.add_theme_font_override("font", UI.devanagari_font())
-	nepali.add_theme_constant_override("outline_size", 10)
-	nepali.add_theme_color_override("font_outline_color", Color("8a1020"))
-	nepali.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
-	nepali.add_theme_constant_override("shadow_offset_y", 4)
-	nepali.pivot_offset = Vector2(0, 42)
-	nepali.scale = Vector2.ONE * 1.12
-	nepali.create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT).tween_property(nepali, "scale", Vector2.ONE, 0.45)
-	var title := UI.heading(self, "WHO WON?", Vector2(36, 116), Vector2(310, 36), 30, UI.WHITE, Color("8a1020"))
+	var title := UI.label(self, "WHO WON?", Vector2(40, 34), Vector2(520, 90), 72, Color.WHITE)
 	title.name = "GameTitle"
-	# A crimson and blue rule, the colours of the flag.
-	UI.panel(self, Vector2(36, 156), Vector2(150, 3), Color("dc143c"), Color.TRANSPARENT, 0.0)
-	UI.panel(self, Vector2(188, 156), Vector2(44, 3), Color("2f5fd0"), Color.TRANSPARENT, 0.0)
-	# Diyos along the foot of the panel.
-	for i in 5:
-		var x := 40.0 + i * 64.0
-		var bowl := Polygon2D.new()
-		bowl.polygon = PackedVector2Array([Vector2(x - 13, 491), Vector2(x + 13, 491), Vector2(x + 8, 500), Vector2(x - 8, 500)])
-		bowl.color = Color("b5652b")
-		add_child(bowl)
-		var flame := ColorRect.new()
-		flame.position = Vector2(x - 8, 466)
-		flame.size = Vector2(16, 26)
-		flame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		flame.material = _shader_material(DIYO_FLAME)
-		flame.material.set_shader_parameter("seed", float(i))
-		add_child(flame)
+	title.add_theme_font_override("font", UI.saira(900, 112, true))
+	title.add_theme_constant_override("outline_size", 4)
+	title.add_theme_color_override("font_outline_color", Color("1a1206"))
+	# A deep drop shadow sets the metal off the scene.
+	title.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
+	title.add_theme_constant_override("shadow_offset_x", 3)
+	title.add_theme_constant_override("shadow_offset_y", 5)
+	title.material = _shader_material(LOGO_METAL)
+	var nepali := UI.label(self, "को जित्यो?", Vector2(48, 120), Vector2(300, 34), 26, UI.GOLD)
+	nepali.name = "NepaliTitle"
+	nepali.add_theme_font_override("font", UI.teko(500))
+	UI.panel(self, Vector2(48, 160), Vector2(36, 2), UI.GOLD, Color.TRANSPARENT, 0.0)
+	# The title block rises into place as the menu opens.
+	for node in [title, nepali]:
+		node.modulate.a = 0.0
+		node.position.y += 14
+		var rise: Tween = node.create_tween().set_parallel(true).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+		rise.tween_property(node, "position:y", node.position.y - 14, 0.8)
+		rise.tween_property(node, "modulate:a", 1.0, 0.6)
 	for i in MODES.size():
 		var data: Array = MODES[i]
 		var row := _mode_row(data[0], data[1], data[2], float(i))
@@ -206,23 +134,38 @@ func _ready() -> void:
 		row.button.mouse_entered.connect(_point_at.bind(extra[0]))
 		extra_rows[extra[0]] = row
 	# Start lives on the splash card; clicking a mode or pressing Enter also starts.
-	play_button = UI.button(self, "START  ▶", Vector2(790, 452), Vector2(146, 38), true)
+	play_button = UI.button(self, "START", Vector2(796, 418), Vector2(140, 36), true)
 	play_button.name = "StartGame"
-	play_button.add_theme_font_override("font", UI.display_font())
-	play_button.add_theme_font_size_override("font_size", 21)
-	play_button.add_theme_stylebox_override("hover", UI.blade(Color("f03a52"), UI.GOLD, 8))
+	play_button.add_theme_font_override("font", UI.saira(800, 100, true))
+	play_button.add_theme_font_size_override("font_size", 18)
+	var outline := StyleBoxFlat.new()
+	outline.bg_color = Color(1, 1, 1, 0.04)
+	outline.border_color = Color(1, 1, 1, 0.8)
+	outline.set_border_width_all(1)
+	var filled := outline.duplicate()
+	filled.bg_color = Color(UI.GOLD, 0.22)
+	filled.border_color = UI.GOLD
+	filled.set_border_width_all(2)
+	for state in ["normal", "focus"]:
+		play_button.add_theme_stylebox_override(state, outline)
+	for state in ["hover", "pressed"]:
+		play_button.add_theme_stylebox_override(state, filled)
+	play_button.add_theme_color_override("font_color", UI.WHITE)
+	play_button.add_theme_color_override("font_focus_color", UI.WHITE)
 	play_button.add_theme_color_override("font_hover_color", UI.WHITE)
+	play_button.add_theme_color_override("font_pressed_color", UI.WHITE)
 	play_button.pressed.connect(_confirm)
 	# Splash card for the highlighted mode.
 	# The highlighted entry, explained once, under the list.
 	mode_title_label = UI.eyebrow(self, "", Vector2(-1000, -1000), Vector2(10, 10), UI.GOLD)
 	mode_title_label.visible = false
-	mode_desc_label = UI.label(self, "", Vector2(36, 432), Vector2(300, 36), 12, Color(UI.WHITE, 0.78))
+	mode_desc_label = UI.label(self, "", Vector2(46, 456), Vector2(320, 40), 13, Color(UI.WHITE, 0.6))
 	mode_desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	mode_desc_label.add_theme_font_override("font", UI.saira(400, 100))
 	# The player's ledger sits under the splash card, arcade high-score style.
-	record_strip = UI.label(self, "", Vector2(400, 462), Vector2(372, 30), 11, UI.MUTED)
+	record_strip = UI.label(self, "", Vector2(520, 460), Vector2(416, 36), 11, Color(UI.WHITE, 0.5))
 	record_strip.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	record_strip.add_theme_font_override("font", UI.strong_font())
+	record_strip.add_theme_font_override("font", UI.saira(500, 90))
 	record_strip.add_theme_constant_override("outline_size", 4)
 	_refresh_record_strip()
 	var hint_x := 40.0
@@ -269,19 +212,23 @@ func _build_showcase() -> void:
 	hero.viewport.size = Vector2i(380, 448)
 	hero.camera.size = 140.0
 	hero.camera.h_offset = 0.0
-	hero_eyebrow = UI.eyebrow(self, "THE ROSTER", Vector2(740, 290), Vector2(196, 14), Color(UI.GOLD, 0.85))
+	hero_eyebrow = UI.label(self, "THE ROSTER", Vector2(640, 262), Vector2(296, 16), 11, Color(UI.WHITE, 0.5))
 	hero_eyebrow.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	hero_title = UI.label(self, "", Vector2(640, 306), Vector2(296, 46), 34, Color("ffc53d"))
+	hero_eyebrow.add_theme_font_override("font", UI.saira(600, 112))
+	hero_title = UI.label(self, "", Vector2(640, 280), Vector2(296, 30), 24, UI.GOLD)
 	hero_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	hero_title.add_theme_font_override("font", UI.devanagari_font())
-	hero_title.add_theme_constant_override("outline_size", 6)
-	hero_title.add_theme_color_override("font_outline_color", Color("8a1020"))
-	hero_name = UI.heading(self, "", Vector2(640, 350), Vector2(296, 40), 34, UI.WHITE)
+	hero_title.add_theme_font_override("font", UI.teko(500))
+	hero_name = UI.label(self, "", Vector2(540, 304), Vector2(396, 64), 56, UI.WHITE)
 	hero_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	hero_caption = UI.eyebrow(self, "", Vector2(640, 392), Vector2(296, 14), UI.GOLD)
+	hero_name.add_theme_font_override("font", UI.saira(900, 110, true))
+	hero_name.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.5))
+	hero_name.add_theme_constant_override("shadow_offset_y", 3)
+	hero_caption = UI.label(self, "", Vector2(640, 374), Vector2(296, 18), 12, Color(UI.WHITE, 0.7))
 	hero_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	var browse := UI.label(self, "◀ ▶  BROWSE", Vector2(640, 424), Vector2(296, 14), 11, UI.MUTED)
+	hero_caption.add_theme_font_override("font", UI.saira(600, 112))
+	var browse := UI.label(self, "◀  ▶   BROWSE FIGHTERS", Vector2(640, 394), Vector2(296, 16), 11, Color(UI.WHITE, 0.4))
 	browse.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	browse.add_theme_font_override("font", UI.saira(500, 100))
 	_show_hero(hero.index, false)
 
 ## Puts a fighter in the spotlight: portrait, name, title and stats. With
@@ -294,7 +241,6 @@ func _show_hero(index: int, animate := true) -> void:
 		hero.show_fighter(index)
 		hero_name.text = profile.name
 		hero_caption.text = String(profile.title).to_upper()
-		hero_name.add_theme_color_override("font_shadow_color", (profile.color as Color).darkened(0.1))
 		hero_title.text = ROSTER.NEPALI_NAMES.get(profile.id, "")
 		var values := [
 			clampf((float(profile.get("punch_bonus", 0)) + 3.0) / 7.0, 0.1, 1.0),
@@ -357,74 +303,32 @@ func _mode_row(mode_key: String, title: String, desc: String, index: float, acce
 	var y := ROW_TOP + index * ROW_STEP + (GROUP_GAP if index >= MODES.size() else 0.0)
 	if accent.a == 0.0:
 		accent = BACKDROP.ACCENTS[BACKDROP.MODE_ORDER.find(mode_key)]
-	var btn := UI.button(self, "", Vector2(30, y), Vector2(ROW_WIDTH, ROW_HEIGHT))
+	var btn := UI.button(self, "", Vector2(44, y), Vector2(ROW_WIDTH, ROW_HEIGHT))
 	btn.name = title.replace(" ", "") + "Mode"
 	btn.focus_mode = Control.FOCUS_NONE
-	var glow := TextureRect.new()
-	glow.texture = _glow_texture()
-	glow.stretch_mode = TextureRect.STRETCH_SCALE
-	glow.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	glow.size = Vector2(ROW_WIDTH, ROW_HEIGHT)
-	glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	glow.modulate.a = 0.0
-	btn.add_child(glow)
-	var pennant := _pennant()
-	pennant.position = Vector2(4, 2)
-	pennant.scale = Vector2.ONE * 1.2
-	pennant.visible = false
-	btn.add_child(pennant)
-	var heading := UI.heading(btn, title, Vector2(28, 0), Vector2(180, ROW_HEIGHT), 20, UI.WHITE, Color(0, 0, 0, 0.6))
+	var edge := ColorRect.new()
+	edge.color = UI.GOLD
+	edge.position = Vector2(0, 6)
+	edge.size = Vector2(2, ROW_HEIGHT - 12)
+	edge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	btn.add_child(edge)
+	var heading := UI.label(btn, title, Vector2(16, -1), Vector2(ROW_WIDTH - 16, ROW_HEIGHT), 19, UI.WHITE)
 	heading.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	heading.add_theme_constant_override("shadow_offset_x", 1)
-	heading.add_theme_constant_override("shadow_offset_y", 1)
-	var local := UI.label(btn, NEPALI.get(mode_key, ""), Vector2(ROW_WIDTH - 128, -3), Vector2(120, ROW_HEIGHT), 15, Color(1.0, 0.78, 0.25, 0.5))
-	local.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	local.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	local.add_theme_font_override("font", UI.devanagari_font())
-	return {"button": btn, "title": title, "desc": desc, "accent": accent, "heading": heading, "glow": glow, "pennant": pennant, "local": local, "home": Vector2(30, y)}
-
-## The Nepal flag's double pennant, crimson in a blue border, small.
-static func _pennant() -> Node2D:
-	var mark := Node2D.new()
-	var shape := PackedVector2Array([Vector2(0, 0), Vector2(14, 8.5), Vector2(5, 8.5), Vector2(14, 20), Vector2(0, 20)])
-	var rim := Polygon2D.new()
-	rim.polygon = shape
-	rim.color = Color("2f5fd0")
-	rim.scale = Vector2(1.0, 1.0)
-	mark.add_child(rim)
-	var face := Polygon2D.new()
-	face.polygon = PackedVector2Array([Vector2(1.6, 2.4), Vector2(10.4, 7.4), Vector2(3.4, 7.4), Vector2(3.4, 9.8), Vector2(10.6, 18.6), Vector2(1.6, 18.6)])
-	face.color = Color("dc143c")
-	mark.add_child(face)
-	return mark
-
-## The chosen row's glow: crimson on the left, fading out to the right.
-static var _glow: Texture2D
-static func _glow_texture() -> Texture2D:
-	if _glow == null:
-		var image := Image.create(128, 4, false, Image.FORMAT_RGBA8)
-		for x in 128:
-			var fade := pow(1.0 - x / 127.0, 1.6)
-			for y in 4:
-				image.set_pixel(x, y, Color(0.86, 0.08, 0.24, fade * 0.55))
-		_glow = ImageTexture.create_from_image(image)
-	return _glow
+	heading.add_theme_font_override("font", UI.saira(600, 100, true))
+	return {"button": btn, "title": title, "desc": desc, "accent": accent, "heading": heading, "edge": edge, "home": Vector2(44, y)}
 
 func _style_row(row: Dictionary, active: bool) -> void:
 	var btn: Button = row.button
 	var accent: Color = row.accent
-	# Idle rows are quiet; the chosen one has the flag pennant, a crimson
-	# glow behind it and its name in full white.
+	# Idle rows are quiet grey; the chosen one turns white and gains a thin
+	# gold edge.
 	var clear := StyleBoxEmpty.new()
 	for state in ["normal", "hover", "pressed", "focus"]:
 		btn.add_theme_stylebox_override(state, clear)
-	row.heading.add_theme_color_override("font_color", UI.WHITE if active else Color(0.93, 0.9, 0.84, 0.6))
-	row.heading.add_theme_color_override("font_shadow_color", Color("8a1020") if active else Color(0, 0, 0, 0.6))
-	row.heading.add_theme_constant_override("outline_size", 3)
-	row.glow.modulate.a = 1.0 if active else 0.0
-	row.pennant.visible = active
-	row.local.add_theme_color_override("font_color", Color("ffc53d") if active else Color(1.0, 0.78, 0.25, 0.42))
-	var target: Vector2 = row.home + (Vector2(6, 0) if active else Vector2.ZERO)
+	row.heading.add_theme_color_override("font_color", UI.WHITE if active else Color(1, 1, 1, 0.42))
+	row.heading.add_theme_font_override("font", UI.saira(800 if active else 500, 100, true))
+	row.edge.visible = active
+	var target: Vector2 = row.home + (Vector2(8, 0) if active else Vector2.ZERO)
 	if btn.is_inside_tree():
 		btn.create_tween().set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT).tween_property(btn, "position", target, 0.22)
 	else:

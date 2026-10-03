@@ -58,6 +58,56 @@ static func devanagari_font() -> Font:
 			_devanagari = fallback
 	return _devanagari
 
+## Teko (assets/fonts, SIL Open Font License): one condensed family for
+## Latin and Devanagari alike, at any weight from 300 (light) to 700
+## (bold). The modern menus are set in it.
+static var _teko_file: Font
+static var _teko: Dictionary = {}
+static func teko(weight: int = 500) -> Font:
+	if not _teko.has(weight):
+		if _teko_file == null:
+			var path := "res://assets/fonts/Teko.ttf"
+			if ResourceLoader.exists(path):
+				_teko_file = load(path)
+			elif FileAccess.file_exists(path):
+				var file := FontFile.new()
+				file.load_dynamic_font(path)
+				_teko_file = file
+			else:
+				return strong_font()
+		var font := FontVariation.new()
+		font.base_font = _teko_file
+		font.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"): weight}
+		_teko[weight] = font
+	return _teko[weight]
+
+## Saira (assets/fonts, SIL Open Font License): heavy, wide, athletic
+## Latin for titles and menus, any weight 100-900 and width 50-125, upright
+## or italic. Devanagari stays in Teko.
+static var _saira_files: Dictionary = {}
+static var _saira: Dictionary = {}
+static func saira(weight: int = 600, width: int = 100, italic := false) -> Font:
+	var key := "%d/%d/%s" % [weight, width, italic]
+	if not _saira.has(key):
+		var path := "res://assets/fonts/Saira-Italic.ttf" if italic else "res://assets/fonts/Saira.ttf"
+		if not _saira_files.has(path):
+			if ResourceLoader.exists(path):
+				_saira_files[path] = load(path)
+			elif FileAccess.file_exists(path):
+				var file := FontFile.new()
+				file.load_dynamic_font(path)
+				_saira_files[path] = file
+			else:
+				return strong_font()
+		var ts := TextServerManager.get_primary_interface()
+		var font := FontVariation.new()
+		font.base_font = _saira_files[path]
+		font.variation_opentype = {ts.name_to_tag("wght"): weight, ts.name_to_tag("wdth"): width}
+		# Devanagari falls back to Teko inside the same label.
+		font.fallbacks = [teko(500)]
+		_saira[key] = font
+	return _saira[key]
+
 static func strong_font() -> Font:
 	if _strong == null:
 		var font := SystemFont.new()
