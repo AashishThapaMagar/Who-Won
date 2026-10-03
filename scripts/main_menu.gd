@@ -19,24 +19,94 @@ const EXTRAS := [
 	["settings", "SETTINGS", "Display, sound, graphics, fight options, controls and how to play.", Color("c9cfdf")],
 	["exit", "EXIT", "Leave the championship. See you next time.", Color("ff4a5a")],
 ]
+## Each entry's name in Nepali, beside the English.
+const NEPALI := {"arcade": "आर्केड", "story": "कथा", "local": "भिडन्त", "ai": "कम्प्युटरसँग",
+	"practice": "अभ्यास", "records": "रेकर्ड", "settings": "सेटिङ", "exit": "बाहिर"}
 ## Order the arrow keys walk through the list.
 const ENTRIES := ["arcade", "story", "local", "ai", "practice", "records", "settings", "exit"]
 ## Gold light sweeping across the title, arcade attract-mode style.
 const SHIMMER := """shader_type canvas_item;
+// Chrome letters: bright steel at the top, a dark horizon band across the
+// middle, warm reflected fire at the bottom, and a white glint sweeping
+// across now and then. Graded by screen height (the logo spans top..bottom
+// of the screen), since a label's UV is per glyph.
+uniform float top = 0.135;
+uniform float bottom = 0.325;
 void fragment() {
-	vec4 base = texture(TEXTURE, UV) * COLOR;
-	float sweep = fract(TIME * 0.22) * 2.4 - 0.7;
-	float band = abs(SCREEN_UV.x + SCREEN_UV.y * 0.35 - sweep);
-	float shine = 1.0 - smoothstep(0.0, 0.07, band);
-	base.rgb += vec3(0.55, 0.5, 0.35) * shine * base.a;
-	COLOR = base;
+	vec4 glyph = texture(TEXTURE, UV);
+	float y = clamp((SCREEN_UV.y - top) / (bottom - top), 0.0, 1.0);
+	vec3 steel = mix(vec3(1.0, 1.0, 0.98), vec3(0.7, 0.74, 0.82), smoothstep(0.05, 0.47, y));
+	steel = mix(steel, vec3(0.22, 0.24, 0.32), smoothstep(0.46, 0.5, y) * (1.0 - smoothstep(0.5, 0.6, y)));
+	steel = mix(steel, vec3(0.95, 0.9, 0.85), smoothstep(0.55, 0.7, y));
+	steel = mix(steel, vec3(1.0, 0.55, 0.15), smoothstep(0.72, 1.0, y));
+	float sweep = fract(TIME * 0.18) * 3.0 - 1.0;
+	float glint = 1.0 - smoothstep(0.0, 0.05, abs(SCREEN_UV.x + SCREEN_UV.y * 0.5 - sweep));
+	// Only the white letter fill turns to chrome; outline and shadow keep
+	// their own colours.
+	float fill = step(0.98, min(COLOR.r, min(COLOR.g, COLOR.b)));
+	COLOR = vec4(mix(COLOR.rgb, steel + glint * 0.5, fill), glyph.a * COLOR.a);
 }
 """
-## Menu column geometry: row pitch, bar height and the gap after the modes.
-const ROW_TOP := 140.0
-const ROW_STEP := 43.0
-const ROW_HEIGHT := 38.0
-const GROUP_GAP := 14.0
+## Fire behind the logo: noise flames licking upward, white-hot at the
+## base through orange to deep red, fading out at the edges.
+const FLAMES := """shader_type canvas_item;
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p) {
+	vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y);
+}
+float fbm(vec2 p) {
+	float v = 0.0; float a = 0.5;
+	for (int i = 0; i < 5; i++) { v += a * noise(p); p *= 2.03; a *= 0.5; }
+	return v;
+}
+void fragment() {
+	vec2 uv = UV;
+	vec2 q = vec2(uv.x * 4.0, uv.y * 2.4 + TIME * 1.1);
+	float n = fbm(q + fbm(q + vec2(0.0, TIME * 0.4)));
+	// Taller flames in the middle, none at the sides.
+	float body = (1.0 - smoothstep(0.08, 0.5, abs(uv.x - 0.5))) * smoothstep(0.0, 0.85, uv.y);
+	float heat = clamp(n * 1.5 * body - (1.0 - uv.y) * 0.55, 0.0, 1.0);
+	// Burns out before the bottom edge instead of stopping on a line.
+	heat *= 1.0 - smoothstep(0.7, 1.0, uv.y);
+	vec3 col = mix(vec3(0.45, 0.02, 0.0), vec3(1.0, 0.35, 0.02), smoothstep(0.15, 0.55, heat));
+	col = mix(col, vec3(1.0, 0.85, 0.45), smoothstep(0.6, 0.95, heat));
+	COLOR = vec4(col, smoothstep(0.05, 0.35, heat) * 0.95);
+}
+"""
+## Embers drifting up through the dark.
+const EMBERS := """shader_type canvas_item;
+float hash(vec2 p) { return fract(sin(dot(p, vec2(41.3, 289.1))) * 31871.13); }
+void fragment() {
+	vec2 grid = vec2(48.0, 27.0);
+	vec2 uv = UV * grid;
+	uv.y += TIME * 1.6;
+	vec2 cell = floor(uv);
+	float r = hash(cell);
+	vec2 at = fract(uv) - vec2(hash(cell + 3.1), hash(cell + 7.7));
+	float spark = (1.0 - smoothstep(0.0, 0.06, length(at))) * step(0.9, r);
+	float flicker = 0.5 + 0.5 * sin(TIME * 6.0 + r * 40.0);
+	COLOR = vec4(1.0, 0.45, 0.1, spark * flicker * 0.8 * smoothstep(0.0, 0.6, UV.y));
+}
+"""
+## Menu geometry, Tekken style: one centred column under the logo.
+const ROW_TOP := 222.0
+const ROW_STEP := 27.0
+const ROW_HEIGHT := 26.0
+const GROUP_GAP := 8.0
+const ROW_WIDTH := 360.0
+## Grades the live arena into a backdrop: a deep reading panel on the left,
+## the scene dimmed and cooled behind the featured fighter, darker at the
+## top and bottom edges.
+const BACKDROP_GRADE := '''shader_type canvas_item;
+void fragment() {
+	vec2 uv = UV;
+	float panel = 1.0 - smoothstep(0.2, 0.58, uv.x);
+	float edges = smoothstep(0.62, 1.0, uv.y) * 0.55 + (1.0 - smoothstep(0.0, 0.2, uv.y)) * 0.3;
+	float a = clamp(0.84 + panel * 0.0 + edges * 0.3, 0.0, 0.96);
+	COLOR = vec4(0.02, 0.025, 0.055, a);
+}
+'''
 var backdrop: Control
 var extra_rows: Dictionary = {}
 ## Highlighted non-mode entry (a key from EXTRAS), or "" when a mode is.
@@ -62,48 +132,55 @@ var hero_stats: Array[ColorRect] = []
 var showcase_time := 0.0
 var browsing := false
 const SHOWCASE_EVERY := 5.0
-## Spotlight behind the title-screen hero in the mode's accent colour.
-const SPOTLIGHT := """shader_type canvas_item;
-uniform vec4 tint : source_color = vec4(1.0, 0.8, 0.3, 1.0);
-void fragment() {
-	vec2 d = (UV - vec2(0.5, 0.62)) * vec2(1.0, 1.35);
-	float beam = 1.0 - smoothstep(0.0, 0.55, length(d));
-	float rays = 0.5 + 0.5 * sin(atan(d.y, d.x) * 9.0 + TIME * 0.6);
-	float floor_glow = (1.0 - smoothstep(0.86, 1.0, UV.y)) * smoothstep(0.7, 0.9, UV.y);
-	COLOR = vec4(tint.rgb, (beam * (0.6 + 0.18 * rays) + floor_glow * 0.45) * tint.a);
-}
-"""
 func _ready() -> void:
 	theme = UI.theme()
 	backdrop = BACKDROP.new()
 	add_child(backdrop)
-	var title := UI.heading(self, "WHO WON?", Vector2(38, 22), Vector2(420, 84), 70, UI.GOLD)
+	backdrop.shade_width = 0.0
+	var grade := ColorRect.new()
+	grade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	grade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	grade.material = _shader_material(BACKDROP_GRADE)
+	add_child(grade)
+	var embers := ColorRect.new()
+	embers.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	embers.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	embers.material = _shader_material(EMBERS)
+	add_child(embers)
+	var flames := ColorRect.new()
+	flames.position = Vector2(140, 8)
+	flames.size = Vector2(680, 230)
+	flames.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	flames.material = _shader_material(FLAMES)
+	add_child(flames)
+	var title := UI.heading(self, "WHO WON?", Vector2(80, 50), Vector2(800, 130), 118, Color.WHITE, Color("8a0a0a"))
 	title.name = "GameTitle"
-	var shimmer := ShaderMaterial.new()
-	shimmer.shader = Shader.new()
-	shimmer.shader.code = SHIMMER
-	title.material = shimmer
-	# The title lands with a little weight when the screen opens.
-	title.pivot_offset = Vector2(0, 42)
-	title.scale = Vector2.ONE * 1.12
-	title.create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT).tween_property(title, "scale", Vector2.ONE, 0.45)
-	var shade := TextureRect.new()
-	var fade := Gradient.new()
-	fade.set_color(0, Color(0.02, 0.025, 0.05, 0.82))
-	fade.set_color(1, Color(0.02, 0.025, 0.05, 0.0))
-	var ramp := GradientTexture2D.new()
-	ramp.gradient = fade
-	ramp.width = 256
-	ramp.height = 4
-	shade.texture = ramp
-	shade.position = Vector2(0, 0)
-	shade.size = Vector2(430, 540)
-	shade.stretch_mode = TextureRect.STRETCH_SCALE
-	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(shade)
-	move_child(shade, title.get_index())
-	UI.panel(self, Vector2(44, 106), Vector2(150, 4), UI.CRIMSON, Color.TRANSPARENT, 0.0)
-	UI.panel(self, Vector2(196, 106), Vector2(46, 4), UI.GOLD, Color.TRANSPARENT, 0.0)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_constant_override("outline_size", 10)
+	title.add_theme_color_override("font_outline_color", Color("1a0505"))
+	title.add_theme_constant_override("shadow_offset_x", 0)
+	title.add_theme_constant_override("shadow_offset_y", 6)
+	title.material = _shader_material(SHIMMER)
+	# The logo slams down out of the fire as the screen opens.
+	title.pivot_offset = Vector2(400, 65)
+	title.scale = Vector2.ONE * 1.35
+	title.modulate.a = 0.0
+	var land := title.create_tween().set_parallel(true)
+	land.tween_property(title, "scale", Vector2.ONE, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	land.tween_property(title, "modulate:a", 1.0, 0.2)
+	var tagline := UI.eyebrow(self, "KATHMANDU FIGHTING CHAMPIONSHIP", Vector2(180, 34), Vector2(600, 16), UI.GOLD)
+	tagline.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# The title again in Nepali, burning under the chrome.
+	var nepali := UI.label(self, "को जित्यो?", Vector2(180, 172), Vector2(600, 44), 30, Color("ffd257"))
+	nepali.name = "NepaliTitle"
+	nepali.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	nepali.add_theme_font_override("font", UI.devanagari_font())
+	nepali.add_theme_constant_override("outline_size", 8)
+	nepali.add_theme_color_override("font_outline_color", Color("5a0606"))
+	nepali.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.7))
+	nepali.add_theme_constant_override("shadow_offset_y", 3)
+	nepali.modulate.a = 0.0
+	nepali.create_tween().tween_property(nepali, "modulate:a", 1.0, 0.5).set_delay(0.35)
 	for i in MODES.size():
 		var data: Array = MODES[i]
 		var row := _mode_row(data[0], data[1], data[2], float(i))
@@ -119,7 +196,7 @@ func _ready() -> void:
 		row.button.mouse_entered.connect(_point_at.bind(extra[0]))
 		extra_rows[extra[0]] = row
 	# Start lives on the splash card; clicking a mode or pressing Enter also starts.
-	play_button = UI.button(self, "START  ▶", Vector2(786, 454), Vector2(146, 38), true)
+	play_button = UI.button(self, "START  ▶", Vector2(786, 452), Vector2(146, 38), true)
 	play_button.name = "StartGame"
 	play_button.add_theme_font_override("font", UI.display_font())
 	play_button.add_theme_font_size_override("font_size", 21)
@@ -127,15 +204,14 @@ func _ready() -> void:
 	play_button.add_theme_color_override("font_hover_color", UI.WHITE)
 	play_button.pressed.connect(_confirm)
 	# Splash card for the highlighted mode.
-	mode_title_label = UI.heading(self, "", Vector2(470, 322), Vector2(460, 76), 60, UI.WHITE)
-	mode_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	mode_desc_label = UI.label(self, "", Vector2(500, 398), Vector2(430, 44), 14, UI.WHITE)
-	mode_desc_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	mode_desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	mode_desc_label.add_theme_constant_override("outline_size", 4)
+	# The highlighted entry, explained once, under the list.
+	mode_title_label = UI.eyebrow(self, "", Vector2(-1000, -1000), Vector2(10, 10), UI.GOLD)
+	mode_title_label.visible = false
+	mode_desc_label = UI.label(self, "", Vector2(180, 448), Vector2(600, 18), 12, Color(UI.WHITE, 0.75))
+	mode_desc_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	# The player's ledger sits under the splash card, arcade high-score style.
-	record_strip = UI.label(self, "", Vector2(470, 452), Vector2(300, 36), 11, UI.MUTED)
-	record_strip.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	record_strip = UI.label(self, "", Vector2(180, 470), Vector2(600, 30), 11, UI.MUTED)
+	record_strip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	record_strip.add_theme_font_override("font", UI.strong_font())
 	record_strip.add_theme_constant_override("outline_size", 4)
 	_refresh_record_strip()
@@ -160,6 +236,15 @@ func _entrance() -> void:
 		var tween := btn.create_tween().set_parallel(true).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
 		tween.tween_property(btn, "position", home, 0.5).set_delay(0.06 * i)
 		tween.tween_property(btn, "modulate:a", 1.0, 0.3).set_delay(0.06 * i)
+
+## A material for a canvas shader. The code is set before the shader joins
+## the material: one given its code afterwards drew solid white.
+static func _shader_material(code: String) -> ShaderMaterial:
+	var shader := Shader.new()
+	shader.code = code
+	var material := ShaderMaterial.new()
+	material.shader = shader
+	return material
 
 ## Puts a fighter in the spotlight: portrait, name, title and stats. With
 ## animate, the old one dips out and the new one comes up.
@@ -233,38 +318,69 @@ func _mode_row(mode_key: String, title: String, desc: String, index: float, acce
 	var y := ROW_TOP + index * ROW_STEP + (GROUP_GAP if index >= MODES.size() else 0.0)
 	if accent.a == 0.0:
 		accent = BACKDROP.ACCENTS[BACKDROP.MODE_ORDER.find(mode_key)]
-	var btn := UI.button(self, "", Vector2(44, y), Vector2(270, ROW_HEIGHT))
+	var x := 480.0 - ROW_WIDTH * 0.5
+	var btn := UI.button(self, "", Vector2(x, y), Vector2(ROW_WIDTH, ROW_HEIGHT))
 	btn.name = title.replace(" ", "") + "Mode"
-	btn.tooltip_text = desc
 	btn.focus_mode = Control.FOCUS_NONE
-	var heading := UI.heading(btn, title, Vector2(30, 0), Vector2(236, ROW_HEIGHT), 26, UI.WHITE, Color(0, 0, 0, 0.6))
+	var band := TextureRect.new()
+	band.texture = _band_texture()
+	band.stretch_mode = TextureRect.STRETCH_SCALE
+	band.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	band.size = Vector2(ROW_WIDTH, ROW_HEIGHT)
+	band.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	band.modulate.a = 0.0
+	btn.add_child(band)
+	var heading := UI.heading(btn, title + " MODE" if index < MODES.size() else title, Vector2(0, 0), Vector2(ROW_WIDTH, ROW_HEIGHT), 19, UI.GOLD, Color(0, 0, 0, 0.8))
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	heading.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	heading.add_theme_constant_override("shadow_offset_x", 2)
 	heading.add_theme_constant_override("shadow_offset_y", 2)
-	return {"button": btn, "title": title, "desc": desc, "accent": accent, "heading": heading, "home": Vector2(44, y)}
+	var local := UI.label(btn, NEPALI.get(mode_key, ""), Vector2(ROW_WIDTH - 130, -3), Vector2(120, ROW_HEIGHT), 15, Color(1.0, 0.78, 0.25, 0.55))
+	local.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	local.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	local.add_theme_font_override("font", UI.devanagari_font())
+	return {"button": btn, "title": title, "desc": desc, "accent": accent, "heading": heading, "band": band, "local": local, "home": Vector2(x, y)}
+
+## The selection band: red glowing in the middle, fading out both ways,
+## with thin gold rules top and bottom.
+static var _band: Texture2D
+static func _band_texture() -> Texture2D:
+	if _band == null:
+		var image := Image.create(128, 16, false, Image.FORMAT_RGBA8)
+		for x in 128:
+			var fade := 1.0 - absf(x / 127.0 - 0.5) * 2.0
+			fade = smoothstep(0.0, 0.55, fade)
+			for y in 16:
+				var rule := y == 0 or y == 15
+				var color := Color(1.0, 0.78, 0.25, fade) if rule else Color(0.72, 0.05, 0.06, fade * 0.85)
+				image.set_pixel(x, y, color)
+		_band = ImageTexture.create_from_image(image)
+	return _band
 
 func _style_row(row: Dictionary, active: bool) -> void:
 	var btn: Button = row.button
 	var accent: Color = row.accent
-	# Rows stay see-through so the arena shows behind the list: idle rows are
-	# just outlined text on an accent tick, the chosen row a tinted glass bar.
-	var glass := UI.blade(Color(accent, 0.3), accent, 8)
-	btn.add_theme_stylebox_override("normal", glass if active else UI.blade(Color(0, 0, 0, 0), accent, 3))
-	btn.add_theme_stylebox_override("hover", glass if active else UI.blade(Color(accent, 0.14), accent, 5))
-	row.heading.add_theme_color_override("font_color", UI.WHITE)
-	row.heading.add_theme_color_override("font_shadow_color", Color(accent.darkened(0.35), 0.9) if active else Color(0, 0, 0, 0.6))
-	row.heading.add_theme_constant_override("outline_size", 4)
-	var target: Vector2 = row.home + (Vector2(16, 0) if active else Vector2.ZERO)
+	# Idle rows are plain gold text; the chosen one sits on the glowing red
+	# band in white, Tekken style.
+	var clear := StyleBoxEmpty.new()
+	for state in ["normal", "hover", "pressed", "focus"]:
+		btn.add_theme_stylebox_override(state, clear)
+	row.heading.add_theme_color_override("font_color", UI.WHITE if active else Color(1.0, 0.78, 0.25, 0.85))
+	row.heading.add_theme_color_override("font_shadow_color", Color("6a0606") if active else Color(0, 0, 0, 0.8))
+	row.heading.add_theme_constant_override("outline_size", 3)
+	row.band.modulate.a = 1.0 if active else 0.0
+	row.local.add_theme_color_override("font_color", Color(1, 0.92, 0.7, 0.95) if active else Color(1.0, 0.78, 0.25, 0.5))
+	var target: Vector2 = row.home
 	if btn.is_inside_tree():
 		btn.create_tween().set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT).tween_property(btn, "position", target, 0.22)
 	else:
 		btn.position = target
 	if active:
 		mode_title_label.text = row.title
-		mode_title_label.add_theme_color_override("font_shadow_color", accent.darkened(0.2))
+		mode_title_label.add_theme_color_override("font_color", accent)
 		mode_desc_label.text = row.desc
 		if hero_glow != null:
-			hero_glow.material.set_shader_parameter("tint", Color(accent, 1.0))
+			hero_glow.material.set_shader_parameter("tint", Color(accent, 0.55))
 
 func _choose_home_mode(mode: String) -> void:
 	if transitioning or is_instance_valid(modal):

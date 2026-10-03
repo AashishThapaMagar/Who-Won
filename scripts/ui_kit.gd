@@ -39,6 +39,25 @@ static func body_font() -> Font:
 	return _body
 
 ## Bold condensed face for buttons and option labels.
+## Yatra One (assets/fonts, SIL Open Font License): a Devanagari display
+## face for Nepali titles. Read straight from the .ttf when the editor has
+## not imported it yet; Windows' Nirmala UI stands in if the file is gone.
+static var _devanagari: Font
+static func devanagari_font() -> Font:
+	if _devanagari == null:
+		var path := "res://assets/fonts/YatraOne-Regular.ttf"
+		if ResourceLoader.exists(path):
+			_devanagari = load(path)
+		elif FileAccess.file_exists(path):
+			var file := FontFile.new()
+			file.load_dynamic_font(path)
+			_devanagari = file
+		else:
+			var fallback := SystemFont.new()
+			fallback.font_names = PackedStringArray(["Nirmala UI", "Mangal", "Noto Sans Devanagari"])
+			_devanagari = fallback
+	return _devanagari
+
 static func strong_font() -> Font:
 	if _strong == null:
 		var font := SystemFont.new()

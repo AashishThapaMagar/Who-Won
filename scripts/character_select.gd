@@ -32,9 +32,16 @@ var ladder_tiles: Array[ColorRect] = []
 var ladder_faces: Array[TextureRect] = []
 var ladder_names: Array[Label] = []
 ## Per player: [name, fill ColorRect] rows of the showcase stat bars.
-var stat_bars: Array = [[], []]
-const STAT_NAMES := ["POWER", "SPEED", "STAMINA", "KICKS"]
-const STAT_WIDTH := 92.0
+## The fighter dossier in each showcase's top corner (strengths, weaknesses
+## and super), and the Devanagari name watermark behind the fighter.
+var dossiers: Array[RichTextLabel] = []
+var watermarks: Array[Label] = []
+const DOSSIER_WIDTH := 150.0
+const SUPERS := preload("res://scripts/super_moves.gd")
+## Each fighter's name in Devanagari, written large behind them.
+const NEPALI_NAMES := {"anug": "अनुग", "ish": "ईश", "sab": "बल्लस", "bib": "बिब", "abhi": "अभि", "sup": "सुप्रिम", "anant": "अनन्त"}
+## Trait phrases that name a weakness rather than a strength.
+const WEAK_WORDS := ["low ", "vulnerable", "weak ", "light "]
 const TILE_SHADER := """shader_type canvas_item;
 // Select-screen tile: the fighter's colour lit by a spotlight behind the
 // portrait, fine diagonal pinstripes and a slow glossy sweep. Smooth maths
@@ -207,6 +214,18 @@ func _build_player(player: int) -> void:
 	glow.visible = frame.visible
 	add_child(glow)
 	preview_glows.append(glow)
+	var mark_box := Control.new()
+	mark_box.position = pos
+	mark_box.size = dimensions
+	mark_box.clip_contents = true
+	mark_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	mark_box.visible = not compact
+	add_child(mark_box)
+	var mark := UI.label(mark_box, "", Vector2(-20, 6), dimensions + Vector2(40, 0), 120, Color(1, 1, 1, 0.09))
+	mark.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	mark.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	mark.add_theme_font_override("font", UI.devanagari_font())
+	watermarks.append(mark)
 	var portrait := PORTRAIT.new()
 	portrait.index = selections[player]
 	portrait.facing_left = player == 1
@@ -226,7 +245,7 @@ func _build_player(player: int) -> void:
 	if not compact:
 		# The fighter stands on the inner side facing out across the frame;
 		# stats take the far top corner and the name the far bottom corner.
-		_build_stats(player, pos + (Vector2(dimensions.x - STAT_WIDTH - 22, 16) if player == 0 else Vector2(16, 16)))
+		_build_dossier(player, pos + (Vector2(dimensions.x - DOSSIER_WIDTH - 12, 12) if player == 0 else Vector2(12, 12)))
 		for bar in [[Vector2(0, -3), Vector2(dimensions.x * 0.4, 5)], [Vector2(dimensions.x * 0.75, dimensions.y), Vector2(dimensions.x * 0.25, 3)]]:
 			var accent := ColorRect.new()
 			accent.color = color
@@ -288,32 +307,57 @@ func _roulette(player: int) -> void:
 		_refresh())
 
 ## Stat bars in the showcase corner, filled from the fighter's profile.
-func _build_stats(player: int, at: Vector2) -> void:
-	UI.panel(self, at - Vector2(8, 6), Vector2(STAT_WIDTH + 16, STAT_NAMES.size() * 22 + 8), Color(0.02, 0.025, 0.05, 0.62), Color.TRANSPARENT)
-	for row in STAT_NAMES.size():
-		var y := at.y + row * 22
-		var caption := UI.label(self, STAT_NAMES[row], Vector2(at.x, y), Vector2(STAT_WIDTH, 12), 9, UI.MUTED)
-		caption.add_theme_font_override("font", UI.strong_font())
-		var track := ColorRect.new()
-		track.position = Vector2(at.x, y + 13)
-		track.size = Vector2(STAT_WIDTH, 5)
-		track.color = Color(1, 1, 1, 0.12)
-		track.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		add_child(track)
-		var fill := ColorRect.new()
-		fill.position = track.position
-		fill.size = Vector2(0, 5)
-		fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		add_child(fill)
-		stat_bars[player].append(fill)
+## A small dark card: what the fighter is good at (gold), where they are
+## weak (red) and their super if they have one, read from the roster.
+func _build_dossier(player: int, at: Vector2) -> void:
+	var card := PanelContainer.new()
+	card.position = at
+	card.custom_minimum_size = Vector2(DOSSIER_WIDTH, 0)
+	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var face := StyleBoxFlat.new()
+	face.bg_color = Color(0.02, 0.025, 0.05, 0.72)
+	face.border_color = Color(UI.GOLD, 0.35)
+	face.border_width_left = 2 if player == 1 else 0
+	face.border_width_right = 2 if player == 0 else 0
+	face.content_margin_left = 8
+	face.content_margin_right = 8
+	face.content_margin_top = 5
+	face.content_margin_bottom = 5
+	card.add_theme_stylebox_override("panel", face)
+	add_child(card)
+	var text := RichTextLabel.new()
+	text.bbcode_enabled = true
+	text.fit_content = true
+	text.scroll_active = false
+	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	text.custom_minimum_size = Vector2(DOSSIER_WIDTH - 16, 0)
+	text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	text.add_theme_font_override("normal_font", UI.strong_font())
+	text.add_theme_font_size_override("normal_font_size", 11)
+	text.add_theme_constant_override("line_separation", 2)
+	card.add_child(text)
+	dossiers.append(text)
 
-static func _stat_values(profile: Dictionary) -> Array[float]:
-	return [
-		clampf((float(profile.get("punch_bonus", 0)) + 3.0) / 7.0, 0.1, 1.0),
-		clampf((float(profile.get("speed", 1.0)) - 0.8) / 0.45, 0.1, 1.0),
-		clampf(float(profile.get("stamina", 100.0)) / 140.0, 0.1, 1.0),
-		clampf((float(profile.get("kick_bonus", 0)) + 3.0) / 4.5, 0.1, 1.0),
-	]
+## The dossier text for a fighter: each trait phrase as a strength or a
+## weakness, then the super.
+static func _dossier_text(profile: Dictionary) -> String:
+	var lines: Array[String] = []
+	for phrase in String(profile.trait).split(" / "):
+		var line: String = phrase.strip_edges()
+		if line.is_empty():
+			continue
+		line = line.substr(0, 1).to_upper() + line.substr(1)
+		var lower := line.to_lower() + " "
+		if WEAK_WORDS.any(func(word): return lower.begins_with(word) or lower.contains(" " + word)):
+			lines.append("[color=#ff6b6b]▼  %s[/color]" % line)
+		elif lower.begins_with("beat "):
+			lines.append("[color=#9aa3bd]◆  %s[/color]" % line)
+		else:
+			lines.append("[color=#ffd257]▲  %s[/color]" % line)
+	var data: Dictionary = SUPERS.get_super(str(profile.id))
+	if not data.is_empty():
+		lines.append("[color=#ffffff]★  SUPER  %s[/color]" % data.name)
+	return "\n".join(lines)
 
 func _build_campaign() -> void:
 	UI.panel(self, Vector2(38, 88) if mode_id == "story" else Vector2(453, 88), Vector2(507, 310) if mode_id == "story" else Vector2(470, 222), Color(0.06, 0.04, 0.09, 0.9), mode_accent.darkened(0.5))
@@ -408,7 +452,7 @@ func _show_stage() -> void:
 	match MatchSetup.stage_choice:
 		MatchSetup.JOURNEY_STAGE:
 			arena_label.text = "ALL 4 ARENAS"
-			arena_caption.text = "ONE ARENA PER ROUND, ENDING AT THE STUPA"
+			arena_caption.text = "ONE PER ROUND, ENDING AT THE STUPA"
 			backdrop.stage.show_round(0)
 		MatchSetup.RANDOM_STAGE:
 			arena_label.text = "RANDOM ARENA"
@@ -480,21 +524,16 @@ func _refresh() -> void:
 		preview_glows[player].material.set_shader_parameter("top_color", tint.lightened(0.25))
 		preview_glows[player].material.set_shader_parameter("bottom_color", tint.darkened(0.55))
 		names[player].text = profile.name
-		var values := _stat_values(profile)
-		for row in stat_bars[player].size():
-			var fill: ColorRect = stat_bars[player][row]
-			fill.color = UI.GOLD if values[row] >= 0.75 else (profile.accent as Color).lerp(UI.WHITE, 0.3)
-			var tween := fill.create_tween() if fill.is_inside_tree() else null
-			if tween != null:
-				tween.tween_property(fill, "size:x", STAT_WIDTH * values[row], 0.25).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
-			else:
-				fill.size.x = STAT_WIDTH * values[row]
+		if player < dossiers.size():
+			dossiers[player].text = _dossier_text(profile)
+		if player < watermarks.size():
+			watermarks[player].text = NEPALI_NAMES.get(profile.id, "")
 		var ledger := ""
 		var records := get_node_or_null("/root/Records")
 		if records != null:
 			var record: Dictionary = records.fighter_record(profile.id)
 			ledger = "   ·   RECORD %dW / %d" % [record.wins, record.picks] if record.picks > 0 else "   ·   NO RECORD YET"
-		details[player].text = profile.title + ledger + "\n" + profile.trait
+		details[player].text = profile.title + ledger
 		player_tabs[player].text = "P%d / %s" % [player + 1, "PICKING" if editing_player == player else "PICK"]
 		ready_buttons[player].text = "✓  READY" if ready_players[player] else "LOCK IN"
 		if ready_players[player]:
