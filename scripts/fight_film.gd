@@ -116,7 +116,7 @@ func _build_beats() -> void:
 	_at(0.0, func():
 		_fade(0.0, 1.2)
 		_shot_crane(Vector3(0, 7.5, 12), Vector3(0, 1.4, 5.8), Vector3(0, 1.6, -4), Vector3(0, 1.0, 0), 50.0, 3.2))
-	_at(0.8, func(): _caption("HERITAGE SQUARE  ·  KATHMANDU  ·  DUSK"))
+	_at(0.8, func(): _caption("HERITAGE SQUARE  ·  KATHMANDU"))
 	# Ish walks in from the ground up; crash zoom on his face; freeze; his name.
 	_at(3.2, func():
 		_clear_text()
@@ -200,10 +200,11 @@ func _build_beats() -> void:
 	_at(30.0, func():
 		ananta.health = 6
 		ananta.health_changed.emit(ananta.health, ananta.max_health)
-		_place_gap(1.3)
+		_place_gap(1.6)
 		_shot_behind(ananta))
-	_at(30.05, func(): _hold("p2_3d_left", 0.5))
-	_at(30.45, func(): _tap("p1_3d_kick"))
+	# Ananta closes in; Ish's kick meets him as he arrives.
+	_at(30.05, func(): _hold("p2_3d_left", 0.6))
+	_at(30.5, func(): _tap("p1_3d_kick"))
 	_at(30.5, func(): director = false)
 	# Freeze on the fallen; the winner's name; WHO WON?
 	_at(32.4, func():
