@@ -404,6 +404,15 @@ func _tint(colors: Array) -> void:
 		mesh.material_override = paint
 
 ## Mixamo-style one-move-per-file downloads, retargeted onto this skeleton.
+## Retargeted clip sets, built once per fighter and reused: in memory for
+## the rest of the session, and on disk (user://clip_cache) for the next
+## launch. Building one means opening and converting every clip file (about
+## fifty for a full move pack, ~10 s); a cached set loads in a fraction of
+## that. Bump CLIP_CACHE_VERSION whenever the conversion below changes.
+const CLIP_CACHE_VERSION := 1
+const CLIP_CACHE_DIR := "user://clip_cache/"
+static var _clip_cache := {}
+
 func _add_clip_files() -> void:
 	var files: Dictionary = config.get("files", {})
 	if files.is_empty():
@@ -411,8 +420,54 @@ func _add_clip_files() -> void:
 	var skeleton := character.find_children("*", "Skeleton3D", true, false)
 	if skeleton.is_empty():
 		return
-	var library := AnimationLibrary.new()
 	var to_skeleton := player.get_node(player.root_node).get_path_to(skeleton[0])
+	var meshy: Dictionary = config.get("meshy", {})
+	var key := _clip_cache_key(files, meshy, skeleton[0], to_skeleton)
+	var library: AnimationLibrary = _clip_cache.get(key)
+	if library == null:
+		var saved := CLIP_CACHE_DIR + key + ".res"
+		if ResourceLoader.exists(saved):
+			library = ResourceLoader.load(saved, "AnimationLibrary", ResourceLoader.CACHE_MODE_IGNORE) as AnimationLibrary
+	if library == null or not library.has_meta("pace"):
+		var timing_before: Dictionary = config.get("timing", {}).duplicate(true)
+		library = _build_clip_files(files, meshy, skeleton[0], to_skeleton)
+		# What the build learned besides the clips: each clip's travel pace
+		# and any impact times it measured, replayed on a cached load.
+		var measured := {}
+		var timing_after: Dictionary = config.get("timing", {})
+		for logical in timing_after:
+			if not timing_before.has(logical):
+				measured[logical] = timing_after[logical]
+		library.set_meta("pace", clip_pace.duplicate())
+		library.set_meta("timing", measured)
+		DirAccess.make_dir_recursive_absolute(CLIP_CACHE_DIR)
+		ResourceSaver.save(library, CLIP_CACHE_DIR + key + ".res", ResourceSaver.FLAG_COMPRESS)
+	else:
+		clip_pace.merge(library.get_meta("pace", {}), true)
+		var timing: Dictionary = config.get("timing", {})
+		timing.merge(library.get_meta("timing", {}), false)
+		config["timing"] = timing
+	_clip_cache[key] = library
+	player.add_animation_library("files", library)
+
+## Names one fighter's clip set: the conversion version, every source file
+## with its modification time, and the skeleton the clips are fitted to.
+func _clip_cache_key(files: Dictionary, meshy: Dictionary, skeleton: Skeleton3D, to_skeleton: NodePath) -> String:
+	var parts := [CLIP_CACHE_VERSION, str(to_skeleton), skeleton.get_bone_count(), snappedf(_hips_height(skeleton), 0.0001), config.get("scene", ""), config.get("body", "")]
+	var keys := files.keys()
+	keys.sort()
+	for name in keys:
+		parts.append([name, files[name], FileAccess.get_modified_time(files[name])])
+	if not meshy.is_empty():
+		parts.append([meshy.get("file", ""), FileAccess.get_modified_time(str(meshy.get("file", ""))), meshy.get("clips", {})])
+	var timing_keys: Array = config.get("timing", {}).keys()
+	timing_keys.sort()
+	parts.append(timing_keys)
+	return str(parts).sha256_text().substr(0, 24)
+
+func _build_clip_files(files: Dictionary, meshy: Dictionary, target: Skeleton3D, to_skeleton: NodePath) -> AnimationLibrary:
+	var library := AnimationLibrary.new()
+	var skeleton := [target]
 	for key in files:
 		var source: PackedScene = load(files[key])
 		if source == null:
@@ -445,10 +500,9 @@ func _add_clip_files() -> void:
 				library.add_animation(key, animation)
 				break
 		scene.free()
-	var meshy: Dictionary = config.get("meshy", {})
 	if not meshy.is_empty() and ResourceLoader.exists(meshy.file):
 		_add_meshy_clips(library, meshy.file, meshy.clips, skeleton[0], to_skeleton)
-	player.add_animation_library("files", library)
+	return library
 
 ## Meshy's own animations (its "Merged Animations" download) retargeted onto
 ## this skeleton. The two rigs share a hierarchy but not bone names, rest
