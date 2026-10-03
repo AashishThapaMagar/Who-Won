@@ -26,6 +26,12 @@ var _throw_forward := Vector3.RIGHT
 var _throw_reach := 1.0
 var _throw_shift := Vector3.ZERO
 var _throw_rest := Vector3.ZERO
+## Knocked into a railing hard enough, a fighter slams into it, bounces
+## off and stays stunned a beat longer: a follow-up chance (see _wall_hit).
+signal wall_hit(point: Vector3)
+const WALL_SPEED := 150.0
+const WALL_STUN := 0.42
+var _wall_hit_done := false
 ## Fighters locked in a throw or lying after one are placed directly, not
 ## moved by physics, and are not pushboxes.
 const PLACED_STATES := [State.THROWING, State.THROWN, State.KNOCKDOWN]
@@ -165,7 +171,13 @@ func _move_combat_body(delta: float) -> void:
 	body.velocity /= COMBAT_TEMPO
 	_separate_bodies()
 	# Keep sidesteps on the fighting strip, including pushback and jumps.
+	# Stopped by the end wall (its collider halts the body just short of
+	# the clamp) while still being driven toward it.
+	var pressed := body.is_on_wall() or absf(body.position.x) >= LANE_HALF_WIDTH - 0.01
+	var into_wall := pressed and absf(body.position.x) > LANE_HALF_WIDTH - 0.25 and signf(planar.x) == signf(body.position.x)
 	body.position.x = clampf(body.position.x, -LANE_HALF_WIDTH, LANE_HALF_WIDTH)
+	if into_wall and not _wall_hit_done and state in [State.HITSTUN, State.KO] and absf(velocity.x) >= WALL_SPEED:
+		_wall_hit()
 	body.position.z = clampf(body.position.z, -LANE_HALF_DEPTH, LANE_HALF_DEPTH)
 	if absf(body.position.z) >= LANE_HALF_DEPTH:
 		body.velocity.z = 0.0
@@ -278,6 +290,9 @@ func take_hit(damage: int, knockback: float, _attacker_facing: int, attacker: No
 		offset.y = 0
 		guarded_from_front = forward.dot(offset.normalized()) > 0.25
 	var result := super.take_hit(damage, knockback, -1 if guarded_from_front else 1, attacker, attack_type)
+	if state in [State.HITSTUN, State.KO]:
+		# Each new blow may carry the fighter into the wall again.
+		_wall_hit_done = false
 	if attacker != null and state in [State.HITSTUN, State.BLOCKSTUN, State.KO]:
 		var away: Vector3 = body.position - attacker.body.position
 		away.y = 0
@@ -285,7 +300,24 @@ func take_hit(damage: int, knockback: float, _attacker_facing: int, attacker: No
 		velocity.x = -absf(velocity.x)
 	return result
 
+## The slam: the body stops dead against the stone, freezes a moment and
+## rebounds a little toward the attacker, its stun stretched so the
+## attacker can follow up. Once per blow.
+func _wall_hit() -> void:
+	_wall_hit_done = true
+	velocity.x = 50.0
+	if state == State.HITSTUN:
+		stun_timer = maxf(stun_timer, WALL_STUN)
+	hitstop_remaining = maxf(hitstop_remaining, 0.08)
+	if opponent != null:
+		opponent.combat_notice = "WALL HIT"
+		opponent.notice_until = opponent.combat_time + 0.9
+	var contact: Vector3 = body.position
+	contact.x = signf(contact.x) * (LANE_HALF_WIDTH + 0.3)
+	wall_hit.emit(contact)
+
 func reset_for_new_round() -> void:
+	_wall_hit_done = false
 	if body != null:
 		body.position = spawn_position
 		body.velocity = Vector3.ZERO

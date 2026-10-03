@@ -186,6 +186,8 @@ func configure(owner_visual: Node, profile: Dictionary) -> void:
 		fighter.impact.connect(_on_impact)
 	if fighter != null and fighter.has_signal("strike_connected") and not fighter.strike_connected.is_connected(_on_strike):
 		fighter.strike_connected.connect(_on_strike)
+	if fighter != null and fighter.has_signal("wall_hit") and not fighter.wall_hit.is_connected(_on_wall_hit):
+		fighter.wall_hit.connect(_on_wall_hit)
 
 ## The character scene: the imported resource when the editor has seen
 ## the file, otherwise a glTF decoded on the spot (a rig dropped into the
@@ -288,6 +290,19 @@ func _pick_reaction(fighter: Node, attacker) -> String:
 	if _body_flip and clip_names.has("hit_body_alt"):
 		return "hit_body_alt"
 	return "hit_body"
+
+## Slammed back-first into a railing: the chest is thrown forward off the
+## stone, the head whips, and the body lurches back toward the attacker.
+func _on_wall_hit(_point: Vector3) -> void:
+	_recoil = Vector3(-0.45, 0.12 * _recoil_side, 0.2)
+	_recoil_vel = Vector3.ZERO
+	_recoil_spread = [0.3, 0.35, 0.35]
+	_damping = 7.0
+	_push = -0.12
+	_push_vel = 2.0
+	_snap = 0.35 * _recoil_side
+	_snap_vel = 0.0
+	_react = true
 
 ## The attacker's side of a landed blow: once hit-stop releases, the trunk
 ## drives on through the target and the body carries a little forward, so

@@ -110,6 +110,7 @@ func _ready() -> void:
 	add_child(combat_effects)
 	for fighter in [player1, player2]:
 		fighter.impact.connect(func(_point: Vector2, blocked: bool, heavy: bool): _impact_3d(fighter, blocked, heavy))
+		fighter.wall_hit.connect(_wall_impact)
 	health_bar1.max_value = player1.max_health
 	health_bar2.max_value = player2.max_health
 	player1.health_changed.connect(func(h, _mh): health_bar1.value = h)
@@ -306,6 +307,22 @@ func _impact_3d(fighter: Node, blocked: bool, heavy: bool) -> void:
 		var size := get_viewport().get_visible_rect().size
 		var screen := camera_3d.unproject_position(point) / size
 		nepal_stage.punch(screen, 0.25 if blocked else (1.0 if heavy else 0.45))
+
+## A fighter slammed into a railing: a heavy thud, stone dust bursting off
+## the balustrade, sparks where the back meets it and a hard camera knock.
+func _wall_impact(point: Vector3) -> void:
+	preload("res://scripts/sfx.gd").fire("hit_heavy")
+	shake_3d = 0.06
+	fov_kick = 2.0
+	if not _effects_on():
+		return
+	var toward_centre := Vector3(-signf(point.x), 0.0, 0.0)
+	_impact_burst(point + Vector3.UP * 1.0 + toward_centre * 0.1, Color("ffcf8a"), false, true)
+	_dust(Vector3(point.x, 0.0, point.z), 24, Color(0.72, 0.68, 0.6, 0.55), 0.6)
+	_dust(point + Vector3.UP * 0.9, 14, Color(0.78, 0.74, 0.66, 0.45), 0.45)
+	if is_instance_valid(camera_3d) and is_inside_tree() and get_viewport() != null:
+		var size := get_viewport().get_visible_rect().size
+		nepal_stage.punch(camera_3d.unproject_position(point + Vector3.UP) / size, 1.0)
 
 ## Core flash, a camera-facing shock ring and a burst of sparks. Guarded
 ## hits are cold blue chips that die fast; clean hits are hot and fling

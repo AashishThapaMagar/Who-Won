@@ -313,10 +313,42 @@ func show_round(index: int) -> void:
 	content.add_child(HIMALAYA.build(_mood()[1], night, index == 2))
 	_fight_lighting()
 	_arena_inlay()
+	_railings()
 	_batch_static()
 	_ambience()
 	if changing:
 		_fade_in()
+
+## Carved stone balustrades closing the fighting strip at both ends: a
+## plinth, a row of turned balusters, a cap rail and square end posts with
+## pyramid caps, in the temple stone. Their inner face is the invisible wall
+## arena_3d.gd stops the fighters at, so a fighter knocked into it is seen
+## to hit stone.
+const RAIL_X := 4.76
+## The strip runs z -1.4 (far) to 0.85 (near): stopping short on the camera
+## side keeps the near post from filling the corner of the screen.
+const RAIL_FAR := -1.4
+const RAIL_NEAR := 0.85
+
+func _railings() -> void:
+	# Weathered sandstone, darker than the dais so the rail reads apart.
+	var stone := _surface("rail_stone", 1, Color("8a7b67"), Color("4a4035"), 1.4)
+	var length := RAIL_NEAR - RAIL_FAR
+	var middle := (RAIL_NEAR + RAIL_FAR) * 0.5
+	for side in [-1.0, 1.0]:
+		var x: float = side * RAIL_X
+		_box(Vector3(0.42, 0.22, length), Vector3(x, 0.11, middle), stone)
+		_box(Vector3(0.36, 0.12, length), Vector3(x, 0.96, middle), stone)
+		_box(Vector3(0.3, 0.05, length - 0.1), Vector3(x, 0.245, middle), stone)
+		var count := 9
+		for i in range(1, count):
+			var z := RAIL_FAR + length * i / count
+			_frustum(0.06, 0.045, 0.32, Vector3(x, 0.27, z), stone, 8)
+			_frustum(0.045, 0.06, 0.32, Vector3(x, 0.59, z), stone, 8)
+		for z in [RAIL_FAR, RAIL_NEAR]:
+			_box(Vector3(0.46, 1.16, 0.46), Vector3(x, 0.58, z), stone)
+			_box(Vector3(0.54, 0.08, 0.54), Vector3(x, 1.2, z), stone)
+			_frustum(0.22, 0.03, 0.24, Vector3(x, 1.24, z), stone)
 
 ## Imported scenes already include the plaza, dais, flags and practical
 ## lamps. Keep their transforms intact: the solid fighting floor is y=0.
