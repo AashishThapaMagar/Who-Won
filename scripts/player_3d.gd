@@ -51,6 +51,11 @@ func world_input() -> Vector3:
 	if ai_controlled:
 		var direction := forward * Input.get_axis(input_prefix + "left", input_prefix + "right")
 		direction.z *= SIDESTEP_RATIO
+		# Sidesteps use the same screen axes as a player's (see below).
+		var side := Input.get_axis(input_prefix + "far", input_prefix + "near")
+		if side != 0.0:
+			var along := fight_axis()
+			direction += Vector3(-along.z, 0.0, along.x) * side * SIDESTEP_RATIO
 		return direction
 	var axes := Input.get_vector(input_prefix + "left", input_prefix + "right", input_prefix + "far", input_prefix + "near")
 	# Tekken-style: left/right run along the fight axis as seen on screen, and
