@@ -38,8 +38,6 @@ var dossiers: Array[RichTextLabel] = []
 var watermarks: Array[Label] = []
 const DOSSIER_WIDTH := 150.0
 const SUPERS := preload("res://scripts/super_moves.gd")
-## Each fighter's name in Devanagari, written large behind them.
-const NEPALI_NAMES := {"anug": "अनुग", "ish": "ईश", "sab": "बल्लस", "bib": "बिब", "abhi": "अभि", "sup": "सुप्रिम", "anant": "अनन्त"}
 ## Trait phrases that name a weakness rather than a strength.
 const WEAK_WORDS := ["low ", "vulnerable", "weak ", "light "]
 const TILE_SHADER := """shader_type canvas_item;
@@ -527,7 +525,7 @@ func _refresh() -> void:
 		if player < dossiers.size():
 			dossiers[player].text = _dossier_text(profile)
 		if player < watermarks.size():
-			watermarks[player].text = NEPALI_NAMES.get(profile.id, "")
+			watermarks[player].text = ROSTER.NEPALI_NAMES.get(profile.id, "")
 		var ledger := ""
 		var records := get_node_or_null("/root/Records")
 		if records != null:

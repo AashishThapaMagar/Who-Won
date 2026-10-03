@@ -15,6 +15,9 @@ const PROFILES := [
 	{"id":"anant", "name":"ANANTA", "title":"The Final Word", "trait":"Final boss / complete toolkit / beat him with reads and punishment", "color":Color("272337"), "accent":Color("efbd55"), "outfit":"gi", "signature":"cape", "hair_style":"crest", "build":1.06, "speed":1.12, "punch_bonus":2, "kick_bonus":1, "chip_bonus":-0.04, "stamina":120.0, "regen":21.0, "stance":"master"}
 ]
 
+## Each fighter's name in Devanagari.
+const NEPALI_NAMES := {"anug": "अनुग", "ish": "ईश", "sab": "बल्लस", "bib": "बिब", "abhi": "अभि", "sup": "सुप्रिम", "anant": "अनन्त"}
+
 ## PROFILES entries omit fields that match these defaults (e.g. most
 ## fighters don't set "build") to keep the roster table readable; merge
 ## layers each fighter's overrides on top of them.
