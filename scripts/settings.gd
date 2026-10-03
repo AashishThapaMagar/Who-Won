@@ -37,6 +37,10 @@ var shadows: int = 1
 var detailed_textures: bool = false
 var vsync: bool = true
 var show_fps: bool = false
+## Whether the last thing the player pressed was a gamepad: on-screen button
+## prompts follow it (A/B/X/Y instead of keys).
+var using_pad: bool = false
+signal input_device_changed(pad: bool)
 ## Bloom and the per-arena finishing grade (nepal_stage_3d.gd).
 var post_effects: bool = true
 ## Sparks, shock rings, dust, trails and the impact punch (arena_3d.gd).
@@ -270,3 +274,17 @@ func reset_defaults() -> void:
 	input_display = false
 	_apply()
 	set_quality(Quality.HIGH)
+
+## Notes the device of every press, so prompts can follow it. Only real
+## presses count: a resting stick's drift never flips it.
+func _input(event: InputEvent) -> void:
+	var pad: bool = using_pad
+	if event is InputEventJoypadButton and event.pressed:
+		pad = true
+	elif event is InputEventJoypadMotion and absf(event.axis_value) > 0.5:
+		pad = true
+	elif (event is InputEventKey and event.pressed) or event is InputEventMouseButton:
+		pad = false
+	if pad != using_pad:
+		using_pad = pad
+		input_device_changed.emit(pad)

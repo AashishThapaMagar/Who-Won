@@ -11,6 +11,11 @@ var flash: ColorRect
 var burst: Control
 var burst_age := -1.0
 var hint: Label
+## The fight's keyboard legend, and which one is showing.
+var key_legend := ""
+var hint_for_pad := false
+const PAD_LEGEND := "STICK  move + sidestep   |   A 1   LT 2   X 3   R3 4   |   RB guard   RT grab   Y jump
+LB run   |   BACK moves   |   START pause"
 var hint_clock := 0.0
 var last_round := -1
 
@@ -142,7 +147,15 @@ func _draw_burst() -> void:
 ## The key legend stays up for the opening seconds of a match, then gets
 ## out of the way (practice keeps it).
 func _update_hint(delta: float) -> void:
-	if hint == null or str(arena.get_script().resource_path).ends_with("practice_3d.gd"):
+	if hint == null:
+		return
+	# Button names follow the device in the player's hands (practice too).
+	if Settings.using_pad != hint_for_pad:
+		hint_for_pad = Settings.using_pad
+		if key_legend.is_empty():
+			key_legend = hint.text
+		hint.text = PAD_LEGEND if hint_for_pad else key_legend
+	if str(arena.get_script().resource_path).ends_with("practice_3d.gd"):
 		return
 	if arena.round_index != last_round:
 		if arena.round_index == 0:

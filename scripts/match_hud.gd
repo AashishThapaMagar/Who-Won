@@ -300,8 +300,11 @@ func _ready() -> void:
 		tag.add_theme_color_override("font_outline_color", UI.INK)
 		title_tags.append(tag)
 	var hint: Label = layer.get_node("ControlsHint")
-	hint.position = Vector2(12, 505)
-	hint.size = Vector2(936, 34)
+	# Two lines at the 11 px floor need 30 px; sits clear of the screen edge.
+	hint.position = Vector2(12, 502)
+	hint.size = Vector2(936, 36)
+	hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hint.add_theme_constant_override("line_spacing", -6)
 	hint.add_theme_font_size_override("font_size", 11)
 	hint.add_theme_font_override("font", UI.strong_font())
 	hint.add_theme_color_override("font_color", Color(UI.WHITE, 0.7))
@@ -514,7 +517,7 @@ func _show_super_tip(fighter: Node) -> void:
 	layer.add_child(super_tip)
 	UI.panel(super_tip, Vector2.ZERO, Vector2(450, 58), Color(0.04, 0.04, 0.08, 0.92), UI.GOLD, 0.05)
 	UI.heading(super_tip, "SUPER READY", Vector2(18, 6), Vector2(220, 30), 22, UI.GOLD, UI.CRIMSON)
-	UI.key_hint(super_tip, "2 + 4", "", Vector2(176, 11))
+	UI.key_hint(super_tip, "LT + R3" if Settings.using_pad else "2 + 4", "", Vector2(176, 11))
 	UI.label(super_tip, "Press together up close. Land the first hit and the combo plays out.", Vector2(18, 34), Vector2(420, 16), 11, UI.WHITE)
 	super_tip.modulate.a = 0.0
 	var show := super_tip.create_tween()
@@ -588,7 +591,10 @@ func _process(_delta: float) -> void:
 		var full: bool = has_super and fighter.super_meter >= fighter.SUPERS.METER_MAX
 		var pulse := 0.65 + 0.35 * sin(Time.get_ticks_msec() * 0.009)
 		super_bars[i].modulate = Color(1.25, 1.15, 0.9) * pulse if full else Color.WHITE
-		super_tags[i].text = "SUPER READY  2+4" if full else ""
+		super_tags[i].text = ("SUPER READY  " + ("LT+R3" if Settings.using_pad else "2+4")) if full else ""
+		var moves := arena.get_node_or_null("UI/MovesButton")
+		if moves != null:
+			moves.text = "MOVES [BACK]" if Settings.using_pad else "MOVES [F1]"
 		super_tags[i].modulate.a = pulse
 		if full and not Settings.super_tip_seen and not is_instance_valid(super_tip) and not (MatchSetup.vs_ai and i == 1):
 			_show_super_tip(fighter)
