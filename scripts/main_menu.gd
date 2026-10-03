@@ -14,12 +14,13 @@ const MODES := [
 const MODE_KEYS := ["arcade", "story", "local", "ai"]
 ## Non-fight entries that follow the modes in the list: [key, title, text, accent].
 const EXTRAS := [
+	["practice", "PRACTICE", "Train against a dummy: guard, grab escapes, fight back. F2 changes what it does.", Color("4cd6a0")],
 	["records", "RECORDS", "Your fights, wins, streaks, perfects and favourite fighter.", Color("6fb4ff")],
 	["settings", "SETTINGS", "Display, sound, graphics, fight options, controls and how to play.", Color("c9cfdf")],
 	["exit", "EXIT", "Leave the championship. See you next time.", Color("ff4a5a")],
 ]
 ## Order the arrow keys walk through the list.
-const ENTRIES := ["arcade", "story", "local", "ai", "records", "settings", "exit"]
+const ENTRIES := ["arcade", "story", "local", "ai", "practice", "records", "settings", "exit"]
 ## Gold light sweeping across the title, arcade attract-mode style.
 const SHIMMER := """shader_type canvas_item;
 void fragment() {
@@ -33,9 +34,9 @@ void fragment() {
 """
 ## Menu column geometry: row pitch, bar height and the gap after the modes.
 const ROW_TOP := 140.0
-const ROW_STEP := 48.0
-const ROW_HEIGHT := 42.0
-const GROUP_GAP := 18.0
+const ROW_STEP := 43.0
+const ROW_HEIGHT := 38.0
+const GROUP_GAP := 14.0
 var backdrop: Control
 var extra_rows: Dictionary = {}
 ## Highlighted non-mode entry (a key from EXTRAS), or "" when a mode is.
@@ -303,6 +304,8 @@ func _activate_extra(key: String) -> void:
 		return
 	_point_at(key)
 	match key:
+		"practice":
+			_start_practice()
 		"records":
 			_show_records()
 		"settings":
