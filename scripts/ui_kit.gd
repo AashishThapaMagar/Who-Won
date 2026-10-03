@@ -114,7 +114,12 @@ static func theme() -> Theme:
 	result.set_stylebox("grabber_area_highlight", "HSlider", active_track)
 	return result
 
+## Smallest text drawn anywhere: the UI is laid out at 960x540, so 11 here
+## is 22 pixels on a 1080p screen. Anything smaller was unreadable.
+const MIN_TEXT := 11
+
 static func label(parent: Node, text: String, pos: Vector2, dimensions: Vector2, font_size: int = 16, color: Color = WHITE) -> Label:
+	font_size = maxi(font_size, MIN_TEXT)
 	var node := Label.new()
 	node.text = text
 	node.position = pos

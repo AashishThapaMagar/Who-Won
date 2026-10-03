@@ -373,9 +373,9 @@ func _build_ladder(tile_shader: Shader) -> void:
 		var pip := UI.label(self, "◆", Vector2(pos.x + dimensions.x * 0.5 - 7, 254), Vector2(14, 16), 12, UI.GOLD if k == 0 else (UI.CRIMSON if boss else Color("6d7389")))
 		pip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var first := UI.eyebrow(self, "FIRST RIVAL", Vector2(476, 272), Vector2(140, 16), UI.GOLD)
-	first.add_theme_font_size_override("font_size", 10)
+	first.add_theme_font_size_override("font_size", 11)
 	var boss_caption := UI.eyebrow(self, "FINAL BOSS", Vector2(816, 272), Vector2(110, 16), UI.RED)
-	boss_caption.add_theme_font_size_override("font_size", 10)
+	boss_caption.add_theme_font_size_override("font_size", 11)
 	var awaits := UI.label(self, ROSTER.profile(6).title.to_upper() + "  /  " + ROSTER.profile(6).name + " AWAITS AT THE TOP", Vector2(476, 290), Vector2(430, 18), 11, UI.MUTED)
 	awaits.add_theme_font_override("font", UI.strong_font())
 
@@ -390,7 +390,7 @@ func _build_stage_picker() -> void:
 	arena_label = UI.heading(self, "", Vector2(394, 364), Vector2(172, 26), 17, UI.GOLD)
 	arena_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	arena_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	arena_caption = UI.label(self, "", Vector2(300, 388), Vector2(360, 14), 9, UI.MUTED)
+	arena_caption = UI.label(self, "", Vector2(300, 386), Vector2(360, 16), 11, UI.MUTED)
 	arena_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	arena_caption.add_theme_font_override("font", UI.strong_font())
 	_show_stage()
@@ -408,7 +408,7 @@ func _show_stage() -> void:
 	match MatchSetup.stage_choice:
 		MatchSetup.JOURNEY_STAGE:
 			arena_label.text = "ALL 4 ARENAS"
-			arena_caption.text = "THE JOURNEY: ONE ARENA PER ROUND, NIGHT TO SUNSET TO THE STUPA"
+			arena_caption.text = "ONE ARENA PER ROUND, ENDING AT THE STUPA"
 			backdrop.stage.show_round(0)
 		MatchSetup.RANDOM_STAGE:
 			arena_label.text = "RANDOM ARENA"

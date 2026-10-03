@@ -549,7 +549,7 @@ func _ko_3d(fighter: Node) -> void:
 		Engine.time_scale = 0.5
 		get_tree().create_timer(0.6, true, false, true).timeout.connect(func(): Engine.time_scale = 1.0)
 		ko_hold = 0.6
-	nepal_stage.flash(Color(1.0, 0.97, 0.9), 0.55, 0.6)
+	nepal_stage.flash(Color(1.0, 0.98, 0.94), 0.22, 0.25)
 	_dust(fighter.body.position, 16, Color(0.6, 0.54, 0.46, 0.5), 0.9)
 
 ## Afterimages: while a fighter dashes or swings a heavy attack, the big

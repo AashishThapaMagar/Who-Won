@@ -379,6 +379,7 @@ func _build_move_ui() -> void:
 		$UI.add_child(label)
 		combo_labels.append(label)
 	var moves_button := Button.new()
+	moves_button.name = "MovesButton"
 	moves_button.text = "MOVES [F1]"
 	moves_button.position = Vector2(418, 92)
 	moves_button.size = Vector2(124, 30)

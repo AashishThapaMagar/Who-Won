@@ -160,7 +160,7 @@ func _ready() -> void:
 	arena.round_label.size = Vector2(100, 16)
 	arena.round_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	arena.round_label.add_theme_font_override("font", UI.strong_font())
-	arena.round_label.add_theme_font_size_override("font_size", 10)
+	arena.round_label.add_theme_font_size_override("font_size", 11)
 	arena.round_label.add_theme_color_override("font_color", UI.GOLD)
 	# No backing box: a big italic round call and one comment line float over
 	# the fight, outlined so they read against any arena.
@@ -489,6 +489,11 @@ func _note_impact(_point: Vector2, blocked: bool, _heavy: bool, defender: int) -
 func readout_blocked_for(defender: int) -> bool:
 	return last_blocked[defender]
 
+## Where the K.O. callout slams in (above the fighters' heads) and where it
+## settles, tucked under the clock.
+const KO_HIGH := 78.0
+const KO_RESTING := 26.0
+
 func _knockout(loser: int) -> void:
 	stats[1 - loser].kos += 1
 	_slam("K.O.", 132)
@@ -501,15 +506,21 @@ func _slam(text: String, size: int) -> void:
 	ko_label.text = text
 	ko_label.add_theme_font_size_override("font_size", size)
 	ko_label.show()
+	# Above the fighters, not over them: the knockout fall is the moment, so
+	# the callout slams in high, then rises and shrinks under the clock.
+	ko_label.position.y = KO_HIGH
 	ko_label.pivot_offset = ko_label.size * 0.5
-	ko_label.scale = Vector2.ONE * 3.0
+	ko_label.scale = Vector2.ONE * 2.2
 	ko_label.modulate.a = 0.0
 	var slam := ko_label.create_tween().set_parallel(true).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	slam.tween_property(ko_label, "scale", Vector2.ONE, 0.3)
-	slam.tween_property(ko_label, "modulate:a", 1.0, 0.12)
+	slam.tween_property(ko_label, "scale", Vector2.ONE * 0.8, 0.22)
+	slam.tween_property(ko_label, "modulate:a", 1.0, 0.1)
 	var leave := ko_label.create_tween()
-	leave.tween_interval(0.8)
-	leave.tween_property(ko_label, "modulate:a", 0.0, 0.2)
+	leave.tween_interval(0.45)
+	leave.tween_property(ko_label, "scale", Vector2.ONE * 0.42, 0.3).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	leave.parallel().tween_property(ko_label, "position:y", KO_RESTING, 0.3).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	leave.tween_interval(0.6)
+	leave.tween_property(ko_label, "modulate:a", 0.0, 0.25)
 	leave.tween_callback(ko_label.hide)
 	# The winner callout waits its turn behind the K.O.
 	arena.result_label.modulate.a = 0.0
@@ -576,8 +587,9 @@ func _process(_delta: float) -> void:
 			perfect_label.pivot_offset = perfect_label.size * 0.5
 			perfect_label.scale = Vector2.ONE * 1.6
 			var flourish := perfect_label.create_tween().set_parallel(true).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-			flourish.tween_property(perfect_label, "scale", Vector2.ONE, 0.35).set_delay(0.3)
-			flourish.tween_property(perfect_label, "modulate:a", 1.0, 0.2).set_delay(0.3)
+			# With the winner line, once the knockout fall has played out.
+			flourish.tween_property(perfect_label, "scale", Vector2.ONE, 0.35).set_delay(1.05)
+			flourish.tween_property(perfect_label, "modulate:a", 1.0, 0.2).set_delay(1.05)
 	elif not show_result:
 		perfect_label.hide()
 	last_result_visible = show_result

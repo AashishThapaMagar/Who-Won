@@ -3,7 +3,7 @@ extends Control
 ## Tekken-style combo counter, white impact flashes on heavy hits, the K.O.
 ## burst, and the control hints that fade out once the fight is under way.
 const UI := preload("res://scripts/ui_kit.gd")
-const HINT_SECONDS := 9.0
+const HINT_SECONDS := 5.0
 var hud: Node
 var arena: Node
 var counters: Array = []
@@ -119,7 +119,7 @@ func _on_impact(_point: Vector2, blocked: bool, heavy: bool, _side: int) -> void
 ## The K.O.: a white flash, gold rays bursting from the middle and a shove
 ## of camera shake. match_hud calls this as the big "K.O." slams in.
 func knockout() -> void:
-	flash.color = Color(1, 0.96, 0.85, 0.7)
+	flash.color = Color(1, 0.98, 0.92, 0.22)
 	burst_age = 0.0
 	burst.visible = true
 	if "shake_3d" in arena:
@@ -152,3 +152,7 @@ func _update_hint(delta: float) -> void:
 		hint_clock += delta
 	var fade := 1.0 - clampf((hint_clock - HINT_SECONDS) / 1.5, 0.0, 1.0)
 	hint.modulate.a = fade
+	# The F1 move-list button stays, faint, once the legend has gone.
+	var moves := arena.get_node_or_null("UI/MovesButton")
+	if moves != null:
+		moves.modulate.a = lerpf(0.35, 1.0, fade)
