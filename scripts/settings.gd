@@ -43,6 +43,8 @@ var post_effects: bool = true
 var hit_effects: bool = true
 ## Training-style input history under each fighter's side of the HUD.
 var input_display: bool = false
+## The "SUPER READY: press 2 + 4" tip shows until a player has seen it once.
+var super_tip_seen: bool = false
 ## Steps the graphics preset down by itself when a fight runs under 30 FPS
 ## for a few seconds (never up, never past LOW, never from CUSTOM).
 var adaptive_quality: bool = true
@@ -232,6 +234,7 @@ func _load() -> void:
 			detailed_textures = PRESETS[quality][3]
 		hit_effects = cfg.get_value("fight", "hit_effects", hit_effects)
 		input_display = cfg.get_value("fight", "input_display", input_display)
+		super_tip_seen = cfg.get_value("fight", "super_tip_seen", super_tip_seen)
 
 func _save() -> void:
 	var cfg := ConfigFile.new()
@@ -241,7 +244,7 @@ func _save() -> void:
 	cfg.set_value("display", "touch_controls", touch_controls)
 	for key in ["quality", "render_scale", "anti_aliasing", "shadows", "detailed_textures", "vsync", "show_fps", "post_effects", "adaptive_quality"]:
 		cfg.set_value("graphics", key, get(key))
-	for key in ["hit_effects", "input_display"]:
+	for key in ["hit_effects", "input_display", "super_tip_seen"]:
 		cfg.set_value("fight", key, get(key))
 	cfg.save(SAVE_PATH)
 

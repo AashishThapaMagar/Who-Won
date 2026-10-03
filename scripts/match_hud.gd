@@ -13,6 +13,8 @@ var stamina_bars: Array[ProgressBar] = []
 ## SUPER READY tag that pulses beside a full one.
 var super_bars: Array[ProgressBar] = []
 var super_tags: Array[Label] = []
+## A one-time tip the first time anyone's super meter fills.
+var super_tip: Control
 var callout_style := false
 ## Hand-drawn gauges and clock plate (hud_gauges.gd); the ProgressBars
 ## below stay as invisible data holders for combat code and tests.
@@ -500,6 +502,27 @@ func _knockout(loser: int) -> void:
 	if fx != null:
 		fx.knockout()
 
+## First full meter ever: a banner under the HUD says what it is and how to
+## use it, then is never shown again.
+func _show_super_tip(fighter: Node) -> void:
+	Settings.set_option("super_tip_seen", true)
+	var layer: Node = arena.get_node("UI")
+	super_tip = Control.new()
+	super_tip.position = Vector2(255, 132)
+	super_tip.z_index = 8
+	super_tip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(super_tip)
+	UI.panel(super_tip, Vector2.ZERO, Vector2(450, 58), Color(0.04, 0.04, 0.08, 0.92), UI.GOLD, 0.05)
+	UI.heading(super_tip, "SUPER READY", Vector2(18, 6), Vector2(220, 30), 22, UI.GOLD, UI.CRIMSON)
+	UI.key_hint(super_tip, "2 + 4", "", Vector2(176, 11))
+	UI.label(super_tip, "Press together up close. Land the first hit and the combo plays out.", Vector2(18, 34), Vector2(420, 16), 11, UI.WHITE)
+	super_tip.modulate.a = 0.0
+	var show := super_tip.create_tween()
+	show.tween_property(super_tip, "modulate:a", 1.0, 0.25)
+	show.tween_interval(4.5)
+	show.tween_property(super_tip, "modulate:a", 0.0, 0.4)
+	show.tween_callback(super_tip.queue_free)
+
 ## The big callout (K.O., TIME UP) slams in and holds the winner line back
 ## for a beat.
 func _slam(text: String, size: int) -> void:
@@ -567,6 +590,8 @@ func _process(_delta: float) -> void:
 		super_bars[i].modulate = Color(1.25, 1.15, 0.9) * pulse if full else Color.WHITE
 		super_tags[i].text = "SUPER READY  2+4" if full else ""
 		super_tags[i].modulate.a = pulse
+		if full and not Settings.super_tip_seen and not is_instance_valid(super_tip) and not (MatchSetup.vs_ai and i == 1):
+			_show_super_tip(fighter)
 	var show_result: bool = arena.result_label.visible
 	# Between rounds only the winner callout shows; the panel with Rematch /
 	# Next Rival / Main Menu is kept for the end of the match.

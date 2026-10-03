@@ -639,17 +639,35 @@ func _show_guide() -> void:
 	if transitioning or is_instance_valid(modal):
 		return
 	_open_modal("KNOW YOUR MOVES", "HOW TO PLAY")
-	for player in 2:
-		var x := 28.0 + player * 294
-		var color := UI.GOLD if player == 0 else UI.VIOLET
-		UI.panel(modal_content, Vector2(x, 104), Vector2(270, 108), Color(color, 0.08), Color(color, 0.6), 0.06)
-		UI.heading(modal_content, "PLAYER %d" % (player + 1), Vector2(x + 14, 108), Vector2(240, 30), 22, color, Color(0, 0, 0, 0.6))
-		var keys := [["WASD", "MOVE"], ["SPACE", "JUMP"], ["E", "GUARD"], ["F", "PUNCH"], ["G", "KICK"]] if player == 0 else [["ARROWS", "MOVE"], ["ENTER", "JUMP"], ["O", "GUARD"], ["K", "PUNCH"], ["L", "KICK"]]
-		for k in keys.size():
-			var column := k % 2
-			var row := k / 2
-			UI.key_hint(modal_content, keys[k][0], keys[k][1], Vector2(x + 14 + column * 124, 146 + row * 21))
-	UI.label(modal_content, "Hold Shift (P1) / Ctrl (P2) to run. Double-tap to dash.\nKeep your fighter's moves across four rounds. Most round wins takes it.\nF1 in a match: moves, throws, weaknesses and signature commands.", Vector2(28, 224), Vector2(566, 75), 13, UI.MUTED)
+	# Left: the basics, both players' keys side by side.
+	UI.eyebrow(modal_content, "BASICS", Vector2(28, 98), Vector2(270, 16), UI.GOLD)
+	UI.label(modal_content, "P1", Vector2(178, 98), Vector2(40, 16), 11, UI.GOLD)
+	UI.label(modal_content, "P2", Vector2(244, 98), Vector2(40, 16), 11, UI.VIOLET)
+	var basics := [["MOVE", "A  D", "← →"], ["SIDESTEP", "W  S", "↑ ↓"], ["JUMP", "SPACE", "ENTER"], ["GUARD", "E", "O"],
+		["1  2  3  4", "F V G B", "K , L ."], ["GRAB", "H", "J"], ["RUN", "SHIFT", "CTRL"]]
+	for row in basics.size():
+		var y := 118.0 + row * 23.0
+		UI.label(modal_content, basics[row][0], Vector2(28, y), Vector2(140, 20), 12, UI.WHITE).add_theme_font_override("font", UI.strong_font())
+		UI.label(modal_content, basics[row][1], Vector2(178, y), Vector2(64, 20), 12, UI.GOLD)
+		UI.label(modal_content, basics[row][2], Vector2(244, y), Vector2(64, 20), 12, UI.VIOLET)
+	UI.label(modal_content, "1 2 punch, 3 4 kick. Hold back to guard too.
+F1 in a fight: every move and combo.", Vector2(28, 282), Vector2(290, 34), 11, UI.MUTED)
+	# Right: the big moves.
+	UI.eyebrow(modal_content, "BIG MOVES", Vector2(322, 98), Vector2(270, 16), UI.GOLD)
+	var moves := [
+		["2 + 4", "SUPER", "When the gold meter is full (Ish, Ananta)"],
+		["GRAB", "TAKEDOWN", "Beats guard. Then tap 1 to punch from on top"],
+		["GRAB", "ESCAPE", "Tap grab just as theirs lands"],
+		["BACK", "ROLL AWAY", "While knocked down: roll clear"],
+		["GUARD", "STAY DOWN", "While knocked down: get up late"],
+		["ATTACK", "RISING HIT", "Press while getting up"],
+		["F2", "TRAINING", "In Practice: what the dummy does"],
+	]
+	for row in moves.size():
+		var y := 118.0 + row * 27.0
+		UI.key_hint(modal_content, moves[row][0], "", Vector2(322, y + 1))
+		UI.label(modal_content, moves[row][1], Vector2(390, y - 1), Vector2(200, 16), 12, UI.WHITE).add_theme_font_override("font", UI.strong_font())
+		UI.label(modal_content, moves[row][2], Vector2(390, y + 12), Vector2(210, 14), 11, UI.MUTED)
 
 func _close_modal() -> void:
 	if not is_instance_valid(modal):
