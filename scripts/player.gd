@@ -745,6 +745,10 @@ func take_hit(damage: int, knockback: float, attacker_facing: int, attacker: Nod
 	if health <= 0:
 		state = State.KO
 		hurtbox.set_deferred("monitorable", false)
+		# Barely a beat of freeze: the body goes the moment the blow lands.
+		hitstop_remaining = minf(hitstop_remaining, 0.03)
+		if attacker != null:
+			attacker.hitstop_remaining = minf(attacker.hitstop_remaining, 0.03)
 		ko.emit()
 	_update_animation()
 	return not blocked

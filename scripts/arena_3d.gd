@@ -22,6 +22,10 @@ var camera_nudge := Vector3.ZERO
 ## swung into its close-up (0 = fight camera, 1 = full close-up).
 var super_fighter: Node = null
 var cinematic := 0.0
+## The knockout shot: the fallen fighter, and until when (real milliseconds,
+## since the fall plays in slow motion) the camera holds low on the fall.
+var ko_fighter: Node = null
+var ko_until := 0
 var fov_kick := 0.0
 ## Lens push-in held through a knockout (field-of-view degrees, eased).
 var ko_push := 0.0
@@ -167,6 +171,8 @@ func _begin_round(index: int) -> void:
 	camera_nudge = Vector3.ZERO
 	super_fighter = null
 	cinematic = 0.0
+	ko_fighter = null
+	ko_until = 0
 	fov_kick = 0
 	for spark in impact_meshes:
 		spark.mesh.queue_free()
@@ -276,8 +282,26 @@ func _update_fight_camera(delta: float) -> void:
 	# Super: swing to a low close-up from the attacker's front quarter and
 	# ease back out once the combo is over.
 	var performing: bool = is_instance_valid(super_fighter) and super_fighter.state == super_fighter.State.SUPER
-	cinematic = move_toward(cinematic, 1.0 if performing else 0.0, delta * (2.6 if performing else 1.4))
-	if cinematic > 0.001 and is_instance_valid(super_fighter):
+	var falling: bool = is_instance_valid(ko_fighter) and Time.get_ticks_msec() < ko_until
+	# The knockout cuts straight in (no ease) so the fall reads as instant.
+	if falling and cinematic < 1.0 and not performing:
+		cinematic = 1.0
+	cinematic = move_toward(cinematic, 1.0 if performing or falling else 0.0, delta * (2.6 if performing or falling else 1.4))
+	# The knockout shot holds while the camera eases back out of it.
+	if cinematic > 0.001 and is_instance_valid(ko_fighter) and not performing:
+		# Low and close on the fallen fighter from the camera's side, the
+		# winner standing over them in the back of the frame.
+		var down: Vector3 = ko_fighter.body.position
+		var winner: Node = ko_fighter.opponent
+		var toward_winner: Vector3 = (winner.body.position - down) if winner != null else Vector3.RIGHT
+		toward_winner.y = 0.0
+		var side: float = signf(toward_winner.dot(along)) if absf(toward_winner.dot(along)) > 0.01 else 1.0
+		var middle: Vector3 = (down + winner.body.position) * 0.5 if winner != null else down
+		var swing: Vector3 = (turn * Vector3.BACK).rotated(Vector3.UP, -0.3 * side)
+		var k := smoothstep(0.0, 1.0, cinematic)
+		eye = eye.lerp(middle + swing * 4.4 + Vector3.UP * 0.45, k)
+		look = look.lerp(down.lerp(middle, 0.35) + Vector3.UP * 0.8, k)
+	elif cinematic > 0.001 and is_instance_valid(super_fighter):
 		var rival: Node = super_fighter.opponent
 		var middle: Vector3 = (super_fighter.body.position + rival.body.position) * 0.5 + Vector3.UP * 1.05
 		var toward_face: float = signf(super_fighter.forward.dot(along)) if absf(super_fighter.forward.dot(along)) > 0.01 else 1.0
@@ -517,11 +541,15 @@ func _ko_3d(fighter: Node) -> void:
 	fov_kick = 2.2
 	# The knockout plays in slow motion with the camera pushed in on the
 	# fall (real-time timer, so the slow-mo itself is not slowed down).
+	ko_fighter = fighter
+	ko_until = Time.get_ticks_msec() + 2000
 	if DisplayServer.get_name() != "headless" and MatchSetup.camera_shake:
-		Engine.time_scale = 0.3
-		get_tree().create_timer(0.7, true, false, true).timeout.connect(func(): Engine.time_scale = 1.0)
+		# The fall itself plays in slow motion, starting the instant the blow
+		# lands; the camera has already cut to it.
+		Engine.time_scale = 0.5
+		get_tree().create_timer(0.6, true, false, true).timeout.connect(func(): Engine.time_scale = 1.0)
 		ko_hold = 0.6
-	nepal_stage.flash(Color(1.0, 0.96, 0.88), 0.35, 0.45)
+	nepal_stage.flash(Color(1.0, 0.97, 0.9), 0.55, 0.6)
 	_dust(fighter.body.position, 16, Color(0.6, 0.54, 0.46, 0.5), 0.9)
 
 ## Afterimages: while a fighter dashes or swings a heavy attack, the big

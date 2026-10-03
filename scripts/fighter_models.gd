@@ -52,6 +52,8 @@ const SHARED_CLIPS := {
 }
 ## [start, impact, end] seconds, measured from where each fist or foot is
 ## fully extended. Jab Cross is two punches; heavy punches use the cross.
+## Second the shared knocked_out clip's body starts to drop.
+const KO_FALL_START := 1.78
 const SHARED_TIMING := {
 	"jab": [0.0, 0.5, 1.2], "punch_heavy": [0.45, 0.7, 1.5],
 	"kick": [0.25, 0.6, 1.3], "kick_front": [0.2, 0.6, 1.2], "kick_spin": [0.3, 0.7, 1.4],
@@ -125,7 +127,7 @@ const STYLES := {
 				"grapple": "double_leg_takedown_attacker", "thrown": "double_leg_takedown_victim", "getup": "get_up_from_back",
 				"finisher": "punch_to_elbow_combo",
 				"block": "high_right_block", "block_hit": "block_reaction",
-				"hit": "light_head_hit", "hit_heavy": "livershot_knockdown", "ko": "defeated",
+				"hit": "light_head_hit", "hit_heavy": "livershot_knockdown",
 				# Reactions picked by where and how hard each blow lands.
 				"hit_head": "light_head_hit", "hit_head_heavy": "heavy_head_hit",
 				"hit_body": "body_hit_by_straight_punch", "hit_liver": "livershot_knockdown",
@@ -180,7 +182,7 @@ const STYLES := {
 				"grapple": "double_leg_takedown_attacker", "thrown": "double_leg_takedown_victim", "getup": "get_up_from_back",
 				"finisher": "eight_punch_combo",
 				"block": "chest_block", "block_hit": "block_reaction",
-				"hit": "body_hit", "hit_heavy": "liver_shot_knockdown", "ko": "defeated",
+				"hit": "body_hit", "hit_heavy": "liver_shot_knockdown",
 				# Reactions picked by where and how hard each blow lands.
 				"hit_head": "light_head_hit", "hit_head_heavy": "heavy_head_hit",
 				"hit_body": "body_hit", "hit_liver": "liver_shot_knockdown",
@@ -231,7 +233,7 @@ const STYLES := {
 				"block": "high_right_block", "block_hit": "block_reaction",
 				# Body-shot reactions: the head-hit clips whip his head so far
 				# back that the collar and neck stretch.
-				"hit": "body_hit_by_straight_punch", "hit_heavy": "livershot_knockdown", "ko": "defeated",
+				"hit": "body_hit_by_straight_punch", "hit_heavy": "livershot_knockdown",
 				# Reactions picked by where and how hard each blow lands.
 				"hit_head": "medium_head_hit", "hit_head_alt": "taking_punch_reaction", "hit_head_heavy": "heavy_head_hit",
 				"hit_body": "body_hit_by_straight_punch", "hit_liver": "livershot_knockdown",
@@ -379,4 +381,7 @@ static func _mixamo(fighter_id: String) -> Dictionary:
 		"meshy": meshy,
 		"reversed": pack.get("reversed", []),
 		"throw_posture": style.get("throw_posture", 0.0),
+		# The shared knockout stands still for 1.6 s before the body drops:
+		# a knockout starts at the drop, so the fall is the blow's reaction.
+		"starts": {"ko": KO_FALL_START} if clips.get("ko", "") == "ko" else {},
 	} if ResourceLoader.exists(SHARED + "idle.fbx") else {}

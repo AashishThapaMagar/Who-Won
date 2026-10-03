@@ -952,9 +952,14 @@ func update(delta: float) -> void:
 	if clip != current or (entered and not logical in LOOPING) or restart:
 		# Snap into a flinch; ease back out of one.
 		var was_reaction: bool = current != "" and REACTIONS.any(func(name): return clip_names.get(name, "") == current)
-		player.play(clip, 0.05 if logical in REACTIONS else (0.22 if was_reaction else 0.12))
+		player.play(clip, 0.05 if logical in REACTIONS or logical == "ko" else (0.22 if was_reaction else 0.12))
 		if restart:
 			player.seek(0.0, true)
+		# Clips that open with a still beat (the knockout) start where the
+		# motion starts.
+		var start: float = float(config.get("starts", {}).get(logical, 0.0))
+		if start > 0.0:
+			player.seek(start, true)
 		current = clip
 	player.speed_scale = 0.0 if frozen else _loop_speed(fighter, logical, clip)
 	if logical == "jump" and not frozen and entered:
