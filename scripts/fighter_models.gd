@@ -39,12 +39,16 @@ const SHARED_FILES := {
 	"jab": "lead_jab", "cross": "jab_cross", "hit": "head_hit", "hit_body": "hit_to_body",
 	"kick_mid": "mma_kick_2", "kick_front": "mma_kick_1", "kick_high": "mma_kick",
 	"ko": "knocked_out", "block": "body_block", "run": "running", "injured": "injured_run",
+	"hit_body_alt": "hit_to_body_1", "hit_side": "hit_on_side_of_body", "hit_react": "reaction",
 }
 const SHARED_CLIPS := {
 	"idle": "idle", "walk": "walk", "walk_back": "walk_back", "jab": "jab",
 	"punch_heavy": "cross", "hit": "hit", "hit_heavy": "hit_body", "ko": "ko",
 	"kick": "kick_mid", "kick_front": "kick_front", "kick_spin": "kick_high",
 	"block": "block", "block_hit": "block", "run": "run", "injured": "injured",
+	# Reactions picked by where and how hard each blow lands.
+	"hit_head": "hit", "hit_head_heavy": "hit_react", "hit_body": "hit_body",
+	"hit_body_alt": "hit_body_alt", "hit_side": "hit_side",
 }
 ## [start, impact, end] seconds, measured from where each fist or foot is
 ## fully extended. Jab Cross is two punches; heavy punches use the cross.
@@ -98,6 +102,9 @@ const STYLES := {
 	},
 	"ish": {
 		"height": 1.8, "width": 1.0, "tint": [Color("a2322c"), Color("2a2227")],
+		# His takedown is a spear: the chest comes up through the shot so
+		# the shoulder drives into the stomach, not the thighs.
+		"throw_posture": 0.34,
 		"clips": {"idle": "bouncing_fight_idle", "punch_heavy": "hook_punch", "uppercut": "uppercut"},
 		"timing": {"punch_heavy": [0.55, 1.13, 1.75], "uppercut": [0.05, 0.47, 1.0]},
 		# His 50-clip Mixamo set (Downloads/Ish_MMA) in assets/fighters/ish/fight/
@@ -115,9 +122,13 @@ const STYLES := {
 				"jab": "jab_punch", "cross": "cross_punch", "hook": "rear_hand_hook",
 				"uppercut": "left_uppercut", "punch_heavy": "four_punch_combo",
 				"kick": "mma_medium_kick", "kick_front": "lead_foot_front_snap_kick", "kick_spin": "mma_spinning_back_kick",
-				"grapple": "double_leg_takedown_attacker", "finisher": "punch_to_elbow_combo",
+				"grapple": "double_leg_takedown_attacker", "thrown": "double_leg_takedown_victim", "getup": "get_up_from_back",
+				"finisher": "punch_to_elbow_combo",
 				"block": "high_right_block", "block_hit": "block_reaction",
 				"hit": "light_head_hit", "hit_heavy": "livershot_knockdown", "ko": "defeated",
+				# Reactions picked by where and how hard each blow lands.
+				"hit_head": "light_head_hit", "hit_head_heavy": "heavy_head_hit",
+				"hit_body": "body_hit_by_straight_punch", "hit_liver": "livershot_knockdown",
 				"taunt": "boxing_taunt", "victory": "bouncing_fight_idle",
 				# Extra strikes, played by moves whose pose names them.
 				"strike_elbow": "elbow_punch", "strike_elbow_upper": "elbow_uppercut_combo",
@@ -166,9 +177,13 @@ const STYLES := {
 				"jab": "jab", "cross": "cross", "hook": "lead_hook",
 				"uppercut": "long_body_hook", "punch_heavy": "right_hook",
 				"kick": "rear_roundhouse", "kick_front": "double_front_kick", "kick_spin": "advancing_roundhouse",
-				"grapple": "double_leg_takedown_attacker", "finisher": "eight_punch_combo",
+				"grapple": "double_leg_takedown_attacker", "thrown": "double_leg_takedown_victim", "getup": "get_up_from_back",
+				"finisher": "eight_punch_combo",
 				"block": "chest_block", "block_hit": "block_reaction",
 				"hit": "body_hit", "hit_heavy": "liver_shot_knockdown", "ko": "defeated",
+				# Reactions picked by where and how hard each blow lands.
+				"hit_head": "light_head_hit", "hit_head_heavy": "heavy_head_hit",
+				"hit_body": "body_hit", "hit_liver": "liver_shot_knockdown",
 				"victory": "victory", "taunt": "boxing_taunt",
 				# Extra strikes, played by moves whose pose names them.
 				"strike_short_hook": "short_head_hook", "strike_jab_elbow": "jab_elbow_combo",
@@ -211,11 +226,15 @@ const STYLES := {
 				"jab": "jab_punch", "cross": "cross_punch", "hook": "rear_hand_hook",
 				"uppercut": "left_uppercut", "punch_heavy": "four_punch_combo",
 				"kick": "mma_medium_kick", "kick_front": "lead_foot_front_snap_kick", "kick_spin": "mma_spinning_back_kick",
-				"grapple": "double_leg_takedown_attacker", "finisher": "four_punch_combo",
+				"grapple": "double_leg_takedown_attacker", "thrown": "double_leg_takedown_victim", "getup": "get_up_from_back",
+				"finisher": "four_punch_combo",
 				"block": "high_right_block", "block_hit": "block_reaction",
 				# Body-shot reactions: the head-hit clips whip his head so far
 				# back that the collar and neck stretch.
 				"hit": "body_hit_by_straight_punch", "hit_heavy": "livershot_knockdown", "ko": "defeated",
+				# Reactions picked by where and how hard each blow lands.
+				"hit_head": "medium_head_hit", "hit_head_alt": "taking_punch_reaction", "hit_head_heavy": "heavy_head_hit",
+				"hit_body": "body_hit_by_straight_punch", "hit_liver": "livershot_knockdown",
 				"victory": "boxing_victory", "taunt": "boxing_taunt",
 				# Extra strikes, played by moves whose pose names them.
 				"strike_roundhouse": "mma_roundhouse_kick", "strike_side_kick": "mma_side_kick",
@@ -359,4 +378,5 @@ static func _mixamo(fighter_id: String) -> Dictionary:
 		"timing": timing,
 		"meshy": meshy,
 		"reversed": pack.get("reversed", []),
+		"throw_posture": style.get("throw_posture", 0.0),
 	} if ResourceLoader.exists(SHARED + "idle.fbx") else {}

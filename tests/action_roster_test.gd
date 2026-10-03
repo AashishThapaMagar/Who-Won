@@ -78,7 +78,8 @@ func run() -> void:
 			for frame in 4:
 				await physics_frame
 				await process_frame
-			check(p2.health < 100 if moves[key].get("utility", "").is_empty() else p2.health == 100, "Real hitboxes match strike or utility: %s / %s" % [i, key])
+			# A grab locks the rival into a throw; its damage lands on the slam.
+			check((p2.health < 100 or p2.state == p2.State.THROWN) if moves[key].get("utility", "").is_empty() else p2.health == 100, "Real hitboxes match strike or utility: %s / %s" % [i, key])
 		p1.reset_for_new_round()
 		p1.stamina = 0
 		p1._start_style_move("drive")
@@ -104,7 +105,10 @@ func run() -> void:
 	p1._start_style_move("forward_heavy")
 	p2.state = p2.State.BLOCK
 	p2.block_hold_time = 1
-	check(p2.take_hit(20, 100, 1, p1) and p2.health == 80, "Sab grab beats held guard")
+	check(p2.take_hit(20, 100, 1, p1) and p2.state == p2.State.THROWN and p1.state == p1.State.THROWING, "Sab grab beats held guard")
+	check(p2.health == 100, "Throw damage waits for the slam")
+	p1._slam()
+	check(p2.health == 80, "The slam deals the throw's damage")
 	reset(2, 0)
 	p1._start_style_move("forward_heavy")
 	p2.throw_tech_until = p2.combat_time + 0.16

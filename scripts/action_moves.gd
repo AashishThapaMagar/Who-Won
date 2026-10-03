@@ -217,6 +217,9 @@ static func for_fighter(id: String) -> Dictionary:
 		# Their double-leg takedown clip.
 		m.grapple.name = {"ish": "Flash takedown", "anant": "Crown takedown", "abhi": "Thunder takedown"}[id]
 		m.grapple.pose = "grapple"
+	if id in ["ish", "anant"]:
+		# Mounted after the takedown, punch rains up to three blows down.
+		m.grapple.ground_pound = true
 	# Stamina costs are assigned by move slot/kind here rather than per-move
 	# above, so every fighter's moves stay priced consistently even though
 	# their reach/damage/timing differ.

@@ -19,6 +19,16 @@ var dash_run_held := false
 ## advantage, combo links and jump arcs keep their shape because the whole
 ## combat clock is scaled together. Menus, camera and round timer ignore it.
 const COMBAT_TEMPO := 0.8
+## Throw path, fixed when the grab lands (see _begin_throw).
+var _throw_anchor := Vector3.ZERO
+var _throw_victim_anchor := Vector3.ZERO
+var _throw_forward := Vector3.RIGHT
+var _throw_reach := 1.0
+var _throw_shift := Vector3.ZERO
+var _throw_rest := Vector3.ZERO
+## Fighters locked in a throw or lying after one are placed directly, not
+## moved by physics, and are not pushboxes.
+const PLACED_STATES := [State.THROWING, State.THROWN, State.KNOCKDOWN]
 
 func _physics_process(delta: float) -> void:
 	super._physics_process(delta * COMBAT_TEMPO)
@@ -109,6 +119,9 @@ func _capture_input() -> void:
 func _move_combat_body(delta: float) -> void:
 	if body == null:
 		return
+	if state in PLACED_STATES or thrown_down:
+		_hold_placed_body()
+		return
 	var input := world_input() if controls_enabled else Vector3.ZERO
 	# A held second forward tap carries the dash into a sustained run.
 	# Releasing, reversing, guarding or attacking ends that commitment.
@@ -167,6 +180,8 @@ func _separate_bodies() -> void:
 		return
 	if absf(body.position.y - opponent.body.position.y) > 1.65:
 		return
+	if opponent.state in PLACED_STATES or opponent.thrown_down:
+		return
 	var offset: Vector3 = body.position - opponent.body.position
 	offset.y = 0
 	var distance := offset.length()
@@ -185,6 +200,60 @@ func _separate_bodies() -> void:
 		gap.y = 0
 		if gap.length() < 0.64:
 			opponent.body.move_and_collide(-normal * (0.64 - gap.length()))
+
+## Keeps a placed body still and its facing, hurtbox and 2D shadow in step
+## with wherever _place_throw put it.
+func _hold_placed_body() -> void:
+	body.velocity = Vector3.ZERO
+	velocity = Vector2.ZERO
+	lateral_speed = 0.0
+	body.get_node("Hurtbox3D").rotation.y = atan2(-forward.z, forward.x)
+	pivot.rotation.y = atan2(-forward.z, forward.x)
+	global_position = Vector2(travel, -body.position.y * UNITS)
+
+## Fixes the throw's line and reach. The attacker's drive is scaled so it
+## ends on top of the rival from whatever gap the grab landed at, and the
+## pair is eased away from a wall the victim would otherwise land inside.
+func _begin_throw() -> void:
+	var victim: Node = throw_partner
+	_throw_anchor = body.position
+	_throw_victim_anchor = victim.body.position
+	var line: Vector3 = _throw_victim_anchor - _throw_anchor
+	line.y = 0.0
+	_throw_forward = line.normalized() if line.length() > 0.05 else forward
+	forward = _throw_forward
+	victim.forward = -_throw_forward
+	var gap := maxf(line.length(), 0.3)
+	_throw_reach = clampf((gap + THROW.VICTIM[-1] - THROW.END_GAP) / THROW.ATTACKER[-1], 0.3, 1.2)
+	var landing: Vector3 = _throw_victim_anchor + _throw_forward * THROW.VICTIM[-1]
+	# The victim's head lands well past its hips: keep that inside the lane.
+	var head: Vector3 = landing + _throw_forward * 0.8
+	var inside := Vector3(clampf(head.x, -LANE_HALF_WIDTH, LANE_HALF_WIDTH), head.y, clampf(head.z, -LANE_HALF_DEPTH, LANE_HALF_DEPTH))
+	_throw_shift = inside - head
+	_throw_shift.y = 0.0
+	_throw_rest = landing + _throw_shift - _throw_forward * THROW.RECOVERY_GAP
+
+func _place_throw() -> void:
+	var victim: Node = throw_partner
+	if victim == null or victim.body == null:
+		return
+	var t := minf(throw_time, THROW.END_TIME)
+	var settle := smoothstep(0.0, THROW.END_TIME, t)
+	var to: Vector3 = _throw_anchor + _throw_forward * (_throw_reach * THROW.travel(THROW.ATTACKER, t)) + _throw_shift * settle
+	if not is_inf(mount_slide_at):
+		to += _throw_forward * THROW.MOUNT_ADVANCE * smoothstep(0.0, THROW.MOUNT_SLIDE, throw_time - mount_slide_at)
+	if throw_time > throw_rise_at:
+		# Up off the downed rival and a step back to a safe gap.
+		var rise := smoothstep(0.0, THROW.RECOVERY_TIME, throw_time - throw_rise_at)
+		to = to.lerp(_throw_rest, rise)
+	_set_placed(to)
+	victim._set_placed(_throw_victim_anchor + _throw_forward * THROW.travel(THROW.VICTIM, t) + _throw_shift * settle)
+
+func _set_placed(to: Vector3) -> void:
+	to.y = body.position.y
+	var moved: Vector3 = to - body.position
+	travel += Vector2(moved.x, moved.z).length() * UNITS * (1.0 if moved.dot(forward) >= 0.0 else -1.0)
+	body.position = to
 
 func take_hit(damage: int, knockback: float, _attacker_facing: int, attacker: Node = null, attack_type: String = "punch") -> bool:
 	var guarded_from_front := true

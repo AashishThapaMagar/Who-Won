@@ -234,7 +234,8 @@ func _end_round(winner: int) -> void:
 	for fighter in [player1, player2]:
 		fighter.controls_enabled = false
 		fighter.hitbox.set_active(false)
-		if fighter.state != fighter.State.KO:
+		# A finishing slam plays out; the thrower rises off the body itself.
+		if fighter.state not in [fighter.State.KO, fighter.State.THROWING]:
 			fighter.state = fighter.State.IDLE
 
 	if winner == 1:

@@ -3,13 +3,16 @@ extends CharacterBody2D
 signal health_changed(new_health: int, max_health: int)
 signal ko
 signal impact(point: Vector2, blocked: bool, heavy: bool)
+## Fired on the attacker when its blow lands (or is guarded), for follow-through.
+signal strike_connected(blocked: bool, force: float)
 
 const ROSTER := preload("res://scripts/fighter_roster.gd")
 const MOVES := preload("res://scripts/move_catalog.gd")
 const MOTIONS := preload("res://scripts/motion_input.gd")
 const ACTION_MOVES := preload("res://scripts/action_moves.gd")
+const THROW := preload("res://scripts/throw_data.gd")
 
-enum State { IDLE, WALK, JUMP, PUNCH, KICK, BLOCK, HITSTUN, KO, BLOCKSTUN, DASH, JUMP_START, LAND }
+enum State { IDLE, WALK, JUMP, PUNCH, KICK, BLOCK, HITSTUN, KO, BLOCKSTUN, DASH, JUMP_START, LAND, THROWING, THROWN, KNOCKDOWN }
 
 @export var player_id: int = 1
 @export var max_health: int = 100
@@ -63,6 +66,16 @@ var character_profile: Dictionary = ROSTER.profile(0)
 var block_hold_time: float = 999.0
 var combo_stacks: int = 0
 var hitstop_remaining: float = 0.0
+## Where and how hard the last blow landed, read by the visual to pick the
+## body's recoil: "high" snaps the head back, "mid" folds the trunk, "low"
+## buckles the knees. Force runs 0..1 from a light jab to a counter finisher.
+var last_hit_height: String = "high"
+var last_hit_force: float = 0.0
+var last_hit_counter: bool = false
+## Counter hits and the heaviest blows knock the fighter off balance.
+var last_hit_stagger: bool = false
+## Speed the current knockback started at; the slide eases out from it.
+var _knockback_start: float = 0.0
 var controls_enabled: bool = true
 ## A practice dummy: takes no input but still takes hits and damage.
 var dummy: bool = false
@@ -95,6 +108,29 @@ var _last_land_time: float = -999.0
 var _finisher_cooldown_until: float = -999.0
 var _flash_tween: Tween
 var stamina: float = 100.0
+## A landed grab locks both fighters into one throw: the attacker
+## (THROWING) runs the clock for both, the victim (THROWN) is carried, and
+## the damage lands on the slam, not on the grab.
+var throw_partner: Node = null
+var throw_time: float = 0.0
+var throw_damage: int = 0
+var throw_slammed: bool = false
+var throw_contact: bool = false
+## Mount after a takedown: ground punches thrown, the current swing's time
+## left, a press waiting for the swing before it, and when the attacker
+## started rising (INF while still mounted).
+var ground_hits: int = 0
+var ground_timer: float = 0.0
+var ground_queued: bool = false
+var ground_landed: bool = false
+var throw_rise_at: float = INF
+var mount_slide_at: float = INF
+var _mount_idle: float = 0.0
+## The victim of a takedown stays down (KNOCKDOWN) and can't be hit until
+## it is back on its feet; time spent down so far.
+var knockdown_time: float = 0.0
+## Knocked out by a slam: the body stays where it landed.
+var thrown_down: bool = false
 var stamina_delay: float = 0.0
 var taunt_ready_at: float = 0.0
 var throw_tech_until: float = -1.0
@@ -182,12 +218,18 @@ func _physics_process(delta: float) -> void:
 	_update_facing()
 	var was_grounded := _is_grounded()
 	velocity.y += GRAVITY * delta
-	if not controls_enabled or state == State.KO:
+	if (not controls_enabled or state == State.KO) and state != State.THROWING:
 		velocity.x = move_toward(velocity.x, 0.0, braking * delta)
 	else:
 		match state:
 			State.HITSTUN, State.BLOCKSTUN:
 				_process_hitstun(delta)
+			State.THROWING:
+				_process_throw(delta)
+			State.THROWN:
+				velocity = Vector2.ZERO
+			State.KNOCKDOWN:
+				_process_knockdown(delta)
 			State.PUNCH, State.KICK:
 				_process_attack(delta)
 			State.BLOCK:
@@ -313,7 +355,7 @@ func _update_animation() -> void:
 		visual.sync_pose(self)
 	elif visual is AnimatedSprite2D:
 		visual.flip_h = facing < 0
-		var names := ["idle", "walk", "jump", "punch", "kick", "block", "hitstun", "ko", "block", "walk", "jump", "idle"]
+		var names := ["idle", "walk", "jump", "punch", "kick", "block", "hitstun", "ko", "block", "walk", "jump", "idle", "punch", "hitstun", "ko"]
 		var anim: String = names[state]
 		if state == State.PUNCH and attack_variant == "hook":
 			anim = "hook"
@@ -530,7 +572,11 @@ func _process_block(delta: float) -> void:
 
 func _process_hitstun(delta: float) -> void:
 	stun_timer -= delta
-	velocity.x = move_toward(velocity.x, 0.0, move_speed * 3.0 * delta)
+	# The push is hardest at the moment of impact and eases into a short
+	# creep, like a body absorbing the blow. Braking scales with the speed
+	# left, tuned (x0.82) so a hit slides about as far as the old linear stop.
+	var remaining := minf(absf(velocity.x) / maxf(_knockback_start, 1.0), 1.0)
+	velocity.x = move_toward(velocity.x, 0.0, move_speed * 3.0 * 0.82 * (0.35 + 1.3 * remaining) * delta)
 	if state == State.BLOCKSTUN:
 		block_hold_time += delta
 	if stun_timer <= 0.0:
@@ -543,7 +589,7 @@ func _process_hitstun(delta: float) -> void:
 
 ## Returns true only for an unblocked hit; chip and parries cannot grant a cancel.
 func take_hit(damage: int, knockback: float, attacker_facing: int, attacker: Node = null, attack_type: String = "punch") -> bool:
-	if state == State.KO or not (controls_enabled or dummy):
+	if state in [State.KO, State.THROWN, State.KNOCKDOWN] or not (controls_enabled or dummy):
 		return false
 	var move: Dictionary = attacker.current_move if attacker != null else {}
 	var grapple: bool = move.get("kind", "") == "grapple"
@@ -558,6 +604,9 @@ func take_hit(damage: int, knockback: float, attacker_facing: int, attacker: Nod
 			attacker.apply_parry_punish()
 			velocity.x = attacker_facing * 140.0
 			return false
+		if attacker != null and attacker.has_method("start_throw"):
+			attacker.start_throw(self, damage)
+			return true
 	var blocked: bool = state in [State.BLOCK, State.BLOCKSTUN] and attacker_facing != facing
 	# Holding away from the rival guards grounded strikes without turning
 	# the fighter around. Retreat still loses to throws and guard breaks.
@@ -586,7 +635,20 @@ func take_hit(damage: int, knockback: float, attacker_facing: int, attacker: Nod
 			notice_until = combat_time + 1.0
 	hitbox.set_active(false)
 	var heavy := attack_type == "kick"
-	var freeze := 0.075 if heavy else 0.045
+	# The freeze grows with the blow: a jab barely ticks, a big kick or a
+	# counter hangs for a beat. Guarded hits stay short and crisp. Both
+	# fighters freeze together, so frame advantage is unchanged.
+	var force := clampf((damage - 4.0) / 14.0 + (0.15 if heavy else 0.0) + (0.25 if counter else 0.0), 0.0, 1.0)
+	var freeze := lerpf(0.04, 0.11, force)
+	if blocked:
+		freeze = lerpf(0.035, 0.06, force)
+	last_hit_height = "mid" if heavy else "high"
+	if not move.is_empty():
+		var height := float(move.get("height", -88.0))
+		last_hit_height = "high" if height <= -80.0 else ("mid" if height < -65.0 else "low")
+	last_hit_force = force
+	last_hit_counter = counter
+	last_hit_stagger = not blocked and not grapple and (counter or force >= 0.75)
 	hitstop_remaining = freeze
 	if attacker != null:
 		attacker.hitstop_remaining = freeze
@@ -597,6 +659,8 @@ func take_hit(damage: int, knockback: float, attacker_facing: int, attacker: Nod
 		if attacker != null and attacker.has_method("apply_parry_punish"):
 			attacker.apply_parry_punish()
 		return false
+	if attacker != null and attacker.has_signal("strike_connected"):
+		attacker.strike_connected.emit(blocked, force)
 	var dealt := damage
 	# Ish's weak knee: unblocked low strikes (height close to the ground,
 	# i.e. not a punch/kick aimed at the torso or head) deal 25% extra.
@@ -627,11 +691,9 @@ func take_hit(damage: int, knockback: float, attacker_facing: int, attacker: Nod
 			stun_timer += 6.0 / 60.0
 		if guard_broken:
 			stun_timer = maxf(stun_timer, 0.55)
-		if grapple:
-			velocity.y = -260.0
-			stun_timer = 0.55
 	health = maxi(0, health - dealt)
-	velocity.x = attacker_facing * knockback * (0.3 if blocked else 1.0)
+	velocity.x = attacker_facing * knockback * (0.3 if blocked else (1.3 if last_hit_stagger else 1.0))
+	_knockback_start = absf(velocity.x)
 	health_changed.emit(health, max_health)
 	current_move = {}
 	attack_connected = false
@@ -644,6 +706,174 @@ func take_hit(damage: int, knockback: float, attacker_facing: int, attacker: Nod
 	_update_animation()
 	return not blocked
 
+## Locks `victim` into this fighter's throw. Escapes and range were already
+## checked by the victim's take_hit; `damage` is dealt on the slam.
+func start_throw(victim: Node, damage: int) -> void:
+	hitbox.set_active(false)
+	state = State.THROWING
+	throw_partner = victim
+	throw_time = 0.0
+	throw_damage = damage
+	throw_slammed = false
+	throw_contact = false
+	ground_hits = 0
+	ground_timer = 0.0
+	ground_queued = false
+	ground_landed = false
+	throw_rise_at = INF
+	mount_slide_at = INF
+	_mount_idle = 0.0
+	velocity = Vector2.ZERO
+	victim.state = State.THROWN
+	victim.throw_partner = self
+	victim.throw_time = 0.0
+	victim.velocity = Vector2.ZERO
+	victim.hitbox.set_active(false)
+	victim.current_move = {}
+	victim.attack_connected = false
+	victim.chain_step = 0
+	victim.motion_input.reset()
+	victim._combo_attacker = self
+	victim._received_hits = 1
+	# A short catch on contact; the big freeze is saved for the slam.
+	hitstop_remaining = 0.05
+	victim.hitstop_remaining = 0.05
+	preload("res://scripts/sfx.gd").fire("block", -4.0)
+	_begin_throw()
+	_update_animation()
+	victim._update_animation()
+
+## Spatial hook: the 3D fighter anchors both bodies for the throw path.
+func _begin_throw() -> void:
+	pass
+
+## Spatial hook: places both bodies along the throw for the current time.
+func _place_throw() -> void:
+	if throw_partner != null:
+		throw_partner.global_position.x = global_position.x + facing * 48.0
+
+func _process_throw(delta: float) -> void:
+	var victim: Node = throw_partner
+	if victim == null:
+		state = State.IDLE
+		return
+	throw_time += delta
+	if victim.state == State.THROWN:
+		victim.throw_time = throw_time
+	if not throw_contact and throw_time >= THROW.CONTACT_TIME:
+		# The shoulder drives into the stomach: a body blow before the fall.
+		throw_contact = true
+		hitstop_remaining = 0.06
+		victim.hitstop_remaining = 0.06
+		victim.impact.emit(victim.global_position + Vector2(0.0, -66.0), false, true)
+	if not throw_slammed and throw_time >= THROW.SLAM_TIME:
+		_slam()
+	if throw_time >= THROW.END_TIME and victim.state == State.THROWN:
+		victim.state = State.KNOCKDOWN
+		victim.knockdown_time = 0.0
+	_process_mount(delta)
+	_place_throw()
+	if throw_time >= throw_rise_at + THROW.RECOVERY_TIME:
+		if victim.get("throw_partner") == self:
+			victim.throw_partner = null
+		throw_partner = null
+		current_move = {}
+		state = State.IDLE
+		if controls_enabled:
+			_process_move_and_actions(delta)
+
+## On top of the downed rival: punch presses (queued from the slam on)
+## become ground punches; otherwise, or after the last one, rise.
+func _process_mount(delta: float) -> void:
+	var victim: Node = throw_partner
+	if not is_inf(throw_rise_at):
+		return
+	if current_move.get("ground_pound", false) and throw_slammed and not ground_queued and ground_hits < THROW.GROUND_MAX and _buffered_action in ["punch", "rpunch"]:
+		ground_queued = true
+		_buffered_action = ""
+		_buffer_remaining = 0.0
+	if throw_time < THROW.END_TIME:
+		return
+	# Pinned: the rival stays flat until the attacker gets off.
+	if victim.state == State.KNOCKDOWN:
+		victim.knockdown_time = 0.0
+	if ground_timer > 0.0:
+		ground_timer -= delta
+		if not ground_landed and THROW.GROUND_PUNCH_TIME - ground_timer >= THROW.GROUND_IMPACT:
+			_ground_hit()
+		if ground_timer <= 0.0:
+			ground_timer = 0.0
+			_mount_idle = 0.0
+	elif ground_queued and victim.state != State.KO and is_inf(mount_slide_at):
+		# First press: slide up onto the chest, then swing.
+		mount_slide_at = throw_time
+	elif ground_queued and victim.state != State.KO and throw_time - mount_slide_at >= THROW.MOUNT_SLIDE:
+		ground_queued = false
+		ground_hits += 1
+		ground_timer = THROW.GROUND_PUNCH_TIME
+		ground_landed = false
+		preload("res://scripts/sfx.gd").fire("whoosh", -6.0)
+	elif not ground_queued or victim.state == State.KO:
+		ground_queued = false
+		_mount_idle += delta
+		if _mount_idle >= THROW.MOUNT_WAIT or ground_hits >= THROW.GROUND_MAX or victim.state == State.KO:
+			throw_rise_at = throw_time
+
+## A ground punch lands on the downed rival; the last one hardest.
+func _ground_hit() -> void:
+	ground_landed = true
+	var victim: Node = throw_partner
+	var last := ground_hits >= THROW.GROUND_MAX
+	var dealt: int = THROW.GROUND_DAMAGE[clampi(ground_hits - 1, 0, THROW.GROUND_DAMAGE.size() - 1)]
+	victim.health = maxi(0, victim.health - dealt)
+	victim.health_changed.emit(victim.health, victim.max_health)
+	combo_hits += 1
+	combo_damage += dealt
+	victim.last_hit_height = "mid"
+	victim.last_hit_force = 0.8 if last else 0.4
+	victim.last_hit_stagger = false
+	var freeze := 0.08 if last else 0.045
+	hitstop_remaining = freeze
+	victim.hitstop_remaining = freeze
+	victim.impact.emit(victim.global_position + Vector2(0.0, -20.0), false, last)
+	victim._flash(Color(1.0, 0.65, 0.55))
+	if victim.health <= 0:
+		victim.state = State.KO
+		victim.thrown_down = true
+		victim.hurtbox.set_deferred("monitorable", false)
+		victim.ko.emit()
+
+## The victim's back meets the floor: the throw's damage, the heaviest
+## freeze in the game and the full impact (shake, dust, camera shove).
+func _slam() -> void:
+	throw_slammed = true
+	var victim: Node = throw_partner
+	victim.health = maxi(0, victim.health - throw_damage)
+	victim.health_changed.emit(victim.health, victim.max_health)
+	combo_damage += throw_damage
+	victim.last_hit_height = "mid"
+	victim.last_hit_force = 1.0
+	victim.last_hit_counter = false
+	victim.last_hit_stagger = false
+	hitstop_remaining = 0.13
+	victim.hitstop_remaining = 0.13
+	victim.impact.emit(victim.global_position + Vector2(0.0, -20.0), false, true)
+	victim._flash(Color(1.0, 0.65, 0.55))
+	if victim.health <= 0:
+		victim.state = State.KO
+		victim.thrown_down = true
+		victim.hurtbox.set_deferred("monitorable", false)
+		victim.ko.emit()
+
+func _process_knockdown(delta: float) -> void:
+	velocity = Vector2.ZERO
+	knockdown_time += delta
+	if knockdown_time >= THROW.LIE_TIME + THROW.GETUP_TIME:
+		knockdown_time = 0.0
+		state = State.IDLE
+		if controls_enabled:
+			_process_move_and_actions(delta)
+
 func apply_parry_punish() -> void:
 	if state == State.KO:
 		return
@@ -651,6 +881,7 @@ func apply_parry_punish() -> void:
 	state = State.HITSTUN
 	stun_timer = 0.2
 	velocity.x = -facing * 160.0
+	_knockback_start = 160.0
 	_flash(Color(1.0, 0.9, 0.3))
 	_update_animation()
 
@@ -672,6 +903,11 @@ func reset_for_new_round() -> void:
 	health = max_health
 	state = State.IDLE
 	velocity = Vector2.ZERO
+	throw_partner = null
+	throw_time = 0.0
+	throw_slammed = false
+	knockdown_time = 0.0
+	thrown_down = false
 	hurtbox.set_deferred("monitorable", true)
 	hitbox.set_active(false)
 	visual.modulate = Color.WHITE

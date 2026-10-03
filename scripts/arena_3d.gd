@@ -16,6 +16,8 @@ var camera_yaw := 0.0
 ## Short-lived hit effects: {mesh, age, life, update: Callable}.
 var impact_meshes: Array[Dictionary] = []
 var shake_3d := 0.0
+## Metres the lens is shoved along a heavy blow; eases back to rest.
+var camera_nudge := Vector3.ZERO
 var fov_kick := 0.0
 ## Lens push-in held through a knockout (field-of-view degrees, eased).
 var ko_push := 0.0
@@ -155,6 +157,7 @@ func _begin_round(index: int) -> void:
 	camera_yaw = 0.0
 	_update_fight_camera(0.0)
 	shake_3d = 0
+	camera_nudge = Vector3.ZERO
 	fov_kick = 0
 	for spark in impact_meshes:
 		spark.mesh.queue_free()
@@ -173,6 +176,7 @@ func _process(delta: float) -> void:
 	_update_fight_camera(delta)
 	shake_3d = move_toward(shake_3d, 0.0, delta * 0.5)
 	fov_kick = move_toward(fov_kick, 0.0, delta * 28.0)
+	camera_nudge = camera_nudge.lerp(Vector3.ZERO, 1.0 - exp(-9.0 * delta))
 	# Two-axis decaying jolt: the offsets drift at different rates so the
 	# shake reads as a knock rather than a horizontal buzz.
 	var t := Time.get_ticks_msec() * 0.001
@@ -258,8 +262,9 @@ func _update_fight_camera(delta: float) -> void:
 	ko_hold = maxf(0.0, ko_hold - delta)
 	ko_push = move_toward(ko_push, 8.0 if ko_hold > 0.0 else 0.0, delta * (40.0 if ko_hold > 0.0 else 16.0))
 	camera_3d.fov = CAMERA_FOV - (fov_kick if MatchSetup.camera_shake else 0.0) - ko_push
-	camera_3d.position = eye
-	camera_3d.look_at(camera_target)
+	var nudge := camera_nudge if MatchSetup.camera_shake else Vector3.ZERO
+	camera_3d.position = eye + nudge
+	camera_3d.look_at(camera_target + nudge * 0.6)
 
 ## Fight Options can switch the sparks, dust, trails and punch off.
 func _effects_on() -> bool:
@@ -273,15 +278,30 @@ func _impact_3d(fighter: Node, blocked: bool, heavy: bool) -> void:
 			shake_3d = 0.045 if heavy else 0.022
 		return
 	var point: Vector3 = fighter.body.position + fighter.forward * 0.25 + Vector3.UP * (1.03 if heavy else 1.37)
+	# A throw's slam lands on the floor, not where a punch would.
+	var partner = fighter.get("throw_partner")
+	var slammed: bool = fighter.state == fighter.State.KNOCKDOWN or fighter.thrown_down or (fighter.state == fighter.State.THROWN and partner != null and partner.throw_slammed)
+	if slammed:
+		point = fighter.body.position - fighter.forward * 0.35 + Vector3.UP * 0.25
+		if fighter.state in [fighter.State.KNOCKDOWN, fighter.State.KO] and partner != null and partner.ground_hits > 0:
+			# A ground punch to the face of the downed rival.
+			point = fighter.body.position - fighter.forward * 0.8 + Vector3.UP * 0.18
 	var color := Color("8bdeff") if blocked else (Color("ffb347") if heavy else Color("ffd78b"))
 	_impact_burst(point, color, blocked, heavy)
 	if not blocked and heavy:
-		_dust(fighter.body.position, 10, Color(0.62, 0.55, 0.46, 0.5), 0.35)
+		_dust(fighter.body.position, 22 if slammed else 10, Color(0.62, 0.55, 0.46, 0.5), 0.55 if slammed else 0.35)
 	if blocked:
 		shake_3d = 0.012
 	else:
 		shake_3d = 0.045 if heavy else 0.022
 		fov_kick = 1.6 if heavy else 0.0
+		# The lens is knocked the way the blow travels (the struck fighter
+		# faces the attacker, so away from its facing), harder for big hits.
+		var force: float = fighter.get("last_hit_force") if fighter.get("last_hit_force") != null else 0.0
+		if heavy or force > 0.5 or fighter.get("last_hit_stagger"):
+			var blow: Vector3 = -fighter.forward
+			blow.y = 0.0
+			camera_nudge = blow.normalized() * (0.04 + 0.08 * force) * (1.4 if fighter.get("last_hit_stagger") else 1.0)
 	if is_instance_valid(camera_3d) and is_inside_tree() and get_viewport() != null:
 		var size := get_viewport().get_visible_rect().size
 		var screen := camera_3d.unproject_position(point) / size
