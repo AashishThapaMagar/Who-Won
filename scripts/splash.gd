@@ -22,10 +22,20 @@ func _ready() -> void:
 	glow.shader = shader
 	bloom.material = glow
 	add_child(bloom)
-	var name_label := _word("आनन्द", Vector2(0, 176), Vector2(960, 130), 110, UI.teko(400), Color(1, 1, 1, 0))
+	var name_label := _word("आनन्द", Vector2(0, 176), Vector2(960, 130), 110, UI.teko(400), Color.WHITE)
 	name_label.name = "PublisherTitle"
 	name_label.pivot_offset = Vector2(480, 65)
 	name_label.scale = Vector2.ONE * 1.06
+	name_label.modulate.a = 0.0
+	# Teko leaves the headline (shirorekha) over आ's curve short of the rest
+	# of the word at this size, so it read as two pieces; one continuous bar
+	# joins the whole word, as hand lettering would.
+	var headline := ColorRect.new()
+	headline.color = Color.WHITE
+	headline.position = Vector2(375, 37)
+	headline.size = Vector2(216, 7.5)
+	headline.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	name_label.add_child(headline)
 	var line := ColorRect.new()
 	line.color = Color(1.0, 0.86, 0.62)
 	line.position = Vector2(480, 306)
@@ -39,7 +49,7 @@ func _ready() -> void:
 	presents.name = "Presents"
 	var tween := create_tween()
 	tween.tween_interval(0.5)
-	tween.tween_property(name_label, "theme_override_colors/font_color:a", 1.0, 1.2)
+	tween.tween_property(name_label, "modulate:a", 1.0, 1.2)
 	tween.parallel().tween_property(name_label, "scale", Vector2.ONE, 2.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	tween.parallel().tween_property(glow, "shader_parameter/level", 1.0, 1.6)
 	tween.parallel().tween_property(line, "size:x", 260.0, 1.4).set_delay(0.6).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
