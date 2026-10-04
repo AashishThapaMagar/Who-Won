@@ -77,8 +77,7 @@ func _draw() -> void:
 		var dark := Color(0.02, 0.025, 0.05, 0.78)
 		var clear := Color(0.02, 0.025, 0.05, 0.0)
 		draw_polygon(PackedVector2Array([Vector2(reach * 0.55, 0), Vector2(reach, 0), Vector2(reach, size.y), Vector2(reach * 0.55, size.y)]), PackedColorArray([dark, clear, clear, dark]))
-	# Letterbox bars and a thin gold rule give it a broadcast-card frame.
-	draw_rect(Rect2(0, 0, size.x, 6), Color(0, 0, 0, 0.9))
+	# A footer bar under a thin accent rule.
 	draw_rect(Rect2(0, size.y - 34, size.x, 34), Color(0.01, 0.012, 0.025, 0.92))
 	draw_rect(Rect2(0, size.y - 35, size.x, 1.5), Color(ACCENTS[selected], 0.8))
 

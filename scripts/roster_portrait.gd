@@ -69,6 +69,15 @@ func _ready() -> void:
 		camera.position = Vector3(-190 if facing_left else 190, 72, 160)
 		camera.look_at(Vector3(0, 60, 0))
 		camera.h_offset = -40.0 if facing_left else 40.0
+		# Warm sun from behind outlines the fighter against the arena, and a
+		# lower fill keeps the front from washing out flat.
+		environment.environment.ambient_light_energy = 0.45
+		key.light_energy = 0.9
+		var sun := DirectionalLight3D.new()
+		sun.rotation_degrees = Vector3(-25, 160 if not facing_left else -160, 0)
+		sun.light_color = Color("ffd9a0")
+		sun.light_energy = 1.4
+		world.add_child(sun)
 	if bust:
 		# Swing round to face the fighter, a little off-centre and just above
 		# eye level, as on an arcade select screen.

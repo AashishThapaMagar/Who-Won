@@ -84,6 +84,10 @@ var hero_title: Label
 var hero_eyebrow: Label
 var hero_caption: Label
 var hero_stats: Array[ColorRect] = []
+## One short dash per roster fighter under the name; the featured one is gold.
+var roster_ticks: Array[ColorRect] = []
+## The chosen mode, named above Start in English and Nepali.
+var start_mode_label: Label
 var showcase_time := 0.0
 var browsing := false
 const SHOWCASE_EVERY := 5.0
@@ -134,20 +138,27 @@ func _ready() -> void:
 		row.button.mouse_entered.connect(_point_at.bind(extra[0]))
 		extra_rows[extra[0]] = row
 	# Start lives on the splash card; clicking a mode or pressing Enter also starts.
-	play_button = UI.button(self, "START", Vector2(796, 418), Vector2(140, 36), true)
+	start_mode_label = UI.label(self, "", Vector2(640, 420), Vector2(296, 20), 15, Color(UI.WHITE, 0.62))
+	start_mode_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	start_mode_label.add_theme_font_override("font", UI.teko(400))
+	play_button = UI.button(self, "START   ▶", Vector2(766, 442), Vector2(170, 40), true)
 	play_button.name = "StartGame"
 	play_button.add_theme_font_override("font", UI.saira(800, 100, true))
-	play_button.add_theme_font_size_override("font_size", 18)
+	play_button.add_theme_font_size_override("font_size", 19)
 	var outline := StyleBoxFlat.new()
 	outline.bg_color = Color(1, 1, 1, 0.04)
 	outline.border_color = Color(1, 1, 1, 0.8)
 	outline.set_border_width_all(1)
+	outline.skew = Vector2(UI.SLANT, 0)
+	var lit := outline.duplicate()
+	lit.bg_color = Color(UI.GOLD, 0.16)
+	lit.border_color = Color(UI.GOLD, 0.9)
 	var filled := outline.duplicate()
-	filled.bg_color = Color(UI.GOLD, 0.22)
+	filled.bg_color = Color(UI.GOLD, 0.3)
 	filled.border_color = UI.GOLD
 	filled.set_border_width_all(2)
-	for state in ["normal", "focus"]:
-		play_button.add_theme_stylebox_override(state, outline)
+	play_button.add_theme_stylebox_override("normal", outline)
+	play_button.add_theme_stylebox_override("focus", lit)
 	for state in ["hover", "pressed"]:
 		play_button.add_theme_stylebox_override(state, filled)
 	play_button.add_theme_color_override("font_color", UI.WHITE)
@@ -155,6 +166,10 @@ func _ready() -> void:
 	play_button.add_theme_color_override("font_hover_color", UI.WHITE)
 	play_button.add_theme_color_override("font_pressed_color", UI.WHITE)
 	play_button.pressed.connect(_confirm)
+	# A slow breath on Start draws the eye without shouting.
+	var breath := play_button.create_tween().set_loops().set_trans(Tween.TRANS_SINE)
+	breath.tween_property(play_button, "self_modulate", Color(1.15, 1.08, 0.9), 1.1)
+	breath.tween_property(play_button, "self_modulate", Color.WHITE, 1.1)
 	# Splash card for the highlighted mode.
 	# The highlighted entry, explained once, under the list.
 	mode_title_label = UI.eyebrow(self, "", Vector2(-1000, -1000), Vector2(10, 10), UI.GOLD)
@@ -163,15 +178,13 @@ func _ready() -> void:
 	mode_desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	mode_desc_label.add_theme_font_override("font", UI.saira(400, 100))
 	# The player's ledger sits under the splash card, arcade high-score style.
-	record_strip = UI.label(self, "", Vector2(520, 460), Vector2(416, 36), 11, Color(UI.WHITE, 0.5))
+	record_strip = UI.label(self, "", Vector2(440, 514), Vector2(490, 18), 11, Color(UI.WHITE, 0.55))
 	record_strip.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	record_strip.add_theme_font_override("font", UI.saira(500, 90))
-	record_strip.add_theme_constant_override("outline_size", 4)
 	_refresh_record_strip()
 	var hint_x := 40.0
 	for hint in [["↑↓", "SELECT"], ["ENTER", "CONFIRM"], ["F2", "PRACTICE"]]:
 		hint_x += UI.key_hint(self, hint[0], hint[1], Vector2(hint_x, 514))
-	UI.label(self, "v1.0  /  PRESS ENTER TO FIGHT", Vector2(640, 514), Vector2(290, 18), 11, UI.MUTED).horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_refresh_mode_summary()
 	play_button.grab_focus()
 	_entrance()
@@ -202,6 +215,21 @@ static func _shader_material(code: String) -> ShaderMaterial:
 ## A fighter stands on the temple dais behind the menu, named in Devanagari
 ## and English; tours the roster until the player browses with Left / Right.
 func _build_showcase() -> void:
+	# A soft shadow grounds the fighter on the flagstones.
+	var shadow := TextureRect.new()
+	var pool := GradientTexture2D.new()
+	pool.fill = GradientTexture2D.FILL_RADIAL
+	pool.fill_from = Vector2(0.5, 0.5)
+	pool.fill_to = Vector2(1.0, 0.5)
+	pool.gradient = Gradient.new()
+	pool.gradient.set_color(0, Color(0, 0, 0, 0.55))
+	pool.gradient.set_color(1, Color(0, 0, 0, 0))
+	shadow.texture = pool
+	shadow.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	shadow.position = Vector2(478, 456)
+	shadow.size = Vector2(230, 34)
+	shadow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(shadow)
 	hero = PORTRAIT.new()
 	hero.hero = true
 	hero.still = false
@@ -209,7 +237,9 @@ func _build_showcase() -> void:
 	hero.position = Vector2(400, 64)
 	hero.size = Vector2(380, 448)
 	add_child(hero)
-	hero.viewport.size = Vector2i(380, 448)
+	# Rendered at twice the layout size so the fighter stays crisp when the
+	# 960x540 layout is scaled up to the window.
+	hero.viewport.size = Vector2i(760, 896)
 	hero.camera.size = 140.0
 	hero.camera.h_offset = 0.0
 	hero_eyebrow = UI.label(self, "THE ROSTER", Vector2(640, 262), Vector2(296, 16), 11, Color(UI.WHITE, 0.5))
@@ -226,9 +256,27 @@ func _build_showcase() -> void:
 	hero_caption = UI.label(self, "", Vector2(640, 374), Vector2(296, 18), 12, Color(UI.WHITE, 0.7))
 	hero_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	hero_caption.add_theme_font_override("font", UI.saira(600, 112))
-	var browse := UI.label(self, "◀  ▶   BROWSE FIGHTERS", Vector2(640, 394), Vector2(296, 16), 11, Color(UI.WHITE, 0.4))
-	browse.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	browse.add_theme_font_override("font", UI.saira(500, 100))
+	var count := ROSTER.PROFILES.size()
+	var ticks_right := 936.0 - 24.0
+	for i in count:
+		var tick := ColorRect.new()
+		tick.size = Vector2(14, 2)
+		tick.position = Vector2(ticks_right - (count - i) * 18.0 + 4.0, 403)
+		tick.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(tick)
+		roster_ticks.append(tick)
+	for side in [-1, 1]:
+		var arrow := Button.new()
+		arrow.text = "◀" if side < 0 else "▶"
+		arrow.flat = true
+		arrow.focus_mode = Control.FOCUS_NONE
+		arrow.size = Vector2(22, 20)
+		arrow.position = Vector2(ticks_right - count * 18.0 - 30.0 if side < 0 else ticks_right - 4.0, 388)
+		arrow.add_theme_font_size_override("font_size", 12)
+		arrow.add_theme_color_override("font_color", Color(UI.WHITE, 0.55))
+		arrow.add_theme_color_override("font_hover_color", UI.GOLD)
+		arrow.pressed.connect(_browse_hero.bind(side))
+		add_child(arrow)
 	_show_hero(hero.index, false)
 
 ## Puts a fighter in the spotlight: portrait, name, title and stats. With
@@ -242,6 +290,8 @@ func _show_hero(index: int, animate := true) -> void:
 		hero_name.text = profile.name
 		hero_caption.text = String(profile.title).to_upper()
 		hero_title.text = ROSTER.NEPALI_NAMES.get(profile.id, "")
+		for i in roster_ticks.size():
+			roster_ticks[i].color = UI.GOLD if i == index else Color(1, 1, 1, 0.25)
 		var values := [
 			clampf((float(profile.get("punch_bonus", 0)) + 3.0) / 7.0, 0.1, 1.0),
 			clampf((float(profile.get("speed", 1.0)) - 0.8) / 0.45, 0.1, 1.0),
@@ -327,7 +377,10 @@ func _mode_row(mode_key: String, title: String, desc: String, index: float, acce
 	var heading := UI.label(btn, title, Vector2(16, -1), Vector2(ROW_WIDTH - 16, ROW_HEIGHT), 19, UI.WHITE)
 	heading.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	heading.add_theme_font_override("font", UI.saira(600, 100, true))
-	return {"button": btn, "title": title, "desc": desc, "accent": accent, "heading": heading, "edge": edge, "home": Vector2(44, y)}
+	var nepali := UI.label(btn, NEPALI.get(mode_key, ""), Vector2(16, 1), Vector2(140, ROW_HEIGHT), 17, Color(UI.GOLD, 0.9))
+	nepali.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	nepali.add_theme_font_override("font", UI.teko(500))
+	return {"button": btn, "key": mode_key, "title": title, "desc": desc, "accent": accent, "heading": heading, "edge": edge, "nepali": nepali, "home": Vector2(44, y)}
 
 func _style_row(row: Dictionary, active: bool) -> void:
 	var btn: Button = row.button
@@ -340,6 +393,9 @@ func _style_row(row: Dictionary, active: bool) -> void:
 	row.heading.add_theme_color_override("font_color", UI.WHITE if active else Color(1, 1, 1, 0.42))
 	row.heading.add_theme_font_override("font", UI.saira(800 if active else 500, 100, true))
 	row.edge.visible = active
+	# Placed after the bold face is set, so it clears the wider heading.
+	row.nepali.position.x = 16 + row.heading.get_minimum_size().x + 14
+	row.nepali.visible = active
 	var target: Vector2 = row.home + (Vector2(8, 0) if active else Vector2.ZERO)
 	if btn.is_inside_tree():
 		btn.create_tween().set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT).tween_property(btn, "position", target, 0.22)
@@ -349,7 +405,8 @@ func _style_row(row: Dictionary, active: bool) -> void:
 		mode_title_label.text = row.title
 		mode_title_label.add_theme_color_override("font_color", accent)
 		mode_desc_label.text = row.desc
-		pass
+		if start_mode_label != null:
+			start_mode_label.text = "%s   %s" % [row.title, NEPALI.get(row.key, "")]
 
 func _choose_home_mode(mode: String) -> void:
 	if transitioning or is_instance_valid(modal):
@@ -417,16 +474,9 @@ func _refresh_record_strip() -> void:
 	if records == null or record_strip == null:
 		return
 	if records.totals.matches == 0:
-		record_strip.text = "NO FIGHTS ON RECORD YET\nSTEP IN AND MAKE ONE"
+		record_strip.text = "NO FIGHTS ON RECORD YET  /  STEP IN AND MAKE ONE"
 		return
-	var last: Dictionary = records.last
-	var first := ""
-	if not last.is_empty():
-		var p1: String = ROSTER.profile(_roster_index(last.p1)).name
-		var p2: String = ROSTER.profile(_roster_index(last.p2)).name
-		var verdict: String = "DREW WITH" if last.draw else ("BEAT" if last.won else "LOST TO")
-		first = "LAST  %s %s %s  %d : %d" % [p1, verdict, p2, last.score[0], last.score[1]]
-	record_strip.text = "%s\nRECORD  %dW  %dL  /  STREAK %d  /  WIN RATE %d%%" % [first, records.totals.wins, records.totals.losses, records.totals.streak, records.win_rate()]
+	record_strip.text = "RECORD  %dW  %dL   /   STREAK  %d   /   WIN RATE  %d%%" % [records.totals.wins, records.totals.losses, records.totals.streak, records.win_rate()]
 
 func _hero_index() -> int:
 	var records := get_node_or_null("/root/Records")
