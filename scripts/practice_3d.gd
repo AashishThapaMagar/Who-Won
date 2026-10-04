@@ -19,6 +19,7 @@ var _f2_was_down := false
 func _ready() -> void:
 	var previous_ai := MatchSetup.vs_ai
 	MatchSetup.vs_ai = false
+	replay_enabled = false
 	for action in DUMMY_ACTIONS:
 		if not InputMap.has_action(DUMMY_PREFIX + action):
 			InputMap.add_action(DUMMY_PREFIX + action)

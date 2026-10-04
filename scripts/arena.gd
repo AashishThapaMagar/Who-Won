@@ -171,7 +171,7 @@ func _freeze(on: bool) -> void:
 
 ## Esc is handled as an event, not polled, so a quick tap is never missed.
 func _unhandled_input(event: InputEvent) -> void:
-	if not event.is_action_pressed("ui_cancel") or event.is_echo() or is_paused():
+	if not event.is_action_pressed("ui_cancel") or event.is_echo() or is_paused() or is_replaying():
 		return
 	get_viewport().set_input_as_handled()
 	if move_guide.visible:
@@ -179,8 +179,13 @@ func _unhandled_input(event: InputEvent) -> void:
 	else:
 		_pause()
 
+## True while something (the 3D arena's knockout replay) holds the round
+## flow; timers and the next-round call wait for it.
+func is_replaying() -> bool:
+	return false
+
 func _process(delta: float) -> void:
-	if is_paused():
+	if is_paused() or is_replaying():
 		return
 	if Input.is_action_just_pressed("move_list"):
 		_toggle_move_guide()

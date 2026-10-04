@@ -111,7 +111,7 @@ const STYLES := {
 		"timing": {"punch_heavy": [0.55, 1.13, 1.75], "uppercut": [0.05, 0.47, 1.0]},
 		# His 50-clip Mixamo set (Downloads/Ish_MMA) in assets/fighters/ish/fight/
 		# (kept local), "With Skin" on his cleaned-up, fisted T-pose body.
-		# No victory celebration: after a win he stays in his stance.
+		# After a knockout he celebrates with his boxing victory.
 		"pack": {
 			"folder": "fight/",
 			"reversed": ["walk"],
@@ -131,7 +131,7 @@ const STYLES := {
 				# Reactions picked by where and how hard each blow lands.
 				"hit_head": "light_head_hit", "hit_head_heavy": "heavy_head_hit",
 				"hit_body": "body_hit_by_straight_punch", "hit_liver": "livershot_knockdown",
-				"taunt": "boxing_taunt", "victory": "bouncing_fight_idle",
+				"taunt": "boxing_taunt", "victory": "boxing_victory",
 				# Extra strikes, played by moves whose pose names them.
 				"strike_elbow": "elbow_punch", "strike_elbow_upper": "elbow_uppercut_combo",
 				"strike_body_elbow": "punch_to_elbow_combo", "strike_flying_knee": "flying_knee_punch_combo",

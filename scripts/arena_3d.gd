@@ -43,6 +43,10 @@ const TEAM_COLORS := [Color("cfdcef"), Color("efd6cf")]
 var nepal_stage: Node3D
 ## Arena every round uses when a versus mode picked one; -1 plays the journey.
 var fixed_stage := -1
+## Plays the last seconds back after a knockout (see ko_replay.gd); null
+## where there is no replay (headless runs, practice).
+var ko_replay: Node = null
+var replay_enabled := true
 
 func _enter_tree() -> void:
 	world = Node3D.new()
@@ -131,6 +135,10 @@ func _ready() -> void:
 		fighter.ko.connect(func(): preload("res://scripts/sfx.gd").fire("ko"))
 		fighter.ko.connect(_ko_3d.bind(fighter))
 	_contact_shadows()
+	if replay_enabled and DisplayServer.get_name() != "headless":
+		ko_replay = preload("res://scripts/ko_replay.gd").new()
+		ko_replay.arena = self
+		add_child(ko_replay)
 	_build_move_ui()
 	add_child(preload("res://scripts/match_hud.gd").new())
 	if Settings.touch_controls:
@@ -174,6 +182,8 @@ func _begin_round(index: int) -> void:
 	ko_fighter = null
 	ko_until = 0
 	fov_kick = 0
+	if ko_replay != null:
+		ko_replay.reset()
 	for spark in impact_meshes:
 		spark.mesh.queue_free()
 	impact_meshes.clear()
@@ -188,6 +198,13 @@ func _process(delta: float) -> void:
 		return
 	if move_guide.visible or is_paused():
 		return
+	if is_replaying():
+		nepal_stage.animate(delta)
+		_update_impacts(delta)
+		_update_contact_shadows()
+		return
+	if ko_replay != null:
+		ko_replay.record(delta)
 	_update_fight_camera(delta)
 	shake_3d = move_toward(shake_3d, 0.0, delta * 0.5)
 	fov_kick = move_toward(fov_kick, 0.0, delta * 28.0)
@@ -199,12 +216,7 @@ func _process(delta: float) -> void:
 	camera_3d.h_offset = sin(t * 110.0) * jolt
 	camera_3d.v_offset = cos(t * 83.0) * jolt * 0.7
 	nepal_stage.animate(delta)
-	for spark in impact_meshes:
-		spark.age += delta
-		spark.update.call(spark)
-		if spark.age >= spark.life:
-			spark.mesh.queue_free()
-	impact_meshes = impact_meshes.filter(func(spark): return spark.age < spark.life)
+	_update_impacts(delta)
 	_update_ghosts(delta)
 	_update_contact_shadows()
 	_footwork_dust()
@@ -316,12 +328,25 @@ func _update_fight_camera(delta: float) -> void:
 	camera_3d.position = eye + nudge
 	camera_3d.look_at(look + nudge * 0.6)
 
+func _update_impacts(delta: float) -> void:
+	for spark in impact_meshes:
+		spark.age += delta
+		spark.update.call(spark)
+		if spark.age >= spark.life:
+			spark.mesh.queue_free()
+	impact_meshes = impact_meshes.filter(func(spark): return spark.age < spark.life)
+
+func is_replaying() -> bool:
+	return ko_replay != null and (ko_replay.playing or ko_replay.celebrating)
+
 ## Fight Options can switch the sparks, dust, trails and punch off.
 func _effects_on() -> bool:
 	var settings := get_node_or_null("/root/Settings")
 	return settings == null or settings.hit_effects
 
 func _impact_3d(fighter: Node, blocked: bool, heavy: bool) -> void:
+	if ko_replay != null:
+		ko_replay.note_impact(fighter, blocked, heavy)
 	preload("res://scripts/sfx.gd").fire("block" if blocked else ("hit_heavy" if heavy else "hit_light"))
 	if not _effects_on():
 		if not blocked:
@@ -537,6 +562,8 @@ func _exit_tree() -> void:
 	Engine.time_scale = 1.0
 
 func _ko_3d(fighter: Node) -> void:
+	if ko_replay != null:
+		ko_replay.note_ko(fighter)
 	shake_3d = 0.07
 	fov_kick = 2.2
 	# The knockout plays in slow motion with the camera pushed in on the
