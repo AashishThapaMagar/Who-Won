@@ -41,26 +41,29 @@ const SUPERS := preload("res://scripts/super_moves.gd")
 ## Trait phrases that name a weakness rather than a strength.
 const WEAK_WORDS := ["low ", "vulnerable", "weak ", "light "]
 const TILE_SHADER := """shader_type canvas_item;
-// Select-screen tile: the fighter's colour lit by a spotlight behind the
-// portrait, fine diagonal pinstripes and a slow glossy sweep. Smooth maths
-// only, so it stays clean on every GPU.
+// Select-screen tile: the fighter's colour, dark, lit by a soft spotlight
+// behind the portrait and falling to near-black at the foot.
 uniform vec4 top_color : source_color;
 uniform vec4 bottom_color : source_color;
 uniform float seed = 0.0;
 uniform float aspect = 1.0;
 void fragment() {
 	vec2 uv = UV;
-	vec3 col = mix(top_color.rgb, bottom_color.rgb, smoothstep(0.0, 1.0, uv.y));
-	float spot = 1.0 - smoothstep(0.0, 0.8, length((uv - vec2(0.5, 0.36)) * vec2(aspect, 1.2)));
-	col += top_color.rgb * spot * 0.4;
-	float stripe = smoothstep(0.3, 0.5, abs(fract((uv.x * aspect + uv.y) * 38.0) - 0.5));
-	col *= 1.0 - 0.08 * stripe;
-	float sweep = fract(TIME * 0.1 + seed * 0.137) * 3.0 - 1.0;
-	float band = abs(uv.x * 0.8 + uv.y * 0.5 - sweep);
-	col += vec3(0.16) * (1.0 - smoothstep(0.0, 0.09, band));
-	col *= 1.0 - 0.5 * smoothstep(0.55, 1.0, uv.y);
-	col *= 1.0 - 0.35 * pow(length(uv - vec2(0.5)), 2.0);
+	vec3 base = mix(top_color.rgb, bottom_color.rgb, uv.y) * 0.55;
+	float spot = 1.0 - smoothstep(0.0, 0.75, length((uv - vec2(0.5, 0.34)) * vec2(aspect, 1.15)));
+	vec3 col = base + top_color.rgb * spot * 0.32;
+	col *= 1.0 - 0.7 * smoothstep(0.45, 1.0, uv.y);
 	COLOR = vec4(col, 1.0);
+}
+"""
+## Film grade over the live arena behind the select screen.
+const SELECT_GRADE := """shader_type canvas_item;
+void fragment() {
+	vec2 uv = UV;
+	float a = 0.5 + (1.0 - smoothstep(0.0, 0.16, uv.y)) * 0.35 + smoothstep(0.68, 0.76, uv.y) * 0.4;
+	vec2 c = (uv - vec2(0.5, 0.42)) * vec2(1.2, 1.0);
+	a += smoothstep(0.4, 0.95, length(c)) * 0.3;
+	COLOR = vec4(0.012, 0.014, 0.03, clamp(a, 0.0, 0.94));
 }
 """
 var arena_label: Label
@@ -74,9 +77,9 @@ var arena_caption: Label
 
 func _ready() -> void:
 	theme = UI.theme()
-	mode_id = "story" if MatchSetup.story else ("arcade" if MatchSetup.arcade else ("ai" if MatchSetup.vs_ai else "local"))
+	mode_id = "practice" if MatchSetup.practice else ("story" if MatchSetup.story else ("arcade" if MatchSetup.arcade else ("ai" if MatchSetup.vs_ai else "local")))
 	name = mode_id.capitalize() + "Selection"
-	var colors := {"local": UI.RED, "ai": UI.VIOLET, "arcade": UI.GOLD, "story": Color("e59bff")}
+	var colors := {"local": UI.RED, "ai": UI.VIOLET, "arcade": UI.GOLD, "story": Color("e59bff"), "practice": Color("4cd6a0")}
 	mode_accent = colors[mode_id]
 	selections.assign(MatchSetup.selected_fighters)
 	if MatchSetup.arcade:
@@ -85,14 +88,29 @@ func _ready() -> void:
 	backdrop = preload("res://scripts/menu_backdrop.gd").new()
 	backdrop.shade_width = 0.0
 	add_child(backdrop)
-	backdrop.selected = backdrop.MODE_ORDER.find(mode_id)
-	UI.panel(self, Vector2.ZERO, Vector2(960, 540), Color(0.02, 0.025, 0.05, 0.62), Color.TRANSPARENT)
-	UI.panel(self, Vector2(0, 396), Vector2(960, 110), Color(0.02, 0.025, 0.05, 0.75), Color.TRANSPARENT)
-	UI.button(self, "◀  BACK", Vector2(24, 18), Vector2(132, 32)).pressed.connect(_back)
-	var titles := {"local": "LOCAL VERSUS", "ai": "COMPUTER CHALLENGE", "arcade": "ARCADE / ROAD TO " + ROSTER.profile(6).name, "story": "STORY / THE JOURNEY"}
-	UI.heading(self, titles[mode_id], Vector2(186, 6), Vector2(740, 50), 38, UI.WHITE, mode_accent.darkened(0.25))
-	var subtitles := {"local": "TWO PLAYERS. ONE KEYBOARD. SETTLE THE SCORE.", "ai": "PICK YOUR FIGHTER, YOUR RIVAL AND YOUR DIFFICULTY.", "arcade": "ONE FIGHTER. THE WHOLE ROSTER. A FINAL SHOWDOWN.", "story": "CHOOSE WHO WILL WALK THE ROAD TO THE FINAL WORD."}
-	UI.eyebrow(self, subtitles[mode_id], Vector2(190, 56), Vector2(740, 20), mode_accent)
+	backdrop.selected = maxi(0, backdrop.MODE_ORDER.find(mode_id))
+	var grade := ColorRect.new()
+	grade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	grade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var grade_shader := Shader.new()
+	grade_shader.code = SELECT_GRADE
+	var grade_look := ShaderMaterial.new()
+	grade_look.shader = grade_shader
+	grade.material = grade_look
+	add_child(grade)
+	UI.button(self, "◀  BACK", Vector2(24, 20), Vector2(110, 28)).pressed.connect(_back)
+	var titles := {"local": "VERSUS", "ai": "VS COMPUTER", "arcade": "ARCADE", "story": "STORY", "practice": "PRACTICE"}
+	var nepali_titles := {"local": "भिडन्त", "ai": "कम्प्युटरसँग", "arcade": "आर्केड", "story": "कथा", "practice": "अभ्यास"}
+	var title := UI.label(self, titles[mode_id], Vector2(152, 6), Vector2(400, 48), 40, UI.WHITE)
+	title.add_theme_font_override("font", UI.saira(900, 100, true))
+	title.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.55))
+	title.add_theme_constant_override("shadow_offset_y", 3)
+	var title_width := UI.saira(900, 100, true).get_string_size(titles[mode_id], HORIZONTAL_ALIGNMENT_LEFT, -1, 40).x
+	var local_title := UI.label(self, nepali_titles[mode_id], Vector2(166 + title_width, 14), Vector2(200, 34), 24, mode_accent)
+	local_title.add_theme_font_override("font", UI.teko(500))
+	var subtitles := {"local": "TWO PLAYERS. ONE KEYBOARD. SETTLE THE SCORE.", "ai": "PICK YOUR FIGHTER, YOUR RIVAL AND YOUR DIFFICULTY.", "arcade": "ONE FIGHTER. THE WHOLE ROSTER. A FINAL SHOWDOWN.", "story": "CHOOSE WHO WILL WALK THE ROAD TO THE FINAL WORD.", "practice": "PICK YOUR FIGHTER AND YOUR TRAINING PARTNER."}
+	var subtitle := UI.label(self, subtitles[mode_id], Vector2(154, 52), Vector2(740, 16), 11, Color(UI.WHITE, 0.55))
+	subtitle.add_theme_font_override("font", UI.saira(600, 112))
 	# Arcade is just: pick a fighter, then READY TO FIGHT.
 	var simple := mode_id == "arcade"
 	if MatchSetup.arcade and not simple:
@@ -116,9 +134,9 @@ func _ready() -> void:
 	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER if mode_id != "arcade" else HORIZONTAL_ALIGNMENT_LEFT
 	status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	start_button = UI.button(self, {"local": "START DUEL", "ai": "CHALLENGE CPU", "arcade": "READY TO FIGHT", "story": "BEGIN CHAPTER ONE"}[mode_id], Vector2(361, 327) if not MatchSetup.arcade else (Vector2(146, 351) if mode_id == "story" else Vector2(345, 342)), Vector2(238, 36) if mode_id != "arcade" else Vector2(270, 46), true)
-	start_button.add_theme_font_override("font", UI.display_font())
-	start_button.add_theme_font_size_override("font_size", 20 if mode_id != "arcade" else 24)
+	start_button = UI.button(self, {"local": "START DUEL", "ai": "CHALLENGE CPU", "arcade": "READY TO FIGHT", "story": "BEGIN CHAPTER ONE", "practice": "START TRAINING"}[mode_id], Vector2(361, 327) if not MatchSetup.arcade else (Vector2(146, 351) if mode_id == "story" else Vector2(345, 342)), Vector2(238, 36) if mode_id != "arcade" else Vector2(270, 46), true)
+	start_button.add_theme_font_override("font", UI.saira(800, 100, true))
+	start_button.add_theme_font_size_override("font_size", 17 if mode_id != "arcade" else 20)
 	start_button.pressed.connect(_start_match)
 	var tile_shader := Shader.new()
 	tile_shader.code = TILE_SHADER
@@ -152,8 +170,11 @@ func _ready() -> void:
 		card.focus_mode = Control.FOCUS_NONE
 		card.pressed.connect(_choose.bind(i))
 		cards.append(card)
-		var card_name := UI.heading(self, profile.name, Vector2(x, y + 76), Vector2(104, 22), 15, UI.WHITE, Color(0, 0, 0, 0.8))
+		var card_name := UI.label(self, profile.name, Vector2(x, y + 76), Vector2(104, 20), 14, UI.WHITE)
 		card_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		card_name.add_theme_font_override("font", UI.saira(800, 100, true))
+		card_name.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
+		card_name.add_theme_constant_override("shadow_offset_y", 2)
 		var marker := UI.label(self, "", Vector2(x + 6, y + 3), Vector2(94, 18), 11, UI.WHITE)
 		marker.add_theme_color_override("font_outline_color", UI.INK)
 		marker.add_theme_constant_override("outline_size", 4)
@@ -163,13 +184,15 @@ func _ready() -> void:
 		status_label.visible = false
 		ready_players.assign([true, true])
 	var hint := "P1: A/D select, F ready    |    P2: arrows select, K ready    |    R random    |    Enter fight"
+	if mode_id == "practice":
+		hint = "A/D your fighter    |    Arrows the dummy    |    F / K lock in    |    Enter train"
 	if MatchSetup.arcade:
 		hint = "A/D or click to choose    |    click again, F or Enter to fight    |    R random    |    Esc back"
 	elif mode_id == "ai":
 		hint = "A/D choose fighter    |    Arrows choose CPU    |    R random    |    F lock in    |    Enter challenge"
-	var hint_label := UI.label(self, hint, Vector2(55, 512), Vector2(850, 22), 12, UI.WHITE)
+	var hint_label := UI.label(self, hint, Vector2(55, 512), Vector2(850, 22), 11, Color(UI.WHITE, 0.6))
 	hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint_label.add_theme_font_override("font", UI.strong_font())
+	hint_label.add_theme_font_override("font", UI.saira(500, 100))
 	if not MatchSetup.arcade:
 		_build_stage_picker()
 		hint += "    |    Tab arena"
@@ -236,7 +259,10 @@ func _build_player(player: int) -> void:
 	portraits.append(portrait)
 	# The name sits in the corner away from the fighter, who stands toward
 	# the outside edge of the showcase.
-	var label := UI.heading(self, "", pos + Vector2(18, dimensions.y - 50), Vector2(dimensions.x - 36, 48), 18 if compact else 44, UI.WHITE, color.darkened(0.2))
+	var label := UI.label(self, "", pos + Vector2(18, dimensions.y - 52), Vector2(dimensions.x - 36, 50), 18 if compact else 46, UI.WHITE)
+	label.add_theme_font_override("font", UI.saira(900, 104, true))
+	label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
+	label.add_theme_constant_override("shadow_offset_y", 3)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER if compact else (HORIZONTAL_ALIGNMENT_RIGHT if player == 0 else HORIZONTAL_ALIGNMENT_LEFT)
 	label.visible = not compact
 	names.append(label)
@@ -463,6 +489,7 @@ func _show_stage() -> void:
 func _back() -> void:
 	if not transitioning:
 		preload("res://scripts/sfx.gd").fire("menu_back")
+		MatchSetup.practice = false
 		get_tree().change_scene_to_file("res://scenes/MainMenu.tscn")
 
 func _choose(index: int) -> void:
@@ -502,12 +529,12 @@ func _refresh() -> void:
 		var chosen := selections.has(i)
 		var owner_color: Color = UI.RED if selections[0] == i else (UI.VIOLET if chosen else Color("3b3f58"))
 		# The card is just a frame over its portrait tile.
-		cards[i].add_theme_stylebox_override("normal", UI.box(Color(0, 0, 0, 0), owner_color if chosen else Color("15161f"), 4 if chosen else 2))
-		cards[i].add_theme_stylebox_override("hover", UI.box(Color(1, 1, 1, 0.08), UI.GOLD, 4))
-		cards[i].add_theme_stylebox_override("pressed", UI.box(Color(1, 1, 1, 0.15), UI.GOLD, 4))
-		tiles[i].modulate = Color.WHITE if chosen else Color(0.72, 0.72, 0.78)
+		cards[i].add_theme_stylebox_override("normal", UI.box(Color(0, 0, 0, 0), owner_color if chosen else Color(1, 1, 1, 0.08), 2 if chosen else 1))
+		cards[i].add_theme_stylebox_override("hover", UI.box(Color(1, 1, 1, 0.06), UI.GOLD, 2))
+		cards[i].add_theme_stylebox_override("pressed", UI.box(Color(1, 1, 1, 0.12), UI.GOLD, 2))
+		tiles[i].modulate = Color.WHITE if chosen else Color(0.6, 0.6, 0.66)
 		markers[i].text = ("P1 " if selections[0] == i else "") + (("CPU" if MatchSetup.vs_ai else "P2") if selections[1] == i and mode_id != "arcade" else "")
-		previews[i].modulate = Color.WHITE if chosen else Color(0.78, 0.78, 0.84)
+		previews[i].modulate = Color.WHITE if chosen else Color(0.62, 0.62, 0.68)
 	for player in 2:
 		var profile := ROSTER.profile(selections[player])
 		if portraits[player].index != selections[player] and portraits[player].is_inside_tree():
@@ -535,13 +562,15 @@ func _refresh() -> void:
 		player_tabs[player].text = "P%d / %s" % [player + 1, "PICKING" if editing_player == player else "PICK"]
 		ready_buttons[player].text = "✓  READY" if ready_players[player] else "LOCK IN"
 		if ready_players[player]:
-			ready_buttons[player].add_theme_stylebox_override("normal", UI.blade(UI.GOLD, UI.CRIMSON, 6))
-			ready_buttons[player].add_theme_color_override("font_color", UI.INK)
+			ready_buttons[player].add_theme_stylebox_override("normal", UI.glass(Color(UI.GOLD, 0.22), UI.GOLD))
+			ready_buttons[player].add_theme_color_override("font_color", UI.GOLD)
 		else:
 			ready_buttons[player].remove_theme_stylebox_override("normal")
 			ready_buttons[player].remove_theme_color_override("font_color")
 		if MatchSetup.vs_ai and player == 1:
 			player_tabs[player].text = "CHOOSE CPU RIVAL"
+		if mode_id == "practice" and player == 1:
+			player_tabs[player].text = "DUMMY / PICK"
 		if MatchSetup.arcade and player == 1:
 			player_tabs[player].text = "CPU / FIRST RIVAL"
 			player_tabs[player].disabled = true
@@ -602,6 +631,9 @@ func _start_match() -> void:
 	MatchSetup.selected_fighters.assign(selections)
 	if MatchSetup.arcade:
 		MatchSetup.begin_arcade()
+	if MatchSetup.practice:
+		get_tree().change_scene_to_file("res://scenes/Practice3D.tscn")
+		return
 	if MatchSetup.story:
 		StoryDirector.start_run()
 		var destination: int = StoryDirector.resolve()

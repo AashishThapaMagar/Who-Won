@@ -291,11 +291,23 @@ func _enter_door(mode: String) -> void:
 	_choose_home_mode(mode)
 	_start_fight()
 
+## F2 drops straight into practice with the last picks.
 func _start_practice() -> void:
 	if transitioning or is_instance_valid(modal):
 		return
 	transitioning = true
 	get_tree().change_scene_to_file("res://scenes/Practice3D.tscn")
+
+## The menu entry: pick a fighter and a dummy first.
+func _choose_practice() -> void:
+	if transitioning or is_instance_valid(modal):
+		return
+	MatchSetup.practice = true
+	MatchSetup.story = false
+	MatchSetup.arcade = false
+	MatchSetup.vs_ai = false
+	transitioning = true
+	get_tree().change_scene_to_file("res://scenes/CharacterSelect.tscn")
 
 ## One slanted bar in the menu column: its name on an accent edge. Fight
 ## modes come first; a small gap separates them from the other entries.
@@ -342,6 +354,7 @@ func _style_row(row: Dictionary, active: bool) -> void:
 func _choose_home_mode(mode: String) -> void:
 	if transitioning or is_instance_valid(modal):
 		return
+	MatchSetup.practice = false
 	MatchSetup.story = mode == "story"
 	MatchSetup.arcade = mode in ["story", "arcade"]
 	MatchSetup.vs_ai = mode != "local"
@@ -378,7 +391,7 @@ func _activate_extra(key: String) -> void:
 	_point_at(key)
 	match key:
 		"practice":
-			_start_practice()
+			_choose_practice()
 		"records":
 			_show_records()
 		"settings":

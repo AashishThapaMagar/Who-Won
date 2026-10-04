@@ -22,6 +22,9 @@ var arcade_index: int = 0
 ## each fight (see story_director.gd); this only marks that the dialogue
 ## layer is active, all progression state above still drives it.
 var story: bool = false
+## Practice: the select screen picks the fighter and the training dummy,
+## then opens Practice3D.
+var practice: bool = false
 
 ## Builds the run's opponent order: every regular roster fighter (indices
 ## 0-5) except the one the player picked, in roster order, with Anant

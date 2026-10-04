@@ -1,7 +1,7 @@
 extends RefCounted
-## Shared arcade visual language for menus and match overlays: heavy italic
-## display type, slanted parallelogram panels and a Nepal crimson / gold
-## palette on deep navy.
+## Shared visual language for menus and match overlays: Saira type (heavy
+## italic for display, clean for text, Teko for Devanagari), thin glass
+## buttons with a gold edge and a Nepal crimson / gold palette on deep navy.
 const INK := Color("07080f")
 const PANEL := Color(0.055, 0.065, 0.11, 0.9)
 const LINE := Color("3b3f58")
@@ -15,27 +15,20 @@ const VIOLET := Color("6fb4ff")
 const RED := Color("ff4a5a")
 const CRIMSON := Color("d7263d")
 ## Horizontal slant shared by every parallelogram in the interface.
-const SLANT := 0.22
+const SLANT := 0.12
 static var _display: Font
 static var _body: Font
 static var _strong: Font
 
-## Condensed heavy italic for titles, names and big callouts.
+## Heavy italic Saira, semi-condensed, for titles, names and big callouts.
 static func display_font() -> Font:
 	if _display == null:
-		var font := SystemFont.new()
-		font.font_names = PackedStringArray(["Impact", "Anton", "Bahnschrift", "DejaVu Sans"])
-		font.font_weight = 900
-		font.font_italic = true
-		_display = font
+		_display = saira(900, 88, true)
 	return _display
 
 static func body_font() -> Font:
 	if _body == null:
-		var font := SystemFont.new()
-		font.font_names = PackedStringArray(["Bahnschrift", "Segoe UI", "DejaVu Sans"])
-		font.font_weight = 500
-		_body = font
+		_body = saira(500, 100)
 	return _body
 
 ## Bold condensed face for buttons and option labels.
@@ -74,7 +67,7 @@ static func teko(weight: int = 500) -> Font:
 				file.load_dynamic_font(path)
 				_teko_file = file
 			else:
-				return strong_font()
+				return _system_font(600)
 		var font := FontVariation.new()
 		font.base_font = _teko_file
 		font.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"): weight}
@@ -98,7 +91,7 @@ static func saira(weight: int = 600, width: int = 100, italic := false) -> Font:
 				file.load_dynamic_font(path)
 				_saira_files[path] = file
 			else:
-				return strong_font()
+				return _system_font(weight)
 		var ts := TextServerManager.get_primary_interface()
 		var font := FontVariation.new()
 		font.base_font = _saira_files[path]
@@ -108,14 +101,18 @@ static func saira(weight: int = 600, width: int = 100, italic := false) -> Font:
 		_saira[key] = font
 	return _saira[key]
 
+## Bold Saira for buttons and option labels.
 static func strong_font() -> Font:
 	if _strong == null:
-		var font := SystemFont.new()
-		font.font_names = PackedStringArray(["Bahnschrift", "Segoe UI", "DejaVu Sans"])
-		font.font_weight = 700
-		font.font_stretch = 85
-		_strong = font
+		_strong = saira(700, 92)
 	return _strong
+
+## A system face, only when the bundled fonts are missing.
+static func _system_font(weight: int) -> Font:
+	var font := SystemFont.new()
+	font.font_names = PackedStringArray(["Bahnschrift", "Segoe UI", "DejaVu Sans"])
+	font.font_weight = weight
+	return font
 
 static func box(color: Color, border: Color = LINE, width: int = 1, slant: float = 0.0) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
@@ -127,6 +124,13 @@ static func box(color: Color, border: Color = LINE, width: int = 1, slant: float
 	style.content_margin_left = 18
 	style.content_margin_right = 18
 	style.anti_aliasing = true
+	return style
+
+## Glass button face: a thin outline, a gold edge on the leading side.
+static func glass(color: Color, outline: Color) -> StyleBoxFlat:
+	var style := box(color, outline, 1, SLANT)
+	style.border_width_left = 3
+	style.border_color = outline
 	return style
 
 ## Slanted button face: a crimson edge on the leading side of dark glass.
@@ -144,20 +148,20 @@ static func theme() -> Theme:
 	result.set_constant("outline_size", "Label", 0)
 	for type in ["Button", "OptionButton", "CheckBox"]:
 		result.set_font("font", type, strong_font())
-		result.set_stylebox("normal", type, blade(Color(0.05, 0.06, 0.1, 0.88), CRIMSON))
-		result.set_stylebox("hover", type, blade(GOLD, CRIMSON, 6))
-		result.set_stylebox("pressed", type, blade(CRIMSON, GOLD, 6))
-		result.set_stylebox("focus", type, box(Color(0, 0, 0, 0), GOLD, 2, SLANT))
-		result.set_stylebox("disabled", type, blade(Color(0.05, 0.06, 0.1, 0.55), Color("4a2a33")))
+		result.set_stylebox("normal", type, glass(Color(0.04, 0.05, 0.09, 0.78), Color(1, 1, 1, 0.22)))
+		result.set_stylebox("hover", type, glass(Color(GOLD, 0.2), GOLD))
+		result.set_stylebox("pressed", type, glass(Color(GOLD, 0.34), GOLD))
+		result.set_stylebox("focus", type, box(Color(0, 0, 0, 0), GOLD, 1, SLANT))
+		result.set_stylebox("disabled", type, glass(Color(0.04, 0.05, 0.09, 0.5), Color(1, 1, 1, 0.08)))
 		result.set_color("font_color", type, WHITE)
-		result.set_color("font_hover_color", type, INK)
+		result.set_color("font_hover_color", type, WHITE)
 		result.set_color("font_focus_color", type, WHITE)
 		result.set_color("font_pressed_color", type, WHITE)
-		result.set_color("font_hover_pressed_color", type, INK)
+		result.set_color("font_hover_pressed_color", type, WHITE)
 		result.set_color("font_disabled_color", type, Color("6d7389"))
 		# Hovering a toggled control uses its own state; without a style it
 		# fell back to a bare face with dark text.
-		result.set_stylebox("hover_pressed", type, blade(GOLD, CRIMSON, 6))
+		result.set_stylebox("hover_pressed", type, glass(Color(GOLD, 0.34), GOLD))
 	# Checkboxes are toggles, not actions: keep their text readable in every
 	# state and show "on" with a gold edge and gold text instead of a fill.
 	result.set_stylebox("hover", "CheckBox", blade(Color(0.13, 0.14, 0.22, 0.95), GOLD, 6))
@@ -265,13 +269,13 @@ static func button(parent: Node, text: String, pos: Vector2, dimensions: Vector2
 	node.button_down.connect(func(): _pop(node, 0.93, 0.06))
 	node.button_up.connect(func(): _pop(node, 1.045 if node.is_hovered() else 1.0, 0.12))
 	if primary:
-		node.add_theme_stylebox_override("normal", blade(CRIMSON, GOLD, 6))
-		node.add_theme_stylebox_override("hover", blade(GOLD, WHITE, 6))
-		node.add_theme_stylebox_override("focus", box(Color(0, 0, 0, 0), WHITE, 2, SLANT))
-		node.add_theme_stylebox_override("pressed", blade(Color("a51b2e"), GOLD, 6))
+		node.add_theme_stylebox_override("normal", glass(Color(CRIMSON, 0.9), Color(1, 1, 1, 0.55)))
+		node.add_theme_stylebox_override("hover", glass(Color("e8344c"), GOLD))
+		node.add_theme_stylebox_override("focus", box(Color(0, 0, 0, 0), WHITE, 1, SLANT))
+		node.add_theme_stylebox_override("pressed", glass(Color("a51b2e"), GOLD))
 		node.add_theme_color_override("font_color", WHITE)
 		node.add_theme_color_override("font_focus_color", WHITE)
-		node.add_theme_color_override("font_hover_color", INK)
+		node.add_theme_color_override("font_hover_color", WHITE)
 		node.add_theme_color_override("font_pressed_color", WHITE)
 	return node
 
