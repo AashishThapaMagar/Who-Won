@@ -11,6 +11,9 @@ var bust := false
 ## since stances crouch or lean the head well away from a fixed height.
 var bust_target := Vector3(0, 104, 0)
 var bust_tracking := false
+## Main-menu close-up: a bust lit for drama (low fill, a hard crimson rim
+## from behind), framed chest-up and turned close to profile.
+var cinematic := false
 ## Full-body showcase for the big select-screen frames: a wider render, the
 ## fighter larger and set off-centre toward the outside edge.
 var hero := false
@@ -92,6 +95,18 @@ func _ready() -> void:
 		rim.light_color = Color("b9a4ff")
 		rim.light_energy = 0.9
 		world.add_child(rim)
+		if cinematic:
+			camera.size = 36
+			environment.environment.ambient_light_energy = 0.3
+			key.light_energy = 0.42
+			key.rotation_degrees = Vector3(-20, 40 if facing_left else -40, 0)
+			rim.light_color = Color("ff3a3a")
+			rim.light_energy = 1.3
+			var warm := DirectionalLight3D.new()
+			warm.rotation_degrees = Vector3(-35, -140 if facing_left else 140, 0)
+			warm.light_color = Color("ffb36b")
+			warm.light_energy = 0.4
+			world.add_child(warm)
 	camera.current = true
 	fighter = load("res://scenes/Player.tscn").instantiate()
 	var previous: Node = fighter.get_node("Visual")
@@ -146,10 +161,10 @@ func _process(delta: float) -> void:
 		return
 	var at: Vector3 = animated.skeleton.global_transform * animated.skeleton.get_bone_global_pose(head).origin
 	# Frame the face slightly above centre, with the shoulders below.
-	var goal := at + Vector3(0, -5, 0)
+	var goal := at + Vector3(0, -4 if cinematic else -5, 0)
 	bust_target = goal if not bust_tracking else bust_target.lerp(goal, 0.15)
 	bust_tracking = true
-	var turn := deg_to_rad(30.0)
+	var turn := deg_to_rad(58.0 if cinematic else 30.0)
 	var facing := -1.0 if facing_left else 1.0
 	camera.position = bust_target + Vector3(facing * cos(turn) * 230, 10, sin(turn) * 230)
 	camera.look_at(bust_target)

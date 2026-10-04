@@ -171,7 +171,13 @@ uniform float stars = 0.0;
 uniform float moon = 0.0;
 // 0 skips the clouds and stars (the LOW graphics preset).
 uniform float detail = 1.0;
-float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+// Sine-free hash (Dave Hoskins): sin() of large numbers loses precision on
+// many GPUs, which broke the clouds into hard angular facets.
+float hash(vec2 p) {
+	vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+	p3 += dot(p3, p3.yzx + 33.33);
+	return fract((p3.x + p3.y) * p3.z);
+}
 float hash3(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
 float noise(vec2 p) {
 	vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f);
@@ -200,9 +206,20 @@ void sky() {
 	}
 	float cover = 0.0;
 	if (detail > 0.5) {
-	vec2 cloud_uv = EYEDIR.xz / max(y + 0.18, 0.08) * 2.2 + vec2(TIME * 0.006, 0.0);
-	float cloud = noise(cloud_uv) * 0.57 + noise(cloud_uv * 2.1) * 0.28 + noise(cloud_uv * 4.3) * 0.15;
-	cover = smoothstep(0.51, 0.75, cloud) * smoothstep(0.0, 0.18, y);
+	// Soft fair-weather clouds: five octaves of smooth noise, each turned
+	// against the last so no grid shows, with feathered edges.
+	vec2 cloud_uv = EYEDIR.xz / max(y + 0.22, 0.1) * 1.6 + vec2(TIME * 0.006, 0.0);
+	mat2 turn = mat2(vec2(0.8, 0.6), vec2(-0.6, 0.8));
+	float cloud = 0.0;
+	float weight = 0.5;
+	vec2 q = cloud_uv;
+	for (int o = 0; o < 5; o++) {
+		cloud += noise(q) * weight;
+		q = turn * q * 2.03 + vec2(1.7, 9.2);
+		weight *= 0.5;
+	}
+	cloud /= 0.96875;
+	cover = smoothstep(0.48, 0.82, cloud) * smoothstep(0.0, 0.2, y);
 	// Clouds catch the light on their sunward side.
 	float lit = 0.3 + 0.5 * max(d, 0.0);
 	col = mix(col, mix(horizon_color, sun_color, lit), cover * (0.58 - stars * 0.3));

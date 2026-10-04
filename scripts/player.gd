@@ -232,7 +232,8 @@ func _physics_process(delta: float) -> void:
 	_update_facing()
 	var was_grounded := _is_grounded()
 	velocity.y += GRAVITY * delta
-	if (not controls_enabled or state == State.KO) and state != State.THROWING:
+	# A throw or a super that ends the round plays out to its last frame.
+	if (not controls_enabled or state == State.KO) and state not in [State.THROWING, State.SUPER]:
 		velocity.x = move_toward(velocity.x, 0.0, braking * delta)
 	else:
 		match state:
@@ -825,6 +826,10 @@ func _process_super(delta: float) -> void:
 	super_time += delta
 	var hits: Array = data.hits
 	while super_hits < hits.size() and super_clip_time() >= float(hits[super_hits]):
+		# A rival already knocked out takes no more blows; the move finishes.
+		if victim.state == State.KO:
+			super_hits = hits.size()
+			break
 		_super_hit(super_hits)
 		super_hits += 1
 		if hitstop_remaining > 0.0:

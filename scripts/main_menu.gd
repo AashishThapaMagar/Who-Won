@@ -1,43 +1,42 @@
 extends Control
-## Arcade title screen: a live 3D arena behind one slanted menu column (fight
-## modes, then everything else), with the highlighted entry's splash card on
-## the right.
+## Title screen: the living square. The real 3D arena is the menu's
+## backdrop, with two fighters squaring off on the flagstones, and every
+## entry moves the camera to its own place in the square (see
+## menu_backdrop.gd SHOTS). Over it, only type: the logo, a list whose chosen
+## entry grows large beside a flickering diya, one line explaining it, the
+## arena's name and the player's record.
 const UI := preload("res://scripts/ui_kit.gd")
 const BACKDROP := preload("res://scripts/menu_backdrop.gd")
 const ROSTER := preload("res://scripts/fighter_roster.gd")
-const MODES := [
-	["arcade", "ARCADE", "Fight the whole roster, then face the final boss."],
-	["story", "STORY", "Follow the road through every rival to the final showdown."],
-	["local", "VS BATTLE", "Two players. One keyboard. Settle the score."],
-	["ai", "VS COMPUTER", "Pick your rival and your difficulty. Master your combos."],
-]
+## The four fight modes; they lead to fighter select.
 const MODE_KEYS := ["arcade", "story", "local", "ai"]
-## Non-fight entries that follow the modes in the list: [key, title, text, accent].
-const EXTRAS := [
-	["practice", "PRACTICE", "Train against a dummy: guard, grab escapes, fight back. F2 changes what it does.", Color("4cd6a0")],
-	["records", "RECORDS", "Your fights, wins, streaks, perfects and favourite fighter.", Color("6fb4ff")],
-	["settings", "SETTINGS", "Display, sound, graphics, fight options, controls and how to play.", Color("c9cfdf")],
-	["exit", "EXIT", "Leave the championship. See you next time.", Color("ff4a5a")],
+## The list, [key, title, description]; a gap follows the fight entries.
+const ENTRIES := [
+	["arcade", "ARCADE", "Fight the whole roster, one rival after another, then face the final boss."],
+	["story", "STORY", "Follow the road through every rival to the final showdown with Ananta."],
+	["local", "VS BATTLE", "Two players, one keyboard. Pick your fighters and your arena and settle the score."],
+	["ai", "VS COMPUTER", "Pick your rival and the difficulty. The best place to master your combos."],
+	["practice", "PRACTICE", "Train against a dummy that guards, grabs and fights back."],
+	["fighters", "FIGHTERS", "Meet the seven fighters of the square: their styles, strengths and supers."],
+	["records", "RECORDS", "Your fights, wins, streaks, perfects and favourite fighter."],
+	["settings", "SETTINGS", "Display, sound, graphics, fight rules, controls and how to play."],
+	["exit", "EXIT", "Leave the square. Your records are saved."],
 ]
-## Each entry's name in Nepali, beside the English.
-const NEPALI := {"arcade": "आर्केड", "story": "कथा", "local": "भिडन्त", "ai": "कम्प्युटरसँग",
-	"practice": "अभ्यास", "records": "रेकर्ड", "settings": "सेटिङ", "exit": "बाहिर"}
-## Order the arrow keys walk through the list.
-const ENTRIES := ["arcade", "story", "local", "ai", "practice", "records", "settings", "exit"]
-## Gold light sweeping across the title, arcade attract-mode style.
-## Menu geometry: a quiet column down the left of the screen.
-const ROW_TOP := 196.0
-const ROW_STEP := 31.0
-const ROW_HEIGHT := 30.0
+const FIGHT_ENTRIES := 5
+## Each entry's name in Nepali, beside the chosen entry.
+const NEPALI := {"arcade": "आर्केड", "story": "कथा", "local": "भिडन्त", "ai": "कम्प्युटरसँग", "practice": "अभ्यास",
+	"fighters": "योद्धाहरू", "records": "रेकर्ड", "settings": "सेटिङ", "exit": "बाहिर"}
+const LIST_X := 40.0
+const LIST_TOP := 158.0
+const ROW_SMALL := 26.0
+const ROW_LARGE := 44.0
 const GROUP_GAP := 12.0
-const ROW_WIDTH := 300.0
-const PORTRAIT := preload("res://scripts/roster_portrait.gd")
-## The logo's finish: brushed gold at the top warming to white-hot through
-## the middle and back to deep gold, with a slow glint crossing it. Graded
-## by screen height (a label's UV is per glyph).
+const ROW_WIDTH := 360.0
+## The logo's finish: brushed gold to white-hot to deep gold by screen
+## height, with a slow glint crossing it.
 const LOGO_METAL := """shader_type canvas_item;
-uniform float top = 0.07;
-uniform float bottom = 0.21;
+uniform float top = 0.06;
+uniform float bottom = 0.17;
 void fragment() {
 	vec4 glyph = texture(TEXTURE, UV);
 	float y = clamp((SCREEN_UV.y - top) / (bottom - top), 0.0, 1.0);
@@ -49,159 +48,61 @@ void fragment() {
 	COLOR = vec4(mix(COLOR.rgb, metal + glint * 0.5, fill), glyph.a * COLOR.a);
 }
 """
-## Film grade over the live arena: dark on the left where the menu reads,
-## open in the middle where the fighter stands, a soft vignette all round.
+## Just enough shade for the type: a soft fall-off from the left edge and
+## the foot, the scene itself left open.
 const BACKDROP_GRADE := """shader_type canvas_item;
 void fragment() {
 	vec2 uv = UV;
-	float left = 1.0 - smoothstep(0.05, 0.5, uv.x);
-	vec2 c = (uv - vec2(0.62, 0.5)) * vec2(1.3, 1.0);
-	float vignette = smoothstep(0.35, 0.95, length(c));
-	float a = clamp(0.28 + left * 0.64 + vignette * 0.5 + smoothstep(0.75, 1.0, uv.y) * 0.45, 0.0, 0.95);
+	float left = 1.0 - smoothstep(0.0, 0.5, uv.x);
+	float foot = smoothstep(0.74, 1.0, uv.y);
+	vec2 c = (uv - vec2(0.6, 0.45)) * vec2(1.2, 1.0);
+	float vignette = smoothstep(0.45, 1.0, length(c));
+	float a = clamp(left * 0.8 + foot * 0.5 + vignette * 0.35, 0.0, 0.92);
 	COLOR = vec4(0.012, 0.014, 0.03, a);
 }
 """
+
 var backdrop: Control
-var extra_rows: Dictionary = {}
-## Highlighted non-mode entry (a key from EXTRAS), or "" when a mode is.
-var cursor_key := ""
+## Row dictionaries {button, key, title, desc, heading, nepali}.
+var rows: Array[Dictionary] = []
+var cursor := 2
+## Fight mode rows by key, for clicks and tests.
 var home_modes: Dictionary = {}
-var mode_rows: Dictionary = {}
+## Highlighted non-mode entry, or "" when a fight mode is highlighted.
+var cursor_key := ""
+var diya: TextureRect
 var mode_desc_label: Label
-var mode_title_label: Label
+var arena_label: Label
+var record_strip: Label
+var play_button: Button
 var modal: Control
 var modal_content: Control
-var play_button: Button
 var return_focus: Control
 var transitioning: bool = false
-var record_strip: Label
-var hero: TextureRect
-var hero_glow: ColorRect
-## Featured fighter showcase: name, title and three stat bars beside the
-## hero; the roster rotates until the player browses with Left / Right.
-var hero_name: Label
-var hero_title: Label
-var hero_eyebrow: Label
-var hero_caption: Label
-var hero_stats: Array[ColorRect] = []
-## One short dash per roster fighter under the name; the featured one is gold.
-var roster_ticks: Array[ColorRect] = []
-## The chosen mode, named above Start in English and Nepali.
-var start_mode_label: Label
-var showcase_time := 0.0
-var browsing := false
-const SHOWCASE_EVERY := 5.0
+## Buttons navigated by keys that never take focus.
+var nav_buttons: Array[Button] = []
+var _flicker := 0.0
+
 func _ready() -> void:
 	theme = UI.theme()
 	backdrop = BACKDROP.new()
 	add_child(backdrop)
 	backdrop.shade_width = 0.0
+	if DisplayServer.get_name() != "headless":
+		backdrop.add_fighters(MatchSetup.selected_fighters[0], MatchSetup.selected_fighters[1])
 	var grade := ColorRect.new()
 	grade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	grade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	grade.material = _shader_material(BACKDROP_GRADE)
 	add_child(grade)
-	_build_showcase()
-	var title := UI.label(self, "WHO WON?", Vector2(40, 34), Vector2(520, 90), 72, Color.WHITE)
-	title.name = "GameTitle"
-	title.add_theme_font_override("font", UI.saira(900, 112, true))
-	title.add_theme_constant_override("outline_size", 4)
-	title.add_theme_color_override("font_outline_color", Color("1a1206"))
-	# A deep drop shadow sets the metal off the scene.
-	title.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
-	title.add_theme_constant_override("shadow_offset_x", 3)
-	title.add_theme_constant_override("shadow_offset_y", 5)
-	title.material = _shader_material(LOGO_METAL)
-	var nepali := UI.label(self, "को जित्यो?", Vector2(48, 120), Vector2(300, 34), 26, UI.GOLD)
-	nepali.name = "NepaliTitle"
-	nepali.add_theme_font_override("font", UI.teko(500))
-	UI.panel(self, Vector2(48, 160), Vector2(36, 2), UI.GOLD, Color.TRANSPARENT, 0.0)
-	# The title block rises into place as the menu opens.
-	for node in [title, nepali]:
-		node.modulate.a = 0.0
-		node.position.y += 14
-		var rise: Tween = node.create_tween().set_parallel(true).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
-		rise.tween_property(node, "position:y", node.position.y - 14, 0.8)
-		rise.tween_property(node, "modulate:a", 1.0, 0.6)
-	for i in MODES.size():
-		var data: Array = MODES[i]
-		var row := _mode_row(data[0], data[1], data[2], float(i))
-		row.button.pressed.connect(_enter_door.bind(data[0]))
-		row.button.mouse_entered.connect(_choose_home_mode.bind(data[0]))
-		row.button.focus_entered.connect(_choose_home_mode.bind(data[0]))
-		home_modes[data[0]] = row.button
-		mode_rows[data[0]] = row
-	for i in EXTRAS.size():
-		var extra: Array = EXTRAS[i]
-		var row := _mode_row(extra[0], extra[1], extra[2], float(MODES.size() + i), extra[3])
-		row.button.pressed.connect(_activate_extra.bind(extra[0]))
-		row.button.mouse_entered.connect(_point_at.bind(extra[0]))
-		extra_rows[extra[0]] = row
-	# Start lives on the splash card; clicking a mode or pressing Enter also starts.
-	start_mode_label = UI.label(self, "", Vector2(640, 420), Vector2(296, 20), 15, Color(UI.WHITE, 0.62))
-	start_mode_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	start_mode_label.add_theme_font_override("font", UI.teko(400))
-	play_button = UI.button(self, "START   ▶", Vector2(766, 442), Vector2(170, 40), true)
-	play_button.name = "StartGame"
-	play_button.add_theme_font_override("font", UI.saira(800, 100, true))
-	play_button.add_theme_font_size_override("font_size", 19)
-	var outline := StyleBoxFlat.new()
-	outline.bg_color = Color(1, 1, 1, 0.04)
-	outline.border_color = Color(1, 1, 1, 0.8)
-	outline.set_border_width_all(1)
-	outline.skew = Vector2(UI.SLANT, 0)
-	var lit := outline.duplicate()
-	lit.bg_color = Color(UI.GOLD, 0.16)
-	lit.border_color = Color(UI.GOLD, 0.9)
-	var filled := outline.duplicate()
-	filled.bg_color = Color(UI.GOLD, 0.3)
-	filled.border_color = UI.GOLD
-	filled.set_border_width_all(2)
-	play_button.add_theme_stylebox_override("normal", outline)
-	play_button.add_theme_stylebox_override("focus", lit)
-	for state in ["hover", "pressed"]:
-		play_button.add_theme_stylebox_override(state, filled)
-	play_button.add_theme_color_override("font_color", UI.WHITE)
-	play_button.add_theme_color_override("font_focus_color", UI.WHITE)
-	play_button.add_theme_color_override("font_hover_color", UI.WHITE)
-	play_button.add_theme_color_override("font_pressed_color", UI.WHITE)
-	play_button.pressed.connect(_confirm)
-	# A slow breath on Start draws the eye without shouting.
-	var breath := play_button.create_tween().set_loops().set_trans(Tween.TRANS_SINE)
-	breath.tween_property(play_button, "self_modulate", Color(1.15, 1.08, 0.9), 1.1)
-	breath.tween_property(play_button, "self_modulate", Color.WHITE, 1.1)
-	# Splash card for the highlighted mode.
-	# The highlighted entry, explained once, under the list.
-	mode_title_label = UI.eyebrow(self, "", Vector2(-1000, -1000), Vector2(10, 10), UI.GOLD)
-	mode_title_label.visible = false
-	mode_desc_label = UI.label(self, "", Vector2(46, 456), Vector2(320, 40), 13, Color(UI.WHITE, 0.6))
-	mode_desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	mode_desc_label.add_theme_font_override("font", UI.saira(400, 100))
-	# The player's ledger sits under the splash card, arcade high-score style.
-	record_strip = UI.label(self, "", Vector2(440, 514), Vector2(490, 18), 11, Color(UI.WHITE, 0.55))
-	record_strip.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	record_strip.add_theme_font_override("font", UI.saira(500, 90))
-	_refresh_record_strip()
-	var hint_x := 40.0
-	for hint in [["↑↓", "SELECT"], ["ENTER", "CONFIRM"], ["F2", "PRACTICE"]]:
-		hint_x += UI.key_hint(self, hint[0], hint[1], Vector2(hint_x, 514))
-	_refresh_mode_summary()
+	_build_logo()
+	_build_list()
+	_build_corner()
+	_build_footer()
+	_choose_home_mode(_selected_mode())
+	_layout(false)
 	play_button.grab_focus()
 	_entrance()
-
-## The menu column slides in row by row as the screen opens.
-func _entrance() -> void:
-	var rows: Array = []
-	for key in ENTRIES:
-		rows.append(mode_rows.get(key, extra_rows.get(key)))
-	for i in rows.size():
-		var btn: Button = rows[i].button
-		var home: Vector2 = btn.position
-		btn.position = home - Vector2(60, 0)
-		btn.modulate.a = 0.0
-		var tween := btn.create_tween().set_parallel(true).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
-		tween.tween_property(btn, "position", home, 0.5).set_delay(0.06 * i)
-		tween.tween_property(btn, "modulate:a", 1.0, 0.3).set_delay(0.06 * i)
 
 ## A material for a canvas shader. The code is set before the shader joins
 ## the material: one given its code afterwards drew solid white.
@@ -212,128 +113,219 @@ static func _shader_material(code: String) -> ShaderMaterial:
 	material.shader = shader
 	return material
 
-## A fighter stands on the temple dais behind the menu, named in Devanagari
-## and English; tours the roster until the player browses with Left / Right.
-func _build_showcase() -> void:
-	# A soft shadow grounds the fighter on the flagstones.
-	var shadow := TextureRect.new()
-	var pool := GradientTexture2D.new()
-	pool.fill = GradientTexture2D.FILL_RADIAL
-	pool.fill_from = Vector2(0.5, 0.5)
-	pool.fill_to = Vector2(1.0, 0.5)
-	pool.gradient = Gradient.new()
-	pool.gradient.set_color(0, Color(0, 0, 0, 0.55))
-	pool.gradient.set_color(1, Color(0, 0, 0, 0))
-	shadow.texture = pool
-	shadow.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	shadow.position = Vector2(478, 456)
-	shadow.size = Vector2(230, 34)
-	shadow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(shadow)
-	hero = PORTRAIT.new()
-	hero.hero = true
-	hero.still = false
-	hero.index = MatchSetup.selected_fighters[0]
-	hero.position = Vector2(400, 64)
-	hero.size = Vector2(380, 448)
-	add_child(hero)
-	# Rendered at twice the layout size so the fighter stays crisp when the
-	# 960x540 layout is scaled up to the window.
-	hero.viewport.size = Vector2i(760, 896)
-	hero.camera.size = 140.0
-	hero.camera.h_offset = 0.0
-	hero_eyebrow = UI.label(self, "THE ROSTER", Vector2(640, 262), Vector2(296, 16), 11, Color(UI.WHITE, 0.5))
-	hero_eyebrow.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	hero_eyebrow.add_theme_font_override("font", UI.saira(600, 112))
-	hero_title = UI.label(self, "", Vector2(640, 280), Vector2(296, 30), 24, UI.GOLD)
-	hero_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	hero_title.add_theme_font_override("font", UI.teko(500))
-	hero_name = UI.label(self, "", Vector2(540, 304), Vector2(396, 64), 56, UI.WHITE)
-	hero_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	hero_name.add_theme_font_override("font", UI.saira(900, 110, true))
-	hero_name.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.5))
-	hero_name.add_theme_constant_override("shadow_offset_y", 3)
-	hero_caption = UI.label(self, "", Vector2(640, 374), Vector2(296, 18), 12, Color(UI.WHITE, 0.7))
-	hero_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	hero_caption.add_theme_font_override("font", UI.saira(600, 112))
-	var count := ROSTER.PROFILES.size()
-	var ticks_right := 936.0 - 24.0
-	for i in count:
-		var tick := ColorRect.new()
-		tick.size = Vector2(14, 2)
-		tick.position = Vector2(ticks_right - (count - i) * 18.0 + 4.0, 403)
-		tick.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		add_child(tick)
-		roster_ticks.append(tick)
-	for side in [-1, 1]:
-		var arrow := Button.new()
-		arrow.text = "◀" if side < 0 else "▶"
-		arrow.flat = true
-		arrow.focus_mode = Control.FOCUS_NONE
-		arrow.size = Vector2(22, 20)
-		arrow.position = Vector2(ticks_right - count * 18.0 - 30.0 if side < 0 else ticks_right - 4.0, 388)
-		arrow.add_theme_font_size_override("font_size", 12)
-		arrow.add_theme_color_override("font_color", Color(UI.WHITE, 0.55))
-		arrow.add_theme_color_override("font_hover_color", UI.GOLD)
-		arrow.pressed.connect(_browse_hero.bind(side))
-		add_child(arrow)
-	_show_hero(hero.index, false)
+func _build_logo() -> void:
+	var title := UI.label(self, "WHO WON?", Vector2(LIST_X - 4, 24), Vector2(520, 76), 62, Color.WHITE)
+	title.name = "GameTitle"
+	title.add_theme_font_override("font", UI.saira(900, 112, true))
+	title.add_theme_constant_override("outline_size", 4)
+	title.add_theme_color_override("font_outline_color", Color("1a1206"))
+	title.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.55))
+	title.add_theme_constant_override("shadow_offset_x", 3)
+	title.add_theme_constant_override("shadow_offset_y", 4)
+	title.material = _shader_material(LOGO_METAL)
+	var nepali := UI.label(self, "को जित्यो?", Vector2(LIST_X, 94), Vector2(240, 32), 26, UI.GOLD)
+	nepali.name = "NepaliTitle"
+	nepali.add_theme_font_override("font", UI.teko(500))
+	for node in [title, nepali]:
+		node.modulate.a = 0.0
+		node.position.y += 12
+		var rise: Tween = node.create_tween().set_parallel(true).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+		rise.tween_property(node, "position:y", node.position.y - 12, 0.9)
+		rise.tween_property(node, "modulate:a", 1.0, 0.7)
 
-## Puts a fighter in the spotlight: portrait, name, title and stats. With
-## animate, the old one dips out and the new one comes up.
-func _show_hero(index: int, animate := true) -> void:
-	# Claimed now, so quick repeated presses step on from the new pick.
-	hero.index = index
-	var profile := ROSTER.profile(index)
-	var apply := func():
-		hero.show_fighter(index)
-		hero_name.text = profile.name
-		hero_caption.text = String(profile.title).to_upper()
-		hero_title.text = ROSTER.NEPALI_NAMES.get(profile.id, "")
-		for i in roster_ticks.size():
-			roster_ticks[i].color = UI.GOLD if i == index else Color(1, 1, 1, 0.25)
-		var values := [
-			clampf((float(profile.get("punch_bonus", 0)) + 3.0) / 7.0, 0.1, 1.0),
-			clampf((float(profile.get("speed", 1.0)) - 0.8) / 0.45, 0.1, 1.0),
-			clampf(float(profile.get("stamina", 100.0)) / 140.0, 0.1, 1.0),
-		]
-		for row in hero_stats.size():
-			var fill: ColorRect = hero_stats[row]
-			if fill.is_inside_tree():
-				fill.create_tween().set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT).tween_property(fill, "size:x", 104.0 * values[row], 0.4)
+func _build_list() -> void:
+	# The diya: a small butter-lamp flame that marks the chosen entry.
+	diya = TextureRect.new()
+	var flame := GradientTexture2D.new()
+	flame.fill = GradientTexture2D.FILL_RADIAL
+	flame.fill_from = Vector2(0.5, 0.5)
+	flame.fill_to = Vector2(1.0, 0.5)
+	flame.gradient = Gradient.new()
+	flame.gradient.set_color(0, Color(1.0, 0.97, 0.85, 1.0))
+	flame.gradient.set_color(1, Color(1.0, 0.45, 0.05, 0.0))
+	flame.gradient.add_point(0.3, Color(1.0, 0.72, 0.2, 0.95))
+	diya.texture = flame
+	diya.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	diya.size = Vector2(22, 22)
+	diya.pivot_offset = Vector2(11, 11)
+	diya.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(diya)
+	for i in ENTRIES.size():
+		var key: String = ENTRIES[i][0]
+		var button := UI.button(self, "", Vector2(LIST_X, LIST_TOP), Vector2(ROW_WIDTH, ROW_SMALL))
+		button.name = String(ENTRIES[i][1]).replace(" ", "").capitalize().replace(" ", "") + "Mode"
+		button.focus_mode = Control.FOCUS_NONE
+		var clear := StyleBoxEmpty.new()
+		for state in ["normal", "hover", "pressed", "focus", "disabled"]:
+			button.add_theme_stylebox_override(state, clear)
+		var heading := UI.label(button, ENTRIES[i][1], Vector2(26, 0), Vector2(ROW_WIDTH - 26, ROW_SMALL), 17, UI.WHITE)
+		heading.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		heading.add_theme_font_override("font", UI.saira(600, 104, true))
+		heading.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
+		heading.add_theme_constant_override("shadow_offset_y", 2)
+		var nepali := UI.label(button, NEPALI.get(key, ""), Vector2(26, 4), Vector2(170, ROW_LARGE), 22, UI.GOLD)
+		nepali.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		nepali.add_theme_font_override("font", UI.teko(500))
+		if key in MODE_KEYS:
+			button.pressed.connect(_enter_door.bind(key))
+			home_modes[key] = button
+		else:
+			button.pressed.connect(_activate_extra.bind(key))
+		button.mouse_entered.connect(_select.bind(i))
+		nav_buttons.append(button)
+		rows.append({"button": button, "key": key, "title": ENTRIES[i][1], "desc": ENTRIES[i][2], "heading": heading, "nepali": nepali})
+	var rule := ColorRect.new()
+	rule.color = UI.GOLD
+	rule.position = Vector2(LIST_X, 446)
+	rule.size = Vector2(28, 2)
+	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(rule)
+	mode_desc_label = UI.label(self, "", Vector2(LIST_X, 454), Vector2(400, 40), 13, Color(UI.WHITE, 0.78))
+	mode_desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	mode_desc_label.add_theme_font_override("font", UI.saira(400, 100))
+
+## The player's record (top right) and the arena on screen (bottom right).
+func _build_corner() -> void:
+	var player := UI.label(self, "PLAYER ONE", Vector2(620, 26), Vector2(312, 16), 10, UI.GOLD)
+	player.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	player.add_theme_font_override("font", UI.saira(700, 112))
+	record_strip = UI.label(self, "", Vector2(520, 42), Vector2(412, 20), 13, UI.WHITE)
+	record_strip.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	record_strip.add_theme_font_override("font", UI.saira(600, 100))
+	record_strip.add_theme_constant_override("outline_size", 4)
+	record_strip.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.5))
+	_refresh_record_strip()
+	arena_label = UI.label(self, "", Vector2(520, 474), Vector2(412, 18), 12, Color(UI.WHITE, 0.8))
+	arena_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	arena_label.add_theme_font_override("font", UI.saira(700, 112))
+	arena_label.add_theme_constant_override("outline_size", 4)
+	arena_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.5))
+
+## Button prompts along the foot; Start is the focused button.
+func _build_footer() -> void:
+	play_button = UI.button(self, "START", Vector2(LIST_X, 509), Vector2(96, 20), true)
+	play_button.name = "StartGame"
+	play_button.custom_minimum_size = Vector2(96, 20)
+	play_button.add_theme_font_override("font", UI.saira(700, 100))
+	play_button.add_theme_font_size_override("font_size", 11)
+	var chip := UI.box(Color(1, 1, 1, 0.06), Color(1, 1, 1, 0.5), 1)
+	var lit := UI.box(Color(UI.GOLD, 0.3), UI.GOLD, 1)
+	for box in [chip, lit]:
+		box.content_margin_top = 1
+		box.content_margin_bottom = 1
+	play_button.add_theme_stylebox_override("normal", chip)
+	play_button.add_theme_stylebox_override("focus", chip)
+	play_button.add_theme_stylebox_override("hover", lit)
+	play_button.add_theme_stylebox_override("pressed", lit)
+	for state in ["font_color", "font_focus_color", "font_hover_color", "font_pressed_color"]:
+		play_button.add_theme_color_override(state, UI.WHITE)
+	play_button.pressed.connect(_confirm)
+	var x := LIST_X + 108.0
+	for hint in [["ENTER", "CONFIRM"], ["↑↓", "SELECT"], ["F2", "QUICK PRACTICE"]]:
+		x += UI.key_hint(self, hint[0], hint[1], Vector2(x, 513))
+
+## The rows slide in one after another as the screen opens.
+func _entrance() -> void:
+	for i in rows.size():
+		var button: Button = rows[i].button
+		var home: Vector2 = button.position
+		button.position = home - Vector2(40, 0)
+		button.modulate.a = 0.0
+		var tween := button.create_tween().set_parallel(true).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+		tween.tween_property(button, "position", home, 0.5).set_delay(0.25 + 0.05 * i)
+		tween.tween_property(button, "modulate:a", 1.0, 0.3).set_delay(0.25 + 0.05 * i)
+
+## Stack the rows: the chosen one large, the rest small, with a gap after
+## the fight entries; the diya moves to the chosen one.
+func _layout(animate := true) -> void:
+	var y := LIST_TOP
+	for i in rows.size():
+		var row: Dictionary = rows[i]
+		var active := i == cursor
+		var height := ROW_LARGE if active else ROW_SMALL
+		row.heading.add_theme_font_size_override("font_size", 30 if active else 17)
+		row.heading.add_theme_font_override("font", UI.saira(900 if active else 600, 104, true))
+		row.heading.add_theme_color_override("font_color", UI.WHITE if active else Color(1, 1, 1, 0.55))
+		row.heading.size.y = height
+		row.button.size.y = height
+		row.nepali.visible = active
+		row.nepali.position.x = 26 + row.heading.get_minimum_size().x + 14
+		var target := Vector2(LIST_X + (6.0 if active else 0.0), y)
+		if animate and row.button.is_inside_tree():
+			row.button.create_tween().set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT).tween_property(row.button, "position", target, 0.25)
+		else:
+			row.button.position = target
+		if active:
+			var spot := Vector2(LIST_X - 2, y + height * 0.5 - 11)
+			if animate and diya.is_inside_tree():
+				diya.create_tween().set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT).tween_property(diya, "position", spot, 0.25)
 			else:
-				fill.size.x = 104.0 * values[row]
-	if not animate:
-		apply.call()
-		return
-	var tween := create_tween()
-	tween.tween_property(hero, "modulate:a", 0.0, 0.18)
-	tween.parallel().tween_property(hero_name, "modulate:a", 0.0, 0.18)
-	tween.tween_callback(apply)
-	tween.tween_property(hero, "modulate:a", 1.0, 0.3)
-	tween.parallel().tween_property(hero_name, "modulate:a", 1.0, 0.3)
+				diya.position = spot
+			mode_desc_label.text = row.desc
+		y += height + (GROUP_GAP if i == FIGHT_ENTRIES - 1 else 0.0)
 
-## Left / Right (or the arrows) choose the featured fighter, who becomes
-## player one's pick; browsing stops the showcase rotation.
-func _browse_hero(step: int) -> void:
-	if hero == null or transitioning or is_instance_valid(modal):
-		return
-	browsing = true
-	hero_eyebrow.text = "YOUR FIGHTER"
-	var next := posmod(hero.index + step, ROSTER.PROFILES.size())
-	MatchSetup.selected_fighters[0] = next
-	_show_hero(next)
-	preload("res://scripts/sfx.gd").fire("menu_move")
-
-## Until the player browses, the spotlight tours the roster.
+## The diya flickers like a real flame.
 func _process(delta: float) -> void:
-	if hero == null or browsing or transitioning or is_instance_valid(modal):
+	_flicker += delta
+	if diya != null:
+		var wobble := 0.85 + 0.1 * sin(_flicker * 13.0) + 0.06 * sin(_flicker * 31.0 + 1.3)
+		diya.scale = Vector2(wobble, wobble * 1.08)
+		diya.modulate.a = 0.82 + 0.18 * sin(_flicker * 9.0)
+
+## Highlight entry `index`: a fight mode becomes the chosen mode; anything
+## else is pointed at without changing it.
+func _select(index: int) -> void:
+	if transitioning or is_instance_valid(modal):
 		return
-	showcase_time += delta
-	if showcase_time >= SHOWCASE_EVERY:
-		showcase_time = 0.0
-		hero_eyebrow.text = "THE ROSTER"
-		_show_hero(posmod(hero.index + 1, ROSTER.PROFILES.size()))
+	var key: String = ENTRIES[index][0]
+	if key in MODE_KEYS:
+		_choose_home_mode(key)
+	else:
+		_point_at(key)
+
+func _choose_home_mode(mode: String) -> void:
+	if transitioning or is_instance_valid(modal):
+		return
+	MatchSetup.practice = false
+	MatchSetup.story = mode == "story"
+	MatchSetup.arcade = mode in ["story", "arcade"]
+	MatchSetup.vs_ai = mode != "local"
+	cursor_key = ""
+	_set_cursor(mode)
+
+## Highlight a non-mode entry without changing the chosen fight mode.
+func _point_at(key: String) -> void:
+	if transitioning or is_instance_valid(modal):
+		return
+	cursor_key = key
+	_set_cursor(key)
+
+func _set_cursor(key: String) -> void:
+	var index := -1
+	for i in ENTRIES.size():
+		if ENTRIES[i][0] == key:
+			index = i
+	if index < 0:
+		return
+	var moved := index != cursor
+	cursor = index
+	_refresh_mode_summary()
+	if moved:
+		_layout()
+
+func _refresh_mode_summary() -> void:
+	var key: String = ENTRIES[cursor][0]
+	if key in MODE_KEYS:
+		backdrop.selected = maxi(0, BACKDROP.MODE_ORDER.find(key))
+	backdrop.frame(key)
+	var arena: Dictionary = backdrop.STAGE.ROUNDS[backdrop.MODE_ROUND[backdrop.selected]]
+	arena_label.text = "%s   /   %s" % [arena.name, "KATHMANDU VALLEY"]
+	play_button.text = "START" if cursor_key.is_empty() or cursor_key == "practice" else ("QUIT" if cursor_key == "exit" else "OPEN")
+
+func _step_entries(step: int) -> void:
+	_select(posmod(cursor + step, ENTRIES.size()))
+	preload("res://scripts/sfx.gd").fire("menu_move")
+	play_button.grab_focus()
 
 func _enter_door(mode: String) -> void:
 	if transitioning or is_instance_valid(modal):
@@ -359,82 +351,6 @@ func _choose_practice() -> void:
 	transitioning = true
 	get_tree().change_scene_to_file("res://scenes/CharacterSelect.tscn")
 
-## One slanted bar in the menu column: its name on an accent edge. Fight
-## modes come first; a small gap separates them from the other entries.
-func _mode_row(mode_key: String, title: String, desc: String, index: float, accent := Color.TRANSPARENT) -> Dictionary:
-	var y := ROW_TOP + index * ROW_STEP + (GROUP_GAP if index >= MODES.size() else 0.0)
-	if accent.a == 0.0:
-		accent = BACKDROP.ACCENTS[BACKDROP.MODE_ORDER.find(mode_key)]
-	var btn := UI.button(self, "", Vector2(44, y), Vector2(ROW_WIDTH, ROW_HEIGHT))
-	btn.name = title.replace(" ", "") + "Mode"
-	btn.focus_mode = Control.FOCUS_NONE
-	var edge := ColorRect.new()
-	edge.color = UI.GOLD
-	edge.position = Vector2(0, 6)
-	edge.size = Vector2(2, ROW_HEIGHT - 12)
-	edge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	btn.add_child(edge)
-	var heading := UI.label(btn, title, Vector2(16, -1), Vector2(ROW_WIDTH - 16, ROW_HEIGHT), 19, UI.WHITE)
-	heading.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	heading.add_theme_font_override("font", UI.saira(600, 100, true))
-	var nepali := UI.label(btn, NEPALI.get(mode_key, ""), Vector2(16, 1), Vector2(140, ROW_HEIGHT), 17, Color(UI.GOLD, 0.9))
-	nepali.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	nepali.add_theme_font_override("font", UI.teko(500))
-	return {"button": btn, "key": mode_key, "title": title, "desc": desc, "accent": accent, "heading": heading, "edge": edge, "nepali": nepali, "home": Vector2(44, y)}
-
-func _style_row(row: Dictionary, active: bool) -> void:
-	var btn: Button = row.button
-	var accent: Color = row.accent
-	# Idle rows are quiet grey; the chosen one turns white and gains a thin
-	# gold edge.
-	var clear := StyleBoxEmpty.new()
-	for state in ["normal", "hover", "pressed", "focus"]:
-		btn.add_theme_stylebox_override(state, clear)
-	row.heading.add_theme_color_override("font_color", UI.WHITE if active else Color(1, 1, 1, 0.42))
-	row.heading.add_theme_font_override("font", UI.saira(800 if active else 500, 100, true))
-	row.edge.visible = active
-	# Placed after the bold face is set, so it clears the wider heading.
-	row.nepali.position.x = 16 + row.heading.get_minimum_size().x + 14
-	row.nepali.visible = active
-	var target: Vector2 = row.home + (Vector2(8, 0) if active else Vector2.ZERO)
-	if btn.is_inside_tree():
-		btn.create_tween().set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT).tween_property(btn, "position", target, 0.22)
-	else:
-		btn.position = target
-	if active:
-		mode_title_label.text = row.title
-		mode_title_label.add_theme_color_override("font_color", accent)
-		mode_desc_label.text = row.desc
-		if start_mode_label != null:
-			start_mode_label.text = "%s   %s" % [row.title, NEPALI.get(row.key, "")]
-
-func _choose_home_mode(mode: String) -> void:
-	if transitioning or is_instance_valid(modal):
-		return
-	MatchSetup.practice = false
-	MatchSetup.story = mode == "story"
-	MatchSetup.arcade = mode in ["story", "arcade"]
-	MatchSetup.vs_ai = mode != "local"
-	cursor_key = ""
-	_refresh_mode_summary()
-
-## Highlight a non-mode entry without changing the chosen fight mode.
-func _point_at(key: String) -> void:
-	if transitioning or is_instance_valid(modal):
-		return
-	cursor_key = key
-	_refresh_mode_summary()
-
-func _step_entries(step: int) -> void:
-	var current := cursor_key if not cursor_key.is_empty() else _selected_mode()
-	var next: String = ENTRIES[posmod(ENTRIES.find(current) + step, ENTRIES.size())]
-	if next in MODE_KEYS:
-		_choose_home_mode(next)
-	else:
-		_point_at(next)
-	preload("res://scripts/sfx.gd").fire("menu_move")
-	play_button.grab_focus()
-
 ## Start the highlighted mode, or open / run the highlighted other entry.
 func _confirm() -> void:
 	if cursor_key.is_empty():
@@ -449,6 +365,8 @@ func _activate_extra(key: String) -> void:
 	match key:
 		"practice":
 			_choose_practice()
+		"fighters":
+			_show_roster()
 		"records":
 			_show_records()
 		"settings":
@@ -468,15 +386,15 @@ func _confirm_exit() -> void:
 	stay.pressed.connect(_close_modal)
 	stay.grab_focus()
 
-## Two lines under the splash card: the last fight and the running record.
+## The player card's line: the running record.
 func _refresh_record_strip() -> void:
 	var records := get_node_or_null("/root/Records")
 	if records == null or record_strip == null:
 		return
 	if records.totals.matches == 0:
-		record_strip.text = "NO FIGHTS ON RECORD YET  /  STEP IN AND MAKE ONE"
+		record_strip.text = "NO FIGHTS ON RECORD YET"
 		return
-	record_strip.text = "RECORD  %dW  %dL   /   STREAK  %d   /   WIN RATE  %d%%" % [records.totals.wins, records.totals.losses, records.totals.streak, records.win_rate()]
+	record_strip.text = "%dW  %dL   /   STREAK %d   /   %d%%" % [records.totals.wins, records.totals.losses, records.totals.streak, records.win_rate()]
 
 func _hero_index() -> int:
 	var records := get_node_or_null("/root/Records")
@@ -608,16 +526,6 @@ func _start_fight() -> void:
 	tween.tween_property(backdrop, "opening", 1.0, 0.7).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
 	tween.tween_property(fade, "modulate:a", 1.0, 0.2)
 	tween.tween_callback(func(): get_tree().change_scene_to_file("res://scenes/CharacterSelect.tscn"))
-
-func _refresh_mode_summary() -> void:
-	var selected := _selected_mode()
-	backdrop.selected = BACKDROP.MODE_ORDER.find(selected)
-	var highlighted := cursor_key if not cursor_key.is_empty() else selected
-	for mode in mode_rows:
-		_style_row(mode_rows[mode], mode == highlighted)
-	for key in extra_rows:
-		_style_row(extra_rows[key], key == highlighted)
-	play_button.text = "START  ▶" if cursor_key.is_empty() else ("QUIT  ▶" if cursor_key == "exit" else "OPEN  ▶")
 
 func _show_roster() -> void:
 	if is_instance_valid(modal):
@@ -815,7 +723,7 @@ func _close_modal() -> void:
 	modal.queue_free()
 	modal = null
 	for child in get_children():
-		if child is Button and not child in home_modes.values() and not extra_rows.values().any(func(row): return row.button == child):
+		if child is Button and not child in nav_buttons:
 			child.focus_mode = Control.FOCUS_ALL
 	if is_instance_valid(return_focus):
 		return_focus.grab_focus()
@@ -825,19 +733,15 @@ func _unhandled_input(event: InputEvent) -> void:
 		_close_modal()
 		get_viewport().set_input_as_handled()
 
+## Up / Down (or Left / Right) walk the list, Enter or A confirms, F2 jumps
+## into practice.
 func _input(event: InputEvent) -> void:
 	if transitioning or is_instance_valid(modal):
 		return
-	# Gamepad: up and down walk the list, left and right browse the
-	# featured fighter, A confirms.
 	if event is InputEventJoypadButton or event is InputEventJoypadMotion:
-		if event.is_action_pressed("ui_down"):
+		if event.is_action_pressed("ui_down") or event.is_action_pressed("ui_right"):
 			_step_entries(1)
-		elif event.is_action_pressed("ui_up"):
-			_step_entries(-1)
-		elif event.is_action_pressed("ui_right"):
-			_step_entries(1)
-		elif event.is_action_pressed("ui_left"):
+		elif event.is_action_pressed("ui_up") or event.is_action_pressed("ui_left"):
 			_step_entries(-1)
 		elif event.is_action_pressed("ui_accept"):
 			_confirm()
@@ -847,13 +751,13 @@ func _input(event: InputEvent) -> void:
 		return
 	if not (event is InputEventKey) or not event.pressed or event.echo:
 		return
-	if event.physical_keycode == KEY_F2:
+	var code: int = event.physical_keycode
+	if code == KEY_F2:
 		_start_practice()
-		get_viewport().set_input_as_handled()
-		return
-	if event.physical_keycode in [KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT]:
-		_step_entries(1 if event.physical_keycode in [KEY_DOWN, KEY_RIGHT] else -1)
-		get_viewport().set_input_as_handled()
-	elif event.physical_keycode == KEY_ENTER and (play_button.has_focus() or home_modes.values().has(get_viewport().gui_get_focus_owner())):
+	elif code in [KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT]:
+		_step_entries(1 if code in [KEY_DOWN, KEY_RIGHT] else -1)
+	elif code in [KEY_ENTER, KEY_KP_ENTER]:
 		_confirm()
-		get_viewport().set_input_as_handled()
+	else:
+		return
+	get_viewport().set_input_as_handled()
