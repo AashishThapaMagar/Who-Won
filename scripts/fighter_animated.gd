@@ -86,6 +86,12 @@ const MAX_REACH_STEP := 0.3
 ## animation name (measured before its hips are pinned).
 var clip_pace: Dictionary = {}
 var _react_speed := 0.0
+## The reaction still finishing after the stun ended ("" when none): a
+## fighter left standing plays out the rest of the flinch.
+var _tail := ""
+## Fastest a reaction clip is played to fit a short stun; the rest of it
+## plays out as the tail.
+const REACT_MAX_SPEED := 1.5
 var skeleton: Skeleton3D
 var guard_clip: Animation
 ## [track, bone] pairs of the idle clip's upper-body rotation tracks.
@@ -119,8 +125,10 @@ var _recoil_side := 1.0
 ## Share of the trunk lean per spine bone, hips to chest: head snaps bend
 ## high, body blows fold from the belly.
 var _recoil_spread := [0.2, 0.3, 0.5]
-const RECOIL_STIFFNESS := 140.0
-const RECOIL_DAMPING := 10.5
+## Soft and heavy: a struck body sways back over about half a second
+## instead of twitching.
+const RECOIL_STIFFNESS := 85.0
+const RECOIL_DAMPING := 8.2
 ## A stagger loosens the spring for a moment so the body wobbles longer.
 var _damping := RECOIL_DAMPING
 ## Whole-body lurch along the facing in metres (+ toward the rival), on the
@@ -227,13 +235,21 @@ func _on_impact(_point: Vector2, blocked: bool, heavy: bool) -> void:
 		_damping = RECOIL_DAMPING
 	elif fighter != null and fighter.get("last_hit_force") != null and not slammed:
 		var force: float = 0.45 + 0.55 * float(fighter.last_hit_force)
+		# Where the blow really touched: a faster limb hits harder, and the
+		# body turns away from the side it came in on.
+		var touch: Dictionary = fighter.get("last_contact") if fighter.get("last_contact") is Dictionary else {}
+		if touch.has("speed"):
+			force *= clampf(0.75 + float(touch.speed) / 16.0, 0.8, 1.3)
 		if blocked:
 			_recoil = Vector3(0.1 * force, 0.0, 0.08 * force)
 			_recoil_spread = [0.34, 0.33, 0.33]
 		else:
-			# Alternate the twist so each blow of a combo turns the body the
-			# other way instead of replaying one identical flinch.
-			_recoil_side = -_recoil_side
+			# Turn away from the side struck; a blow square on alternates the
+			# twist so a combo never replays one identical flinch.
+			if touch.has("side") and float(touch.side) != 0.0:
+				_recoil_side = float(touch.side)
+			else:
+				_recoil_side = -_recoil_side
 			match fighter.last_hit_height:
 				"low":
 					_recoil = Vector3(-0.14 * force, 0.18 * force * _recoil_side, 0.55 * force)
@@ -912,6 +928,16 @@ func update(delta: float) -> void:
 	var rival = fighter.get("opponent")
 	if state == S.IDLE and rival != null and rival.state == rival.State.KO:
 		logical = "victory"
+	# The stun is over but the body is still recovering: standing still, the
+	# fighter finishes its flinch; moving, guarding or striking cuts it off.
+	var tailing := false
+	if state in [S.HITSTUN, S.STRUCK] and logical in REACTIONS:
+		_tail = logical
+	elif state == S.IDLE and logical == "idle" and _tail != "" and pose_override == "" and clip_names.get(_tail, "") == current:
+		logical = _tail
+		tailing = true
+	else:
+		_tail = ""
 	if pose_override != "":
 		logical = pose_override
 	var clip: String = clip_names.get(logical, clip_names.get("idle", ""))
@@ -949,7 +975,7 @@ func update(delta: float) -> void:
 	_reach_step(fighter, delta, false)
 	var restart := _react and logical in REACTIONS
 	_react = false
-	if clip != current or (entered and not logical in LOOPING) or restart:
+	if clip != current or (entered and not logical in LOOPING and not tailing) or restart:
 		# Snap into a flinch; ease back out of one.
 		var was_reaction: bool = current != "" and REACTIONS.any(func(name): return clip_names.get(name, "") == current)
 		player.play(clip, 0.05 if logical in REACTIONS or logical == "ko" else (0.22 if was_reaction else 0.12))
@@ -971,10 +997,14 @@ func update(delta: float) -> void:
 		# halfway and snapping back to the stance: the first ~0.9 s of the
 		# clip (its flinch and recovery) is fitted to the stun length,
 		# worked out once as the reaction starts.
-		if restart or entered or _react_speed <= 0.0:
+		var useful := minf(player.get_animation(clip).length, 0.9)
+		if tailing:
+			_react_speed = move_toward(_react_speed, 1.0, delta * 3.0)
+			if player.current_animation_position >= useful:
+				_tail = ""
+		elif restart or entered or _react_speed <= 0.0:
 			var stun: float = float(fighter.get("stun_timer")) if fighter.get("stun_timer") != null else 0.3
-			var useful := minf(player.get_animation(clip).length, 0.9)
-			_react_speed = clampf(useful / maxf(stun, 0.18), 1.0, 2.4)
+			_react_speed = clampf(useful / maxf(stun, 0.18), 0.9, REACT_MAX_SPEED)
 		player.speed_scale = _react_speed
 	else:
 		_react_speed = 0.0

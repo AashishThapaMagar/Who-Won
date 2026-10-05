@@ -19,6 +19,9 @@ var dash_run_held := false
 ## advantage, combo links and jump arcs keep their shape because the whole
 ## combat clock is scaled together. Menus, camera and round timer ignore it.
 const COMBAT_TEMPO := 0.8
+## Share of a blow's listed damage the 3D fight takes off: rounds are long
+## exchanges, not a few clean hits. Applies to strikes, supers and throws.
+const DAMAGE_SCALE := 0.6
 ## Throw path, fixed when the grab lands (see _begin_throw).
 var _throw_anchor := Vector3.ZERO
 var _throw_victim_anchor := Vector3.ZERO
@@ -44,6 +47,9 @@ var _super_forward := Vector3.RIGHT
 
 func _physics_process(delta: float) -> void:
 	super._physics_process(delta * COMBAT_TEMPO)
+
+func scaled_damage(amount: int) -> int:
+	return 0 if amount <= 0 else maxi(1, roundi(amount * DAMAGE_SCALE))
 
 func _ready() -> void:
 	super._ready()
@@ -322,6 +328,10 @@ func _set_placed(to: Vector3) -> void:
 	body.position = to
 
 func take_hit(damage: int, knockback: float, _attacker_facing: int, attacker: Node = null, attack_type: String = "punch") -> bool:
+	# Momentum: a limb arriving fast shoves harder than one that barely
+	# reached (a few tenths either way; frame data is untouched).
+	if pending_contact.has("speed"):
+		knockback *= clampf(0.85 + float(pending_contact.speed) / 40.0, 0.85, 1.2)
 	var guarded_from_front := true
 	if attacker != null:
 		var offset: Vector3 = attacker.body.position - body.position

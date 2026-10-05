@@ -74,6 +74,11 @@ var hitstop_remaining: float = 0.0
 ## buckles the knees. Force runs 0..1 from a light jab to a counter finisher.
 var last_hit_height: String = "high"
 var last_hit_force: float = 0.0
+## Where the last blow really touched (see hit_detection_3d.gd contact()):
+## point, part, height, side, speed, direction. Empty when not measured.
+var last_contact: Dictionary = {}
+## Handed over by the hit detector just before take_hit.
+var pending_contact: Dictionary = {}
 var last_hit_counter: bool = false
 ## Counter hits and the heaviest blows knock the fighter off balance.
 var last_hit_stagger: bool = false
@@ -618,8 +623,11 @@ func _process_hitstun(delta: float) -> void:
 
 ## Returns true only for an unblocked hit; chip and parries cannot grant a cancel.
 func take_hit(damage: int, knockback: float, attacker_facing: int, attacker: Node = null, attack_type: String = "punch") -> bool:
+	var touch := pending_contact
+	pending_contact = {}
 	if state in [State.KO, State.THROWN, State.KNOCKDOWN, State.STRUCK] or not (controls_enabled or dummy):
 		return false
+	last_contact = touch
 	var move: Dictionary = attacker.current_move if attacker != null else {}
 	var grapple: bool = move.get("kind", "") == "grapple"
 	if grapple:
@@ -685,6 +693,9 @@ func take_hit(damage: int, knockback: float, attacker_facing: int, attacker: Nod
 	if not move.is_empty():
 		var height := float(move.get("height", -88.0))
 		last_hit_height = "high" if height <= -80.0 else ("mid" if height < -65.0 else "low")
+	# The part the blow actually touched beats the move's nominal height.
+	if touch.has("height"):
+		last_hit_height = touch.height
 	last_hit_force = force
 	last_hit_counter = counter
 	last_hit_stagger = not blocked and not grapple and (counter or force >= 0.75)
@@ -734,6 +745,7 @@ func take_hit(damage: int, knockback: float, attacker_facing: int, attacker: Nod
 			stun_timer += 6.0 / 60.0
 		if guard_broken:
 			stun_timer = maxf(stun_timer, 0.55)
+	dealt = scaled_damage(dealt)
 	health = maxi(0, health - dealt)
 	_gain_meter(attacker, dealt, blocked)
 	velocity.x = attacker_facing * knockback * (0.3 if blocked else (1.3 if last_hit_stagger else 1.0))
@@ -753,6 +765,10 @@ func take_hit(damage: int, knockback: float, attacker_facing: int, attacker: Nod
 		ko.emit()
 	_update_animation()
 	return not blocked
+
+## Health actually lost to a blow of `amount` (the 3D fight scales it down).
+func scaled_damage(amount: int) -> int:
+	return amount
 
 func has_super() -> bool:
 	return is_action_fight() and SUPERS.has(str(character_profile.id))
@@ -849,12 +865,13 @@ func _super_hit(index: int) -> void:
 	var victim: Node = super_partner
 	var data := SUPERS.get_super(str(character_profile.id))
 	var last: bool = index == data.hits.size() - 1
-	var dealt: int = data.damage[index]
+	var dealt: int = victim.scaled_damage(data.damage[index])
 	victim.health = maxi(0, victim.health - dealt)
 	victim.health_changed.emit(victim.health, victim.max_health)
 	combo_hits = index + 1
 	combo_damage += dealt
 	victim._received_hits = index + 1
+	victim.last_contact = {}
 	victim.last_hit_height = "high" if index % 2 == 1 else "mid"
 	victim.last_hit_force = 1.0 if last else 0.6
 	victim.last_hit_counter = false
@@ -995,7 +1012,7 @@ func _ground_hit() -> void:
 	ground_landed = true
 	var victim: Node = throw_partner
 	var last := ground_hits >= THROW.GROUND_MAX
-	var dealt: int = THROW.GROUND_DAMAGE[clampi(ground_hits - 1, 0, THROW.GROUND_DAMAGE.size() - 1)]
+	var dealt: int = victim.scaled_damage(THROW.GROUND_DAMAGE[clampi(ground_hits - 1, 0, THROW.GROUND_DAMAGE.size() - 1)])
 	victim.health = maxi(0, victim.health - dealt)
 	victim.health_changed.emit(victim.health, victim.max_health)
 	combo_hits += 1
@@ -1019,9 +1036,10 @@ func _ground_hit() -> void:
 func _slam() -> void:
 	throw_slammed = true
 	var victim: Node = throw_partner
-	victim.health = maxi(0, victim.health - throw_damage)
+	var dealt: int = victim.scaled_damage(throw_damage)
+	victim.health = maxi(0, victim.health - dealt)
 	victim.health_changed.emit(victim.health, victim.max_health)
-	combo_damage += throw_damage
+	combo_damage += dealt
 	victim.last_hit_height = "mid"
 	victim.last_hit_force = 1.0
 	victim.last_hit_counter = false

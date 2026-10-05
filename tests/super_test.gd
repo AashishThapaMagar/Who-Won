@@ -79,7 +79,7 @@ func run() -> void:
 				break
 		var total := 0
 		for d in data.damage:
-			total += d
+			total += p2.scaled_damage(d)
 		check(entered and hits == data.hits.size(), "%s: the super plays all %d blows (played %d)" % [who, data.hits.size(), hits])
 		check(health - p2.health == total, "%s: the super deals %d (dealt %d)" % [who, total, health - p2.health])
 		check(p1.super_meter < 10.0, "%s: the super spends the meter" % who)

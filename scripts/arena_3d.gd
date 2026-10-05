@@ -353,6 +353,10 @@ func _impact_3d(fighter: Node, blocked: bool, heavy: bool) -> void:
 			shake_3d = 0.045 if heavy else 0.022
 		return
 	var point: Vector3 = fighter.body.position + fighter.forward * 0.25 + Vector3.UP * (1.03 if heavy else 1.37)
+	# The spark sits where the limb really touched the body.
+	var touch = fighter.get("last_contact")
+	if touch is Dictionary and touch.has("point"):
+		point = world.to_local(touch.point) if world != null else touch.point
 	# A throw's slam lands on the floor, not where a punch would.
 	var partner = fighter.get("throw_partner")
 	var slammed: bool = fighter.state == fighter.State.KNOCKDOWN or fighter.thrown_down or (fighter.state == fighter.State.THROWN and partner != null and partner.throw_slammed)
