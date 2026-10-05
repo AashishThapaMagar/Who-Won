@@ -3,7 +3,7 @@ extends Node3D
 ## weathered materials, atmospheric skies and animated practical details.
 ## Procedural construction helpers remain below for future scenery edits.
 const ROUNDS := [
-	{"name": "HERITAGE SQUARE", "night": false, "detail": "DAY / Carved windows and a three-tier pagoda under a clear sky"},
+	{"name": "HERITAGE SQUARE", "night": true, "detail": "NIGHT / Lamplit carvings and a three-tier pagoda under the moon"},
 	{"name": "LANTERN SQUARE", "night": false, "detail": "MORNING / Paper lanterns strung across the old square"},
 	{"name": "TERRACE OVERLOOK", "night": false, "detail": "AFTERNOON / Terraced hills and the Himalaya in full sun"},
 	{"name": "MOONLIT STUPA", "night": false, "detail": "DAY / Prayer flags stream from a white stupa"},
@@ -597,7 +597,7 @@ func _fight_lighting() -> void:
 	fill.position = Vector3(0, 4, 3)
 	fill.omni_range = 13
 	fill.light_color = Color("b8d9ff") if night else Color("fff0d6")
-	fill.light_energy = 0.7 if night else 0.35
+	fill.light_energy = 0.5 if night else 0.35
 	content.add_child(fill)
 	var rim := OmniLight3D.new()
 	rim.name = "FighterRim"
@@ -631,7 +631,7 @@ func _fight_lighting() -> void:
 			wash.position = Vector3(side * 7.5, 3.5, -17)
 			wash.omni_range = 15
 			wash.light_color = Color("ffaf68") if current_round in [0, 1] else Color("adc7ff")
-			wash.light_energy = 1.25
+			wash.light_energy = 0.95
 			content.add_child(wash)
 
 ## Merges every static scenery mesh that shares a material (and vertex
@@ -902,6 +902,8 @@ func _dress_heritage(folder: String) -> void:
 			var scale := width / 1.28
 			at.y -= 1.15 * scale * 0.5
 			_place_prop(folder + "window.glb", at, run[0][2] * PI / 2.0, scale, CARVED_WOOD)
+			if night:
+				_window_glow(at, run[0][2], width, 1.15 * scale)
 
 ## Dark carved wood: lifted and warmed so the blue sky light doesn't read it
 ## as grey stone.
@@ -916,8 +918,9 @@ var _tinted: Dictionary = {}
 func _heritage_night(floor_y: float) -> void:
 	var lights := [
 		# [position, colour, energy, range]
-		[Vector3(0, floor_y + 0.6, -18.2), Color("ffb25c"), 2.6, 9.0],   # pagoda steps, up the facade
-		[Vector3(0, floor_y + 7.5, -18.5), Color("ffc27a"), 1.4, 7.0],   # upper tiers
+		[Vector3(0, floor_y + 0.6, -20.6), Color("ffb25c"), 2.6, 9.0],   # pagoda steps, up the facade
+		[Vector3(0, floor_y + 4.2, -21.4), Color("ffc27a"), 1.6, 7.5],   # lower tiers
+		[Vector3(0, floor_y + 7.8, -22.4), Color("ffc27a"), 1.2, 6.5],   # upper tiers
 	]
 	for side in [-1.0, 1.0]:
 		lights.append([Vector3(side * 6.9, floor_y + 0.6, -17.6), Color("ffb868"), 1.6, 6.5])  # tower base
@@ -933,11 +936,65 @@ func _heritage_night(floor_y: float) -> void:
 		lamp.set_meta("base", spec[2])
 		content.add_child(lamp)
 		lamp_lights.append(lamp)
-	# A glowing lantern flame in each lamp post head.
+	# A glowing lantern flame in each lamp post head, and the cone of its
+	# light falling through the night mist to the flagstones.
 	var flame := _flat("post_flame", Color("ffc46a"), 5.0)
 	for side in [-1.0, 1.0]:
 		for z in [-15.0, -8.0]:
 			_ball(0.07, Vector3(side * 6.9, floor_y + 3.05, z), flame, 1.0).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			_light_cone(Vector3(side * 6.9, floor_y + 2.98, z), 2.9, 1.15, Color(1.0, 0.7, 0.38, 0.16))
+	# Butter lamps glowing on the stands at both ends of the fighting floor.
+	for side in [-1.0, 1.0]:
+		var diyo := OmniLight3D.new()
+		diyo.position = Vector3(side * 5.5, 0.9, -1.35)
+		diyo.light_color = Color("ffb35c")
+		diyo.omni_range = 3.2
+		diyo.omni_attenuation = 1.6
+		diyo.set_meta("base", 1.0)
+		content.add_child(diyo)
+		lamp_lights.append(diyo)
+	# Paper lanterns strung high across the back of the square.
+	_lantern_strings([[-9.0, 4.6], [-14.0, 4.9]], false)
+
+## Lamplight behind a carved window: a warm pane just inside the lattice, so
+## the carving reads dark against it and the glow blooms into the night.
+func _window_glow(at: Vector3, facing: float, width: float, height: float) -> void:
+	var pane := QuadMesh.new()
+	pane.size = Vector2(width * 0.62, height * 0.62)
+	var glow := _piece(pane, at + Vector3(facing * 0.012, height * 0.5, 0.0), _flat("window_glow", Color("ffae55"), 2.4))
+	glow.rotation.y = facing * PI / 2.0
+	glow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+## A soft cone of light hanging under a lamp: brightest at the flame,
+## fading to nothing at the ground and at its edges.
+const LIGHT_CONE := """
+shader_type spatial;
+render_mode unshaded, blend_add, cull_disabled, depth_draw_never, shadows_disabled;
+uniform vec4 tint : source_color = vec4(1.0, 0.7, 0.4, 0.15);
+void fragment() {
+	float edge = pow(abs(dot(normalize(NORMAL), normalize(VIEW))), 2.0);
+	float fall = pow(1.0 - clamp(UV.y, 0.0, 1.0), 1.6);
+	ALBEDO = tint.rgb;
+	ALPHA = tint.a * edge * fall;
+}
+"""
+func _light_cone(top: Vector3, length: float, radius: float, tint: Color) -> void:
+	if not materials.has("light_cone"):
+		var shader := Shader.new()
+		shader.code = LIGHT_CONE
+		var material := ShaderMaterial.new()
+		material.shader = shader
+		material.set_shader_parameter("tint", tint)
+		materials["light_cone"] = material
+	var cone := CylinderMesh.new()
+	cone.top_radius = 0.06
+	cone.bottom_radius = radius
+	cone.height = length
+	cone.radial_segments = 20
+	cone.cap_top = false
+	cone.cap_bottom = false
+	var beam := _piece(cone, top - Vector3(0, length * 0.5, 0), materials["light_cone"])
+	beam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 func _place_prop(path: String, at: Vector3, turn: float, scale := 1.0, tint := Color.WHITE) -> void:
 	# The windows and doorways (dozens of copies of fine carving) have a
@@ -1001,11 +1058,11 @@ static func _lite_mesh(mesh: ArrayMesh) -> ArrayMesh:
 	return out
 
 func _mood() -> Array:
-	return NIGHT_MOOD if force_night else MOODS[current_round]
+	return NIGHT_MOOD if night else MOODS[current_round]
 
 func _lighting() -> void:
 	var mood: Array = _mood()
-	var look: Array = NIGHT_GRADE if force_night else GRADES[current_round]
+	var look: Array = NIGHT_GRADE if night else GRADES[current_round]
 	sky_material.set_shader_parameter("top_color", mood[0])
 	sky_material.set_shader_parameter("horizon_color", mood[1])
 	sky_material.set_shader_parameter("sun_color", mood[2])
@@ -1028,7 +1085,8 @@ func _lighting() -> void:
 	env.fog_light_color = mood[1]
 	env.fog_light_energy = 0.65
 	# Thin mountain air: only the far ridges soften, into blue.
-	env.fog_density = 0.0025 if night else 0.0016
+	# At night the far range sinks into the dark haze, moonlit but dim.
+	env.fog_density = 0.0055 if night else 0.0016
 	env.fog_sky_affect = 0.12
 	# Sunlight scattered into the haze, so fog glows toward the sun.
 	env.fog_sun_scatter = 0.0 if night else 0.2
@@ -1410,7 +1468,7 @@ func _flag_line(a: Vector3, b: Vector3, sag: float, count: int) -> void:
 		flags.append(hanger)
 
 ## Strings of paper lanterns cross the square for the night round.
-func _lantern_strings() -> void:
+func _lantern_strings(lines: Array = [[-4.2, 3.9], [-9.0, 4.6], [-14.0, 4.9]], lit := true) -> void:
 	var paper := [_flat("lantern_red", Color("e0452f"), 2.2), _flat("lantern_gold", Color("f2a33a"), 2.2)]
 	var rope := CylinderMesh.new()
 	rope.top_radius = 0.01
@@ -1421,7 +1479,7 @@ func _lantern_strings() -> void:
 	body.bottom_radius = 0.13
 	body.height = 0.3
 	body.radial_segments = 12
-	for line in [[-4.2, 3.9], [-9.0, 4.6], [-14.0, 4.9]]:
+	for line in lines:
 		var z: float = line[0]
 		var height: float = line[1]
 		var a := Vector3(-8.2, height, z)
@@ -1443,7 +1501,7 @@ func _lantern_strings() -> void:
 				lamp.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 				_piece(body, Vector3(0, -0.06, 0), _flat("lantern_cap", Color("241a14")), hanger).scale = Vector3(0.8, 0.12, 0.8)
 				lanterns.append(hanger)
-	for x in [-4.5, 0.0, 4.5]:
+	for x in ([-4.5, 0.0, 4.5] if lit else []):
 		var glow := OmniLight3D.new()
 		glow.position = Vector3(x, 3.0, -3.0)
 		glow.light_color = Color("ffb66a")
@@ -1501,6 +1559,8 @@ static func soft_dot() -> Texture2D:
 ## petals and, for the finale, sky lanterns rising behind the stupa.
 func _ambience() -> void:
 	var spec: Array = AMBIENCE[current_round]
+	if spec[0] == "none" and night and current_round == 0:
+		spec = ["embers", Color(1.0, 0.7, 0.36, 0.85), 34]
 	if spec[0] == "none":
 		return
 	var particles := CPUParticles3D.new()
