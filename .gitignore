@@ -45,3 +45,9 @@ assets/arenas/props/stupa/stupa.fbx
 assets/arenas/props/stupa/stupa.fbx.import
 assets/arenas/props/stupa/stupa_2.png*
 assets/arenas/props/stupa/stupa_3.png*
+# Monastery building sources (Meshy, millions of triangles): the game uses
+# the baked monastery_hall.res / monk_quarters.res and their textures.
+assets/arenas/props/stupa/monastery_hall_src.glb
+assets/arenas/props/stupa/monastery_hall_src.glb.import
+assets/arenas/props/stupa/monk_quarters_src.glb
+assets/arenas/props/stupa/monk_quarters_src.glb.import

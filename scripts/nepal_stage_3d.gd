@@ -1069,48 +1069,88 @@ func _light_cone(top: Vector3, length: float, radius: float, tint: Color) -> voi
 	beam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 ## Boudha: the arena model's simple white stupa (with its flag lines and
-## lamp row) is cut out and the sculpted Boudhanath stupa stands in its
-## place, with prayer wheels, a butter lamp altar and a sang incense burner
-## around its foot (Meshy props in props/stupa/).
-const STUPA_AT := Vector3(0.0, -0.12, -25.0)
-const STUPA_SIZE := 12.5
+## lamp row) and its houses are cut out; the sculpted Boudhanath stupa
+## stands in an open stone courtyard, ringed by a monastery hall, monk
+## quarters, prayer wheels, a butter lamp altar and a sang incense burner
+## (Meshy props in props/stupa/).
+##
+## BOUDHA_LAYOUT is the whole arrangement, one row per piece, so it is easy
+## to adjust: [file, position (metres; x across the screen, z negative is
+## away from the camera, the fight is at the origin), turn (degrees, about
+## the vertical), size]. Size is the piece's footprint width in metres for
+## the baked .res buildings, a plain scale for the .glb props (1 = as
+## modelled at real-world size). Positions sit on the courtyard floor.
+const BOUDHA_LAYOUT := [
+	# The great stupa far down the courtyard, so the fight has depth: a
+	# long stone approach, lamps and wheels near, the dome far off.
+	["stupa_game.res", Vector3(0.0, 0.0, -50.0), 0.0, 18.0],
+	# The gompa well behind it, its gold roof over the dome.
+	["monastery_hall.res", Vector3(0.0, 0.0, -88.0), 0.0, 24.0],
+	# Monk quarters lining both sides of the approach, facing in.
+	["monk_quarters.res", Vector3(-15.5, 0.0, -10.0), 90.0, 15.0],
+	["monk_quarters.res", Vector3(15.5, 0.0, -10.0), -90.0, 15.0],
+	["monk_quarters.res", Vector3(-15.5, 0.0, -25.0), 90.0, 15.0],
+	["monk_quarters.res", Vector3(15.5, 0.0, -25.0), -90.0, 15.0],
+	["monk_quarters.res", Vector3(-15.5, 0.0, -40.0), 90.0, 15.0],
+	["monk_quarters.res", Vector3(15.5, 0.0, -40.0), -90.0, 15.0],
+	# Prayer wheels close behind the fight; the incense burner part way
+	# down; the butter lamps burn at the foot of the stupa's steps.
+	["prayer_wheels.glb", Vector3(-6.0, 0.0, -12.0), 0.0, 1.0],
+	["prayer_wheels.glb", Vector3(6.0, 0.0, -12.0), 0.0, 1.0],
+	["incense_burner.glb", Vector3(-8.0, 0.0, -26.0), 0.0, 1.0],
+	["butter_lamps.glb", Vector3(0.0, 0.0, -38.0), 0.0, 1.4],
+]
+## Height of the stupa's spire tip over its footprint width (where the
+## prayer-flag lines start).
+const STUPA_PEAK := 0.97
 const STUPA_CLEAR := AABB(Vector3(-7.6, 0.05, -33.0), Vector3(15.2, 40.0, 15.5))
 func _dress_stupa(folder: String) -> void:
 	var model := content.get_node_or_null("ArenaModel") as Node3D
+	var floor_y := -0.12
 	if model != null:
 		_clear_region(model, STUPA_CLEAR)
-		# No houses: the stupa stands in an open courtyard, the range all
-		# around it.
 		for side in [-1.0, 1.0]:
 			# Houses, their carved fronts and the eaves over the courtyard.
 			_clear_region(model, AABB(Vector3(6.4 if side > 0.0 else -160.0, 0.05, -160.0), Vector3(153.6, 60.0, 260.0)))
-		_open_ground(model)
-	var stupa := MeshInstance3D.new()
-	stupa.name = "Boudhanath"
-	stupa.mesh = load(folder + "stupa_game.res")
-	stupa.position = STUPA_AT
-	stupa.scale = Vector3.ONE * STUPA_SIZE
-	stupa.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	stupa.set_meta("unbatched", true)
-	content.add_child(stupa)
-	# Prayer wheels flank the approach; the butter lamps burn before the
-	# steps; the sang burner smokes off to one side.
-	for side in [-1.0, 1.0]:
-		_place_prop(folder + "prayer_wheels.glb", Vector3(side * 5.6, STUPA_AT.y, -16.8), 0.0)
-	_place_prop(folder + "butter_lamps.glb", Vector3(0.0, STUPA_AT.y, -17.6), 0.0)
-	_place_prop(folder + "incense_burner.glb", Vector3(-7.4, STUPA_AT.y, -20.5), 0.0)
+		floor_y = _open_ground(model)
+	for row: Array in BOUDHA_LAYOUT:
+		var at: Vector3 = row[1] + Vector3(0.0, floor_y, 0.0)
+		var path: String = folder + row[0]
+		if path.ends_with(".res"):
+			_place_baked(path, at, deg_to_rad(row[2]), row[3])
+		else:
+			_place_prop(path, at, deg_to_rad(row[2]), row[3])
 	# Prayer-flag lines from the spire down to the terrace edge, as at
 	# Boudha; hung still, so they merge with the static scenery.
-	var peak := STUPA_AT + Vector3(0, STUPA_SIZE * 0.97, 0)
+	var stupa: Array = BOUDHA_LAYOUT[0]
+	var base: Vector3 = stupa[1] + Vector3(0.0, floor_y, 0.0)
+	var peak := base + Vector3(0, stupa[3] * STUPA_PEAK, 0)
 	for i in 6:
 		var angle := -1.2 + i * 0.48
-		_flag_line(peak, STUPA_AT + Vector3(sin(angle) * 7.4, 0.5, cos(angle) * 7.4), 0.8, 18, false)
+		var reach: float = stupa[3] * 0.59
+		_flag_line(peak, base + Vector3(sin(angle) * reach, 0.5, cos(angle) * reach), 1.0, 22, false)
+
+## A Meshy model baked to a game mesh (unit footprint, standing on y = 0),
+## placed `width` metres across. Kept out of the static merge so its LODs
+## and culling apply; background pieces cast no shadow.
+func _place_baked(path: String, at: Vector3, turn: float, width: float) -> void:
+	if not ResourceLoader.exists(path):
+		return
+	var piece := MeshInstance3D.new()
+	piece.name = path.get_file().get_basename()
+	piece.mesh = load(path)
+	piece.position = at
+	piece.rotation.y = turn
+	piece.scale = Vector3.ONE * width
+	piece.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	piece.set_meta("unbatched", true)
+	content.add_child(piece)
 
 ## The open monastery ground: worn stone blocks across the courtyard and
 ## meadow beyond it out to the foothills, in place of the brick plaza. One
 ## world-projected texture layer each (the photo materials' full stack is
 ## the HIGH preset's expensive part).
-func _open_ground(model: Node3D) -> void:
+func _open_ground(model: Node3D) -> float:
 	var ground_y := -0.12
 	for node: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
 		if node.mesh == null:
@@ -1124,8 +1164,9 @@ func _open_ground(model: Node3D) -> void:
 	grass.size = Vector2(320, 320)
 	_piece(grass, Vector3(0, ground_y - 0.02, -40), meadow).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var court := PlaneMesh.new()
-	court.size = Vector2(26, 46)
-	_piece(court, Vector3(0, ground_y, -16), _ground_material("medieval_blocks_03", 2.4, Color(0.96, 0.9, 0.82))).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	court.size = Vector2(26, 84)
+	_piece(court, Vector3(0, ground_y, -34), _ground_material("medieval_blocks_03", 2.4, Color(0.96, 0.9, 0.82))).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return ground_y
 
 func _ground_material(folder: String, world_size: float, tint: Color) -> StandardMaterial3D:
 	var key := "ground_" + folder
