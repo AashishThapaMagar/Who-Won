@@ -738,7 +738,7 @@ func _batch_static() -> void:
 func _moves_or_shared(node: Node, moving: Dictionary) -> bool:
 	var parent := node.get_parent()
 	while parent != null and parent != content:
-		if moving.has(parent) or parent.name == "HimalayaBackdrop":
+		if moving.has(parent) or parent.name == "HimalayaBackdrop" or parent.has_meta("unbatched"):
 			return true
 		parent = parent.get_parent()
 	return false
@@ -928,9 +928,10 @@ func _dress_heritage(folder: String) -> void:
 	if night:
 		_heritage_night(floor_y)
 	for side in [-1.0, 1.0]:
-		# The towers are 4 m across: centred 5.8 m out they stand clear in
-		# front of the house rows (whose fronts are at 7.9 m), not inside them.
-		_place_prop(folder + "shikhara.glb", Vector3(side * SHIKHARA_X, floor_y, -19.5), 0.0)
+		# The towers (4 m across) stand at the back corners of the square,
+		# beside the pagoda and behind the ends of the house rows (which stop
+		# at about z -23), so they frame the temple without hiding the houses.
+		_place_prop(folder + "shikhara.glb", Vector3(side * SHIKHARA_X, floor_y, SHIKHARA_Z), 0.0)
 		_place_prop(folder + "lion.glb", Vector3(side * 3.0, floor_y, -19.0), 0.0)
 		_place_prop(folder + "diyo_stand.glb", Vector3(side * 5.5, 0.0, -1.55), 0.0)
 		for z in [-15.0, -8.0]:
@@ -972,7 +973,8 @@ var _tinted: Dictionary = {}
 
 ## Facade pieces (tinted) sit flat on walls: their shadows would only fall
 ## on the wall behind, so they skip the shadow pass.
-const SHIKHARA_X := 5.8
+const SHIKHARA_X := 7.5
+const SHIKHARA_Z := -26.0
 ## The lantern on lamp_post.glb, out along its arm (model space, metres).
 const LAMP_LANTERN := Vector3(0.17, 2.75, 0.0)
 
@@ -986,7 +988,7 @@ func _heritage_night(floor_y: float) -> void:
 		[Vector3(0, floor_y + 7.8, -22.4), Color("ffc27a"), 1.2, 6.5],   # upper tiers
 	]
 	for side in [-1.0, 1.0]:
-		lights.append([Vector3(side * SHIKHARA_X, floor_y + 0.6, -16.9), Color("ffb868"), 1.6, 6.5])  # tower base
+		lights.append([Vector3(side * SHIKHARA_X, floor_y + 0.6, SHIKHARA_Z + 2.6), Color("ffb868"), 1.6, 6.5])  # tower base
 		for z in [-15.0, -8.0]:
 			lights.append([Vector3(side * 6.7, floor_y + 3.0, z), Color("ffb45a"), 1.8, 6.0])  # lamp posts
 	for spec in lights:
@@ -1016,7 +1018,7 @@ func _heritage_night(floor_y: float) -> void:
 		content.add_child(diyo)
 		lamp_lights.append(diyo)
 	# Paper lanterns strung high across the back of the square.
-	_lantern_strings([[-9.0, 4.6], [-14.0, 4.9]], false)
+	_lantern_strings([[-9.0, 4.6], [-14.0, 4.9]], false, false)
 
 ## Lamplight behind a carved window: a warm pane just inside the lattice, so
 ## the carving reads dark against it and the glow blooms into the night.
@@ -1058,6 +1060,8 @@ func _light_cone(top: Vector3, length: float, radius: float, tint: Color) -> voi
 	var beam := _piece(cone, top - Vector3(0, length * 0.5, 0), materials["light_cone"])
 	beam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
+const BACKGROUND_Z := -12.0
+const UNBATCHED_PROPS := ["pagoda", "shikhara", "lion"]
 func _place_prop(path: String, at: Vector3, turn: float, scale := 1.0, tint := Color.WHITE) -> void:
 	# The windows and doorways (dozens of copies of fine carving) have a
 	# hand-reduced *_lite.glb the LOW preset uses instead.
@@ -1077,6 +1081,16 @@ func _place_prop(path: String, at: Vector3, turn: float, scale := 1.0, tint := C
 		for mesh: MeshInstance3D in prop.find_children("*", "MeshInstance3D", true, false):
 			if mesh.mesh is ArrayMesh:
 				mesh.mesh = _lite_mesh(mesh.mesh)
+	# Props well behind the fight (the pagoda, towers and lions) would only
+	# cast moon shadows onto empty plaza: skip the second, shadow-map pass.
+	if at.z < BACKGROUND_Z:
+		for mesh: MeshInstance3D in prop.find_children("*", "MeshInstance3D", true, false):
+			mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	# The big single props stay separate meshes, so the engine can draw them
+	# at the lower detail levels generated on import as they recede, and
+	# skip them when off screen (merging would fix them at full detail).
+	if path.get_file().get_basename() in UNBATCHED_PROPS:
+		prop.set_meta("unbatched", true)
 	if tint != Color.WHITE:
 		for mesh: MeshInstance3D in prop.find_children("*", "MeshInstance3D", true, false):
 			mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -1533,7 +1547,9 @@ func _flag_line(a: Vector3, b: Vector3, sag: float, count: int) -> void:
 		flags.append(hanger)
 
 ## Strings of paper lanterns cross the square for the night round.
-func _lantern_strings(lines: Array = [[-4.2, 3.9], [-9.0, 4.6], [-14.0, 4.9]], lit := true) -> void:
+## `sway` false hangs them still, so they merge into the static scenery
+## (each swaying lantern is two more draws every frame).
+func _lantern_strings(lines: Array = [[-4.2, 3.9], [-9.0, 4.6], [-14.0, 4.9]], lit := true, sway := true) -> void:
 	var paper := [_flat("lantern_red", Color("e0452f"), 2.2), _flat("lantern_gold", Color("f2a33a"), 2.2)]
 	var rope := CylinderMesh.new()
 	rope.top_radius = 0.01
@@ -1565,7 +1581,8 @@ func _lantern_strings(lines: Array = [[-4.2, 3.9], [-9.0, 4.6], [-14.0, 4.9]], l
 				var lamp := _piece(body, Vector3(0, -0.22, 0), paper[(i / 2) % 2], hanger)
 				lamp.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 				_piece(body, Vector3(0, -0.06, 0), _flat("lantern_cap", Color("241a14")), hanger).scale = Vector3(0.8, 0.12, 0.8)
-				lanterns.append(hanger)
+				if sway:
+					lanterns.append(hanger)
 	for x in ([-4.5, 0.0, 4.5] if lit else []):
 		var glow := OmniLight3D.new()
 		glow.position = Vector3(x, 3.0, -3.0)
