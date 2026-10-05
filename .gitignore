@@ -38,3 +38,10 @@ assets/fighters/*/fight/
 
 # Rendered films (scenes/FightFilm.tscn)
 renders/
+
+# Boudhanath stupa source (Meshy, 763k triangles): the game uses the baked
+# stupa_game.res and its two textures; keep the source local.
+assets/arenas/props/stupa/stupa.fbx
+assets/arenas/props/stupa/stupa.fbx.import
+assets/arenas/props/stupa/stupa_2.png*
+assets/arenas/props/stupa/stupa_3.png*

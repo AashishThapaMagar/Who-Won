@@ -6,7 +6,7 @@ const ROUNDS := [
 	{"name": "HERITAGE SQUARE", "night": true, "detail": "NIGHT / Lamplit carvings and a three-tier pagoda under the moon"},
 	{"name": "LANTERN SQUARE", "night": false, "detail": "MORNING / Paper lanterns strung across the old square"},
 	{"name": "TERRACE OVERLOOK", "night": false, "detail": "AFTERNOON / Terraced hills and the Himalaya in full sun"},
-	{"name": "MOONLIT STUPA", "night": false, "detail": "DAY / Prayer flags stream from a white stupa"},
+	{"name": "BOUDHA STUPA", "night": false, "detail": "SUNSET / Prayer flags glow over the great stupa at dusk"},
 ]
 const ARENA_MODELS := [
 	"res://assets/arenas/models/heritage-square.glb",
@@ -24,6 +24,7 @@ const HIMALAYA := preload("res://scripts/himalaya_backdrop.gd")
 ## original pieces.
 const PROPS := {
 	0: "res://assets/arenas/props/heritage/",
+	3: "res://assets/arenas/props/stupa/",
 }
 ## Photo-scanned surfaces from Poly Haven (CC0), in assets/arenas/textures/:
 ## kind -> [texture folder, metres per repeat, tint, normal strength, saturation].
@@ -57,7 +58,10 @@ const MOODS := [
 	[Color("2f6fd6"), Color("bcd8f2"), Color("fff6ea"), 0.9, Color("b4c8e4"), 0.34, -40.0, -35.0, Color(1, 1, 1)],
 	[Color("3a7ad8"), Color("c4dcf2"), Color("fff7ec"), 0.9, Color("b8cbe4"), 0.34, -38.0, 30.0, Color(1, 1, 1)],
 	[Color("2c6cd4"), Color("b8d6f2"), Color("fff4e4"), 0.92, Color("b2c6e2"), 0.33, -42.0, 28.0, Color(1, 1, 1)],
-	[Color("2a68d0"), Color("bad6f2"), Color("fffaf2"), 0.9, Color("b6c9e6"), 0.34, -40.0, -25.0, Color(1, 1, 1)],
+	# Boudha at sunset: a violet-blue sky warming to peach at the horizon,
+	# a low golden sun from the side that rakes across the fighters and
+	# throws long shadows, and a cool dusk fill in the shadows.
+	[Color("3a4688"), Color("e8ae88"), Color("ffbb7a"), 1.2, Color("8e88a8"), 0.36, -12.0, -65.0, Color(1.0, 0.9, 0.82)],
 ]
 ## Finishing grade per round (arena_grade.gdshader): [shadow tint,
 ## highlight tint, saturation, contrast, vignette, exposure, glow intensity,
@@ -70,7 +74,7 @@ const GRADES := [
 	[Color(0.96, 0.99, 1.04), Color(1.01, 1.0, 0.98), 1.2, 1.07, 0.2, 1.04, 0.6, 0.95],
 	[Color(0.96, 0.99, 1.04), Color(1.01, 1.0, 0.98), 1.2, 1.07, 0.2, 1.04, 0.6, 0.95],
 	[Color(0.96, 0.99, 1.04), Color(1.01, 1.0, 0.98), 1.22, 1.07, 0.18, 1.05, 0.6, 0.95],
-	[Color(0.95, 0.99, 1.05), Color(1.0, 1.0, 0.99), 1.18, 1.08, 0.2, 1.04, 0.6, 0.95],
+	[Color(0.93, 0.96, 1.06), Color(1.07, 1.0, 0.9), 1.16, 1.1, 0.26, 1.03, 0.75, 0.9],
 ]
 ## Night version of any arena (cinematics set force_night): the starlit sky,
 ## lamp glow and teal-and-amber grade Heritage Square used to have.
@@ -378,7 +382,9 @@ func show_round(index: int) -> void:
 	_import_arena(index)
 	if PROPS.has(index) and ResourceLoader.exists(PROPS[index] + "pagoda.glb"):
 		_dress_heritage(PROPS[index])
-	content.add_child(HIMALAYA.build(_mood()[1], night, index == 2))
+	elif PROPS.has(index) and ResourceLoader.exists(PROPS[index] + "stupa_game.res"):
+		_dress_stupa(PROPS[index])
+	content.add_child(HIMALAYA.build(_mood()[1], night, index in [2, 3], index == 3))
 	_fight_lighting()
 	_arena_inlay()
 	if RAILINGS:
@@ -1062,6 +1068,122 @@ func _light_cone(top: Vector3, length: float, radius: float, tint: Color) -> voi
 	var beam := _piece(cone, top - Vector3(0, length * 0.5, 0), materials["light_cone"])
 	beam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
+## Boudha: the arena model's simple white stupa (with its flag lines and
+## lamp row) is cut out and the sculpted Boudhanath stupa stands in its
+## place, with prayer wheels, a butter lamp altar and a sang incense burner
+## around its foot (Meshy props in props/stupa/).
+const STUPA_AT := Vector3(0.0, -0.12, -25.0)
+const STUPA_SIZE := 12.5
+const STUPA_CLEAR := AABB(Vector3(-7.6, 0.05, -33.0), Vector3(15.2, 40.0, 15.5))
+func _dress_stupa(folder: String) -> void:
+	var model := content.get_node_or_null("ArenaModel") as Node3D
+	if model != null:
+		_clear_region(model, STUPA_CLEAR)
+		# No houses: the stupa stands in an open courtyard, the range all
+		# around it.
+		for side in [-1.0, 1.0]:
+			# Houses, their carved fronts and the eaves over the courtyard.
+			_clear_region(model, AABB(Vector3(6.4 if side > 0.0 else -160.0, 0.05, -160.0), Vector3(153.6, 60.0, 260.0)))
+		_open_ground(model)
+	var stupa := MeshInstance3D.new()
+	stupa.name = "Boudhanath"
+	stupa.mesh = load(folder + "stupa_game.res")
+	stupa.position = STUPA_AT
+	stupa.scale = Vector3.ONE * STUPA_SIZE
+	stupa.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	stupa.set_meta("unbatched", true)
+	content.add_child(stupa)
+	# Prayer wheels flank the approach; the butter lamps burn before the
+	# steps; the sang burner smokes off to one side.
+	for side in [-1.0, 1.0]:
+		_place_prop(folder + "prayer_wheels.glb", Vector3(side * 5.6, STUPA_AT.y, -16.8), 0.0)
+	_place_prop(folder + "butter_lamps.glb", Vector3(0.0, STUPA_AT.y, -17.6), 0.0)
+	_place_prop(folder + "incense_burner.glb", Vector3(-7.4, STUPA_AT.y, -20.5), 0.0)
+	# Prayer-flag lines from the spire down to the terrace edge, as at
+	# Boudha; hung still, so they merge with the static scenery.
+	var peak := STUPA_AT + Vector3(0, STUPA_SIZE * 0.97, 0)
+	for i in 6:
+		var angle := -1.2 + i * 0.48
+		_flag_line(peak, STUPA_AT + Vector3(sin(angle) * 7.4, 0.5, cos(angle) * 7.4), 0.8, 18, false)
+
+## The open monastery ground: worn stone blocks across the courtyard and
+## meadow beyond it out to the foothills, in place of the brick plaza. One
+## world-projected texture layer each (the photo materials' full stack is
+## the HIGH preset's expensive part).
+func _open_ground(model: Node3D) -> void:
+	var ground_y := -0.12
+	for node: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+		if node.mesh == null:
+			continue
+		var box: AABB = node.global_transform * node.get_aabb()
+		if box.size.x > 80.0 and box.size.y < 0.5:
+			ground_y = box.end.y
+			node.visible = false
+	var meadow := _ground_material("aerial_grass_rock", 9.0, Color(0.62, 0.7, 0.5))
+	var grass := PlaneMesh.new()
+	grass.size = Vector2(320, 320)
+	_piece(grass, Vector3(0, ground_y - 0.02, -40), meadow).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var court := PlaneMesh.new()
+	court.size = Vector2(26, 46)
+	_piece(court, Vector3(0, ground_y, -16), _ground_material("medieval_blocks_03", 2.4, Color(0.96, 0.9, 0.82))).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+func _ground_material(folder: String, world_size: float, tint: Color) -> StandardMaterial3D:
+	var key := "ground_" + folder
+	if materials.has(key):
+		return materials[key]
+	var path := "res://assets/arenas/textures/%s/%s_" % [folder, folder]
+	var material := StandardMaterial3D.new()
+	material.albedo_texture = load(path + "diff_1k.jpg")
+	material.albedo_color = tint
+	if ResourceLoader.exists(path + "nor_gl_1k.jpg"):
+		material.normal_enabled = true
+		material.normal_texture = load(path + "nor_gl_1k.jpg")
+		material.normal_scale = 0.8
+	material.roughness = 0.92
+	material.uv1_triplanar = true
+	material.uv1_world_triplanar = true
+	material.uv1_scale = Vector3.ONE / world_size
+	material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	materials[key] = material
+	return material
+
+## Removes every triangle of `model` whose centre lies in `region` (content
+## space), keeping each surface (an emptied one keeps one degenerate
+## triangle so surface material overrides stay in step).
+func _clear_region(model: Node3D, region: AABB) -> void:
+	var to_content := content.global_transform.affine_inverse()
+	for node: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+		var mesh := node.mesh as ArrayMesh
+		if mesh == null:
+			continue
+		var place: Transform3D = to_content * node.global_transform
+		if not (place * mesh.get_aabb()).intersects(region):
+			continue
+		var out := ArrayMesh.new()
+		var changed := false
+		for surface in mesh.get_surface_count():
+			var arrays := mesh.surface_get_arrays(surface)
+			var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			var index = arrays[Mesh.ARRAY_INDEX]
+			if index == null or (index as PackedInt32Array).is_empty():
+				index = PackedInt32Array(range(verts.size()))
+			var keep := PackedInt32Array()
+			for t in range(0, index.size(), 3):
+				var centre: Vector3 = place * ((verts[index[t]] + verts[index[t + 1]] + verts[index[t + 2]]) / 3.0)
+				if region.has_point(centre):
+					changed = true
+					continue
+				keep.append(index[t])
+				keep.append(index[t + 1])
+				keep.append(index[t + 2])
+			if keep.is_empty():
+				keep = PackedInt32Array([0, 0, 0])
+			arrays[Mesh.ARRAY_INDEX] = keep
+			out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+			out.surface_set_material(surface, mesh.surface_get_material(surface))
+		if changed:
+			node.mesh = out
+
 const BACKGROUND_Z := -12.0
 const UNBATCHED_PROPS := ["pagoda", "shikhara", "lion"]
 func _place_prop(path: String, at: Vector3, turn: float, scale := 1.0, tint := Color.WHITE) -> void:
@@ -1164,6 +1286,10 @@ func _lighting() -> void:
 	# naturally into the sky. Supported by the Compatibility renderer.
 	env.fog_enabled = true
 	env.fog_light_color = mood[1]
+	if current_round == 3 and not night:
+		# Dusk air is cool violet in the distance; a warm haze would turn
+		# the snow catching the last light into sand.
+		env.fog_light_color = mood[1].lerp(Color("6f78a8"), 0.6)
 	env.fog_light_energy = 0.65
 	# Thin mountain air: only the far ridges soften, into blue.
 	# At night the far range sinks into the dark haze, moonlit but dim.
@@ -1195,7 +1321,7 @@ func _lighting() -> void:
 	grade.set_shader_parameter("vignette", look[4])
 	grade.set_shader_parameter("sharpen", 0.35)
 	grade.set_shader_parameter("grain", 0.012)
-	grade.set_shader_parameter("punch_color", Color("ffd9a0") if current_round != 3 else Color("cfe4ff"))
+	grade.set_shader_parameter("punch_color", Color("ffd9a0"))
 	_sync_grade()
 
 ## 0 on the LOW preset (or custom settings with everything off), 1 otherwise:
@@ -1573,7 +1699,9 @@ func _flag_poles(span: float, height: float, depth: float) -> void:
 			_ball(0.055, Vector3(side * span + cos(angle) * 0.07, 0.9 + i * 0.1, depth + sin(angle) * 0.07), marigold)
 
 ## A sagging rope of five-colour prayer flags (lungta) from a to b.
-func _flag_line(a: Vector3, b: Vector3, sag: float, count: int) -> void:
+## `sway` false hangs the flags still so they merge into the static
+## scenery (long lines far from the fight).
+func _flag_line(a: Vector3, b: Vector3, sag: float, count: int, sway := true) -> void:
 	var rope_mesh := CylinderMesh.new()
 	rope_mesh.top_radius = 0.008
 	rope_mesh.bottom_radius = 0.008
@@ -1601,7 +1729,8 @@ func _flag_line(a: Vector3, b: Vector3, sag: float, count: int) -> void:
 		var color: Color = FLAG_COLORS[(i - 1) % FLAG_COLORS.size()]
 		var flag := _piece(flag_mesh, Vector3(0, -0.135, 0), _flat("flag%d" % ((i - 1) % 5), color, 0.1 if night else 0.0), hanger)
 		flag.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		flags.append(hanger)
+		if sway:
+			flags.append(hanger)
 
 ## Strings of paper lanterns cross the square for the night round.
 ## `sway` false hangs them still, so they merge into the static scenery

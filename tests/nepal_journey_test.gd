@@ -68,7 +68,7 @@ func run() -> void:
 		else:
 			check(not stage.flags.is_empty(), "Imported prayer flags retain animated pivots")
 		if index == 3:
-			check(stage.ROUNDS[index].name == "MOONLIT STUPA", "Final round is the stupa arena")
+			check(stage.ROUNDS[index].name == "BOUDHA STUPA", "Final round is the stupa arena")
 		if "--capture" in OS.get_cmdline_user_args():
 			# Let the opening callout clear so the scenery is visible for review.
 			await frames(40)

@@ -18,7 +18,9 @@ static var meshes: Dictionary = {}
 
 ## Builds the backdrop for one round; the lighting mood only changes the
 ## material, so the meshes are generated once and cached.
-static func build(horizon: Color, night: bool, sunset: bool) -> Node3D:
+## `dusk`: evening haze is a cool violet, so snow catching the last light
+## reads as snow (a warm haze turns the range to sand).
+static func build(horizon: Color, night: bool, sunset: bool, dusk := false) -> Node3D:
 	var root := Node3D.new()
 	root.name = "HimalayaBackdrop"
 	for layer in LAYERS:
@@ -27,7 +29,7 @@ static func build(horizon: Color, night: bool, sunset: bool) -> Node3D:
 		if not meshes.has(layer[0]):
 			meshes[layer[0]] = _terrain(layer)
 		node.mesh = meshes[layer[0]]
-		node.material_override = _material(layer, horizon, night, sunset)
+		node.material_override = _material(layer, horizon.lerp(Color("6f78a3"), 0.6) if dusk else horizon, night, sunset)
 		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		node.extra_cull_margin = 50.0
 		root.add_child(node)
