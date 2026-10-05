@@ -1062,7 +1062,10 @@ func _place_prop(path: String, at: Vector3, turn: float, scale := 1.0, tint := C
 	# The windows and doorways (dozens of copies of fine carving) have a
 	# hand-reduced *_lite.glb the LOW preset uses instead.
 	var lite_path := path.get_basename() + "_lite.glb"
-	if built_lite and ResourceLoader.exists(lite_path):
+	# The carved windows and doorways repeat dozens of times but are small
+	# on screen, so every preset uses their reduced versions.
+	var always_lite := path.get_file() in ["window.glb", "doorway.glb"]
+	if (built_lite or always_lite) and ResourceLoader.exists(lite_path):
 		path = lite_path
 	if not ResourceLoader.exists(path):
 		return

@@ -215,6 +215,16 @@ func apply_audio() -> void:
 
 func _load() -> void:
 	var cfg := ConfigFile.new()
+	if cfg.load(SAVE_PATH) != OK:
+		# First launch: integrated graphics (most laptops) start on MEDIUM,
+		# whose FXAA and reduced scenery hold the frame rate; MSAA on HIGH
+		# alone costs them a sixth of a frame.
+		if RenderingServer.get_video_adapter_type() == RenderingDevice.DEVICE_TYPE_INTEGRATED_GPU:
+			quality = Quality.MEDIUM
+			render_scale = PRESETS[quality][0]
+			anti_aliasing = PRESETS[quality][1]
+			shadows = PRESETS[quality][2]
+			detailed_textures = PRESETS[quality][3]
 	if cfg.load(SAVE_PATH) == OK:
 		fullscreen = cfg.get_value("display", "fullscreen", fullscreen)
 		volume = cfg.get_value("audio", "volume", volume)

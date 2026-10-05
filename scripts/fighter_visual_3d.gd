@@ -351,7 +351,10 @@ func _place_bone(key: String, a: Vector3, b: Vector3, thickness: float = 1.0) ->
 	part.scale = Vector3(thickness, maxf(direction.length(), 0.1) / 30.0, thickness)
 
 func _update_model() -> void:
-	if pose.is_empty():
+	# The procedural body is hidden while an imported, animated model stands
+	# in for it (fighter_animated.gd); posing ~40 hidden limbs every frame
+	# was the single biggest cost of a fight.
+	if pose.is_empty() or (model != null and not model.visible):
 		return
 	var hip := pose[0]
 	var chest := pose[1]

@@ -10,7 +10,7 @@ const TEXTURES := "res://assets/arenas/textures/"
 ## angular steps, radial steps, noise seed, snow line, ridged].
 const LAYERS := [
 	["Foothills", 62.0, 190.0, -1.5, 13.0, 220, 70, 11, 999.0, false],
-	["Himalaya", 280.0, 470.0, 4.0, 92.0, 420, 110, 29, 34.0, true],
+	["Himalaya", 280.0, 470.0, 4.0, 92.0, 260, 60, 29, 34.0, true],
 ]
 ## Only the arc behind the arena is built; the sides are hidden by houses.
 const ARC := 1.45
