@@ -36,9 +36,9 @@ const GUARDED := ["walk", "walk_back", "sidestep", "sidestep_left", "sidestep_ri
 const UPPER_BODY := ["Spine", "Neck", "Head", "Shoulder", "Arm", "Hand"]
 ## Playback speed limits for locomotion: beyond these the legs look frantic
 ## (too fast) or floaty (too slow), so a little foot slide is accepted.
-const MOVE_SPEED_RANGE := {"walk": [0.7, 2.2], "walk_back": [0.7, 2.2], "sidestep": [0.7, 2.2],
-	"sidestep_left": [0.7, 2.2], "sidestep_right": [0.7, 2.2],
-	"run": [0.7, 2.0], "injured": [0.7, 1.6], "dash": [1.0, 2.2], "backdash": [1.0, 2.4]}
+const MOVE_SPEED_RANGE := {"walk": [0.45, 2.2], "walk_back": [0.45, 2.2], "sidestep": [0.45, 2.2],
+	"sidestep_left": [0.45, 2.2], "sidestep_right": [0.45, 2.2],
+	"run": [0.55, 2.0], "injured": [0.7, 1.6], "dash": [1.0, 2.2], "backdash": [1.0, 2.4]}
 ## Health fraction at or below which forward movement limps.
 const INJURED_HEALTH := 0.25
 ## Clips allowed to move the hips across the floor. Everything else plays in
@@ -978,7 +978,9 @@ func update(delta: float) -> void:
 	if clip != current or (entered and not logical in LOOPING and not tailing) or restart:
 		# Snap into a flinch; ease back out of one.
 		var was_reaction: bool = current != "" and REACTIONS.any(func(name): return clip_names.get(name, "") == current)
-		player.play(clip, 0.05 if logical in REACTIONS or logical == "ko" else (0.22 if was_reaction else 0.12))
+		# Footwork changes (stand, walk, run, step) melt into each other.
+		var stepping: bool = logical in LOOPING and current != "" and current in LOOPING.map(func(name): return clip_names.get(name, ""))
+		player.play(clip, 0.05 if logical in REACTIONS or logical == "ko" else (0.22 if was_reaction else (0.24 if stepping else 0.12)))
 		if restart:
 			player.seek(0.0, true)
 		# Clips that open with a still beat (the knockout) start where the

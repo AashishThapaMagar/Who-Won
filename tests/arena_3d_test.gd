@@ -42,11 +42,15 @@ func run() -> void:
 	await frames(10)
 	check(p1.body is CharacterBody3D and p1._is_grounded(), "Fighter uses a grounded 3D physics body")
 	check(p1.visual.world_root == p1.pivot and p1.visual.viewport_3d == null, "Characters render in the shared 3D world")
+	# The handheld sway moves the lens on its own; measure without it.
+	root.get_node("MatchSetup").camera_shake = false
+	arena._update_fight_camera(0.0)
 	var steady_camera: Transform3D = arena.camera_3d.transform
 	p1.body.position += Vector3(0.25, 1.0, 0.2)
 	p2.body.position += Vector3(0.25, 0.0, 0.2)
 	arena._update_fight_camera(1.0)
 	check(arena.camera_3d.transform.is_equal_approx(steady_camera), "Close footwork and jumps do not pan, tilt or zoom the camera")
+	root.get_node("MatchSetup").camera_shake = true
 	p1.body.position = p1.spawn_position
 	p2.body.position = p2.spawn_position
 	var start: Vector3 = p1.body.position

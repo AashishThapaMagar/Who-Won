@@ -15,7 +15,13 @@ const CAMERA_FOV := 38.0
 var camera_yaw := 0.0
 ## Short-lived hit effects: {mesh, age, life, update: Callable}.
 var impact_meshes: Array[Dictionary] = []
+## Ask for a jolt by raising this (metres, old scale); it feeds `trauma`.
 var shake_3d := 0.0
+## Camera trauma 0..1: the shake is its square, so a jab barely stirs the
+## lens and a heavy blow knocks it about, both fading out smoothly.
+var trauma := 0.0
+var _cam_time := 0.0
+var _cam_noise := FastNoiseLite.new()
 ## Metres the lens is shoved along a heavy blow; eases back to rest.
 var camera_nudge := Vector3.ZERO
 ## The super cinematic: who is performing it, and how far the camera has
@@ -205,16 +211,13 @@ func _process(delta: float) -> void:
 		return
 	if ko_replay != null:
 		ko_replay.record(delta)
+	if shake_3d > 0.0:
+		trauma = maxf(trauma, minf(shake_3d * 14.0, 0.85))
+		shake_3d = 0.0
+	trauma = move_toward(trauma, 0.0, delta * 1.2)
 	_update_fight_camera(delta)
-	shake_3d = move_toward(shake_3d, 0.0, delta * 0.5)
-	fov_kick = move_toward(fov_kick, 0.0, delta * 28.0)
-	camera_nudge = camera_nudge.lerp(Vector3.ZERO, 1.0 - exp(-9.0 * delta))
-	# Two-axis decaying jolt: the offsets drift at different rates so the
-	# shake reads as a knock rather than a horizontal buzz.
-	var t := Time.get_ticks_msec() * 0.001
-	var jolt := minf(shake_3d, 0.02) if MatchSetup.camera_shake else 0.0
-	camera_3d.h_offset = sin(t * 110.0) * jolt
-	camera_3d.v_offset = cos(t * 83.0) * jolt * 0.7
+	fov_kick = move_toward(fov_kick, 0.0, delta * 18.0)
+	camera_nudge = camera_nudge.lerp(Vector3.ZERO, 1.0 - exp(-5.0 * delta))
 	nepal_stage.animate(delta)
 	_update_impacts(delta)
 	_update_ghosts(delta)
@@ -237,7 +240,7 @@ func _update_fight_camera(delta: float) -> void:
 	# Follow closely (a lagging camera is what shows the fighters' fronts),
 	# ignoring only sub-degree jitter.
 	if absf(angle_difference(camera_yaw, target_yaw)) > 0.01:
-		camera_yaw = lerp_angle(camera_yaw, target_yaw, 1.0 - exp(-9.0 * delta))
+		camera_yaw = lerp_angle(camera_yaw, target_yaw, 1.0 - exp(-4.5 * delta))
 	var turn := Basis(Vector3.UP, -camera_yaw)
 	var back: Vector3 = turn * CAMERA_BACK
 	var along: Vector3 = turn * Vector3.RIGHT
@@ -252,7 +255,8 @@ func _update_fight_camera(delta: float) -> void:
 		desired += (turn * Vector3.BACK) * (depth_offset - signf(depth_offset) * 0.3)
 	# Jumps never pull the view up; the level horizon stays put.
 	desired.y = CAMERA_HEIGHT
-	camera_target = camera_target.lerp(desired, 1.0 - exp(-4.0 * delta))
+	# A heavy dolly: the frame glides after the fight rather than snapping.
+	camera_target = camera_target.lerp(desired, 1.0 - exp(-2.4 * delta))
 	var size := get_viewport().get_visible_rect().size
 	var tan_v := tan(deg_to_rad(camera_3d.fov) * 0.5)
 	var tan_h := tan_v * size.x / maxf(size.y, 1.0)
@@ -271,11 +275,11 @@ func _update_fight_camera(delta: float) -> void:
 			required = maxf(required, depth + absf(vertical) / (tan_v * (0.68 if vertical > 0.0 else 0.8)))
 	if required > camera_distance:
 		camera_zoom_hold = 0.6
-		camera_distance = lerpf(camera_distance, required, 1.0 - exp(-6.0 * delta))
+		camera_distance = lerpf(camera_distance, required, 1.0 - exp(-3.2 * delta))
 	else:
 		camera_zoom_hold = maxf(0.0, camera_zoom_hold - delta)
 		if camera_zoom_hold == 0.0 and camera_distance - required > 0.35:
-			camera_distance = lerpf(camera_distance, required, 1.0 - exp(-1.4 * delta))
+			camera_distance = lerpf(camera_distance, required, 1.0 - exp(-0.9 * delta))
 	var eye: Vector3 = camera_target + back * camera_distance
 	# Round intro: crane down from high in front of the fighters while the
 	# round is announced, landing on the fight view as the banner clears. The
@@ -325,8 +329,22 @@ func _update_fight_camera(delta: float) -> void:
 		eye = eye.lerp(close, k)
 		look = look.lerp(middle, k)
 		camera_3d.fov -= 8.0 * k
-	camera_3d.position = eye + nudge
-	camera_3d.look_at(look + nudge * 0.6)
+	# Handheld: a slow sway that never quite stops, and on top of it the
+	# impact shake, smooth noise with a little roll rather than a buzz.
+	_cam_time += delta
+	var feel := 1.0 if MatchSetup.camera_shake else 0.0
+	var shake := trauma * trauma * feel
+	var sway := Vector3(_wobble(1, 0.23), _wobble(2, 0.19), _wobble(3, 0.21)) * 0.022 * feel
+	var jolt := Vector3(_wobble(4, 11.0), _wobble(5, 11.0), _wobble(6, 11.0)) * 0.11 * shake
+	camera_3d.h_offset = 0.0
+	camera_3d.v_offset = 0.0
+	camera_3d.position = eye + nudge + sway + jolt
+	camera_3d.look_at(look + nudge * 0.6 + sway * 0.4)
+	camera_3d.rotate_object_local(Vector3.BACK, _wobble(7, 0.17) * 0.005 * feel + _wobble(8, 9.0) * 0.045 * shake)
+
+## Smooth noise in -1..1 at `rate` wobbles a second, one strand per `strand`.
+func _wobble(strand: int, rate: float) -> float:
+	return clampf(_cam_noise.get_noise_2d(_cam_time * rate * 100.0, strand * 1000.0) * 1.6, -1.0, 1.0)
 
 func _update_impacts(delta: float) -> void:
 	for spark in impact_meshes:

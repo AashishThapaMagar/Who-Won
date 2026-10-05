@@ -22,6 +22,10 @@ const COMBAT_TEMPO := 0.8
 ## Share of a blow's listed damage the 3D fight takes off: rounds are long
 ## exchanges, not a few clean hits. Applies to strikes, supers and throws.
 const DAMAGE_SCALE := 0.6
+## Footwork with weight (combat units/s^2): about a sixth of a second to
+## reach a run and a short, eased stop, instead of starting and stopping dead.
+const LOCO_ACCEL := 1500.0
+const LOCO_BRAKE := 2300.0
 ## Throw path, fixed when the grab lands (see _begin_throw).
 var _throw_anchor := Vector3.ZERO
 var _throw_victim_anchor := Vector3.ZERO
@@ -164,7 +168,7 @@ func _move_combat_body(delta: float) -> void:
 		if input.dot(forward) < -0.35 and not running:
 			target *= backward_speed_ratio
 		var current := Vector3(body.velocity.x, 0.0, body.velocity.z) * UNITS
-		planar = current.move_toward(target, (braking if input.is_zero_approx() else acceleration) * delta)
+		planar = current.move_toward(target, (LOCO_BRAKE if input.is_zero_approx() else LOCO_ACCEL) * delta)
 		state = State.WALK if planar.length() > 8.0 else State.IDLE
 	if state == State.DASH:
 		planar = dash_vector * move_speed * (1.85 if dash_vector.dot(forward) >= 0 else 1.45)

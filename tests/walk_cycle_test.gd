@@ -152,9 +152,10 @@ func run() -> void:
 	Input.action_release("p1_3d_run")
 
 	Input.action_release("p1_3d_right")
-	# Four frames: braking scales with the 3D fighters' COMBAT_TEMPO (0.8).
-	await frames(4)
-	# Braking is near-instant; the stride is not, or stopping would pop the
+	# Ten frames: a run eases to a stop over about nine (LOCO_BRAKE at the
+	# 3D fighters' COMBAT_TEMPO of 0.8).
+	await frames(10)
+	# The stride fades out after the body stops, or stopping would pop the
 	# legs straight out of a step and into the guard stance.
 	check(p1.state != p1.State.WALK and p1.visual.gait_weight > 0.3, "The stride eases out of a stop instead of snapping off")
 	await frames(40)
