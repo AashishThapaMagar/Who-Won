@@ -10,7 +10,7 @@ const TEXTURES := "res://assets/arenas/textures/"
 ## angular steps, radial steps, noise seed, snow line, ridged].
 const LAYERS := [
 	["Foothills", 62.0, 190.0, -1.5, 13.0, 220, 70, 11, 999.0, false],
-	["Himalaya", 280.0, 470.0, 4.0, 92.0, 260, 60, 29, 34.0, true],
+	["Himalaya", 280.0, 470.0, 4.0, 92.0, 420, 110, 29, 34.0, true],
 ]
 ## Only the arc behind the arena is built; the sides are hidden by houses.
 const ARC := 1.45
@@ -89,6 +89,19 @@ static func _terrain(layer: Array) -> ArrayMesh:
 	tool.generate_normals()
 	return tool.commit()
 
+## The terrain surface for a sculpted range (Heritage Square's peaks) whose
+## lowest and highest points are `low` and `high` metres.
+static func peak_material(horizon: Color, night: bool, low: float, high: float) -> ShaderMaterial:
+	var span := maxf(high - low, 1.0)
+	var material := _material(["Peaks", 0.0, 0.0, low, high, 0, 0, 0, low + span * 0.3, true], horizon, night, false)
+	material.set_shader_parameter("haze_start", 90.0)
+	material.set_shader_parameter("light_scale", 0.95 if night else 1.0)
+	material.set_shader_parameter("moon_glow", 0.16 if night else 0.0)
+	material.set_shader_parameter("mist_height", low + span * 0.2)
+	material.set_shader_parameter("mist_amount", 0.38 if night else 0.3)
+	material.set_shader_parameter("relief", 1.2)
+	return material
+
 static func _material(layer: Array, horizon: Color, night: bool, sunset: bool) -> ShaderMaterial:
 	var material := ShaderMaterial.new()
 	material.shader = TERRAIN_SHADER
@@ -97,7 +110,9 @@ static func _material(layer: Array, horizon: Color, night: bool, sunset: bool) -
 	material.set_shader_parameter("grass_map", load(TEXTURES + "aerial_grass_rock/aerial_grass_rock_diff_1k.jpg"))
 	material.set_shader_parameter("snow_line", layer[8])
 	material.set_shader_parameter("terraces", 1.0 if layer[0] == "Foothills" else 0.0)
-	material.set_shader_parameter("haze_color", horizon)
+	# Night haze is a cool slate, not the sky's saturated blue.
+	material.set_shader_parameter("haze_color", horizon.lerp(Color(0.2, 0.23, 0.3), 0.45) if night else horizon)
+	material.set_shader_parameter("night", 1.0 if night else 0.0)
 	# Far layers dissolve more into the sky; night haze is thinner.
 	var far: bool = layer[9]
 	material.set_shader_parameter("haze_start", 60.0 if not far else 180.0)
@@ -105,5 +120,10 @@ static func _material(layer: Array, horizon: Color, night: bool, sunset: bool) -
 	material.set_shader_parameter("haze_max", 0.55 if night else (0.4 if sunset else 0.72))
 	# Moonlit snow is a fraction as bright as it is by day; the mood's sun
 	# and ambient are already dim, but the scans themselves are shot in sun.
-	material.set_shader_parameter("light_scale", 0.42 if night else 1.0)
+	material.set_shader_parameter("light_scale", (0.42 if far else 0.3) if night else 1.0)
+	# Valley mist: deep banks between the foothills, a thin veil round the
+	# feet of the range.
+	material.set_shader_parameter("mist_height", 7.0 if not far else 22.0)
+	material.set_shader_parameter("mist_amount", (0.6 if night else 0.45) if not far else (0.5 if night else 0.35))
+	material.set_shader_parameter("relief", 0.7 if not far else 1.0)
 	return material

@@ -910,9 +910,21 @@ func _dress_heritage(folder: String) -> void:
 		var peaks := (load(range_path) as PackedScene).instantiate() as Node3D
 		peaks.position = Vector3(0, -4.0, -175.0)
 		peaks.scale = Vector3(1.6, 1.5, 1.0)
-		for mesh: MeshInstance3D in peaks.find_children("*", "MeshInstance3D", true, false):
-			mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		content.add_child(peaks)
+		# Dressed in the same terrain surface as the far range: snow above a
+		# line set from the model's own height, rock, carved relief, valley
+		# mist round its feet and the moonlit treatment at night.
+		var meshes := peaks.find_children("*", "MeshInstance3D", true, false)
+		var low := INF
+		var high := -INF
+		for mesh: MeshInstance3D in meshes:
+			var box: AABB = mesh.global_transform * mesh.get_aabb()
+			low = minf(low, box.position.y)
+			high = maxf(high, box.end.y)
+		var surface := HIMALAYA.peak_material(_mood()[1], night, low, high)
+		for mesh: MeshInstance3D in meshes:
+			mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			mesh.material_override = surface
 	if night:
 		_heritage_night(floor_y)
 	for side in [-1.0, 1.0]:
@@ -1131,7 +1143,7 @@ func _lighting() -> void:
 	env.fog_light_energy = 0.65
 	# Thin mountain air: only the far ridges soften, into blue.
 	# At night the far range sinks into the dark haze, moonlit but dim.
-	env.fog_density = 0.0055 if night else 0.0016
+	env.fog_density = 0.0038 if night else 0.0016
 	env.fog_sky_affect = 0.12
 	# Sunlight scattered into the haze, so fog glows toward the sun.
 	env.fog_sun_scatter = 0.0 if night else 0.2
