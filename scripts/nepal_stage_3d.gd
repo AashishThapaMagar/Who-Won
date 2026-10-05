@@ -6,7 +6,7 @@ const ROUNDS := [
 	{"name": "HERITAGE SQUARE", "night": true, "detail": "NIGHT / Lamplit carvings and a three-tier pagoda under the moon"},
 	{"name": "LANTERN SQUARE", "night": false, "detail": "MORNING / Paper lanterns strung across the old square"},
 	{"name": "TERRACE OVERLOOK", "night": false, "detail": "AFTERNOON / Terraced hills and the Himalaya in full sun"},
-	{"name": "BOUDHA STUPA", "night": false, "detail": "SUNSET / Prayer flags glow over the great stupa at dusk"},
+	{"name": "GOMPA COURTYARD", "night": false, "detail": "SUNSET / A monastery courtyard glowing gold at dusk"},
 ]
 const ARENA_MODELS := [
 	"res://assets/arenas/models/heritage-square.glb",
@@ -1081,11 +1081,11 @@ func _light_cone(top: Vector3, length: float, radius: float, tint: Color) -> voi
 ## the baked .res buildings, a plain scale for the .glb props (1 = as
 ## modelled at real-world size). Positions sit on the courtyard floor.
 const BOUDHA_LAYOUT := [
-	# The great stupa far down the courtyard, so the fight has depth: a
-	# long stone approach, lamps and wheels near, the dome far off.
-	["stupa_game.res", Vector3(0.0, 0.0, -50.0), 0.0, 18.0],
-	# The gompa well behind it, its gold roof over the dome.
-	["monastery_hall.res", Vector3(0.0, 0.0, -88.0), 0.0, 24.0],
+	# The great stupa, set aside for now (uncomment to bring it back; the
+	# gompa then goes behind it at z -88).
+	#["stupa_game.res", Vector3(0.0, 0.0, -50.0), 0.0, 18.0],
+	# The gompa closes the far end of the courtyard.
+	["monastery_hall.res", Vector3(0.0, 0.0, -56.0), 0.0, 22.0],
 	# Monk quarters lining both sides of the approach, facing in.
 	["monk_quarters.res", Vector3(-15.5, 0.0, -10.0), 90.0, 15.0],
 	["monk_quarters.res", Vector3(15.5, 0.0, -10.0), -90.0, 15.0],
@@ -1098,16 +1098,24 @@ const BOUDHA_LAYOUT := [
 	["prayer_wheels.glb", Vector3(-6.0, 0.0, -12.0), 0.0, 1.0],
 	["prayer_wheels.glb", Vector3(6.0, 0.0, -12.0), 0.0, 1.0],
 	["incense_burner.glb", Vector3(-8.0, 0.0, -26.0), 0.0, 1.0],
-	["butter_lamps.glb", Vector3(0.0, 0.0, -38.0), 0.0, 1.4],
+	["butter_lamps.glb", Vector3(0.0, 0.0, -42.0), 0.0, 1.4],
 ]
 ## Height of the stupa's spire tip over its footprint width (where the
 ## prayer-flag lines start).
 const STUPA_PEAK := 0.97
-const STUPA_CLEAR := AABB(Vector3(-7.6, 0.05, -33.0), Vector3(15.2, 40.0, 15.5))
+## The old stupa, its terrace, flag lines and the pennants lying at its
+## foot (flat on the ground, so the region reaches below floor level).
+const STUPA_CLEAR := AABB(Vector3(-12.0, -1.0, -45.0), Vector3(24.0, 46.0, 32.0))
 func _dress_stupa(folder: String) -> void:
 	var model := content.get_node_or_null("ArenaModel") as Node3D
 	var floor_y := -0.12
 	if model != null:
+		# The model's own prayer-flag strings hung from the old stupa; with
+		# it gone they would lie across the courtyard.
+		for pivot in flags.duplicate():
+			if pivot.is_inside_tree() and model.is_ancestor_of(pivot):
+				flags.erase(pivot)
+				pivot.queue_free()
 		_clear_region(model, STUPA_CLEAR)
 		for side in [-1.0, 1.0]:
 			# Houses, their carved fronts and the eaves over the courtyard.
@@ -1122,13 +1130,17 @@ func _dress_stupa(folder: String) -> void:
 			_place_prop(path, at, deg_to_rad(row[2]), row[3])
 	# Prayer-flag lines from the spire down to the terrace edge, as at
 	# Boudha; hung still, so they merge with the static scenery.
-	var stupa: Array = BOUDHA_LAYOUT[0]
+	var rows := BOUDHA_LAYOUT.filter(func(row): return row[0] == "stupa_game.res")
+	if rows.is_empty():
+		return
+	var stupa: Array = rows[0]
 	var base: Vector3 = stupa[1] + Vector3(0.0, floor_y, 0.0)
 	var peak := base + Vector3(0, stupa[3] * STUPA_PEAK, 0)
 	for i in 6:
 		var angle := -1.2 + i * 0.48
-		var reach: float = stupa[3] * 0.59
-		_flag_line(peak, base + Vector3(sin(angle) * reach, 0.5, cos(angle) * reach), 1.0, 22, false)
+		# Tied off at the rim of the stupa's lower terrace, not the ground.
+		var reach: float = stupa[3] * 0.5
+		_flag_line(peak, base + Vector3(sin(angle) * reach, stupa[3] * 0.14, cos(angle) * reach), 1.0, 22, false)
 
 ## A Meshy model baked to a game mesh (unit footprint, standing on y = 0),
 ## placed `width` metres across. Kept out of the static merge so its LODs
@@ -1256,6 +1268,11 @@ func _place_prop(path: String, at: Vector3, turn: float, scale := 1.0, tint := C
 	# skip them when off screen (merging would fix them at full detail).
 	if path.get_file().get_basename() in UNBATCHED_PROPS:
 		prop.set_meta("unbatched", true)
+	# The import's automatic detail levels fold thin parts (scarves, flags,
+	# finials) into stray triangles at fight-camera distance; hold full
+	# detail far longer.
+	for mesh: MeshInstance3D in prop.find_children("*", "MeshInstance3D", true, false):
+		mesh.lod_bias = 6.0
 	if tint != Color.WHITE:
 		for mesh: MeshInstance3D in prop.find_children("*", "MeshInstance3D", true, false):
 			mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF

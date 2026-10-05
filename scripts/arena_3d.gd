@@ -12,6 +12,11 @@ const CAMERA_BACK := Vector3(0, 0.07, 0.9975)
 const CAMERA_HEIGHT := 1.05
 const CAMERA_CLOSE := 4.9
 const CAMERA_FOV := 38.0
+## Furthest the fight camera turns (radians, ~25 degrees) to follow a
+## sidestep. The arenas are built to be seen from the front; turned further
+## the view ran off the end of the scenery into empty ground. Past this the
+## fighters are simply seen at an angle.
+const CAMERA_MAX_TURN := 0.44
 var camera_yaw := 0.0
 ## Short-lived hit effects: {mesh, age, life, update: Callable}.
 var impact_meshes: Array[Dictionary] = []
@@ -236,7 +241,7 @@ func _update_fight_camera(delta: float) -> void:
 	# instead of swinging the view round to a front angle. Measured
 	# left-to-right so the camera never flips when fighters cross over.
 	var axis: Vector3 = preload("res://scripts/player_3d.gd").axis_between(a, b)
-	var target_yaw := clampf(atan2(axis.z, axis.x), -1.05, 1.05)
+	var target_yaw := clampf(atan2(axis.z, axis.x), -CAMERA_MAX_TURN, CAMERA_MAX_TURN)
 	# Follow closely (a lagging camera is what shows the fighters' fronts),
 	# ignoring only sub-degree jitter.
 	if absf(angle_difference(camera_yaw, target_yaw)) > 0.01:

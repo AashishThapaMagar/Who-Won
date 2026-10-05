@@ -65,10 +65,11 @@ func run() -> void:
 		check(stage.environment.environment.fog_enabled, "Arena lighting includes atmospheric depth")
 		if index == 1:
 			check(stage.lanterns.size() == 24, "All imported paper lanterns sway from their hanger pivots")
-		else:
+		elif index != 3:
+			# The gompa courtyard drops the model's flag strings with its stupa.
 			check(not stage.flags.is_empty(), "Imported prayer flags retain animated pivots")
 		if index == 3:
-			check(stage.ROUNDS[index].name == "BOUDHA STUPA", "Final round is the stupa arena")
+			check(stage.ROUNDS[index].name == "GOMPA COURTYARD", "Final round is the monastery arena")
 		if "--capture" in OS.get_cmdline_user_args():
 			# Let the opening callout clear so the scenery is visible for review.
 			await frames(40)
