@@ -191,12 +191,12 @@ float fbm(vec2 p) {
 	mat2 turn = mat2(vec2(0.8, 0.6), vec2(-0.6, 0.8));
 	float sum = 0.0;
 	float weight = 0.5;
-	for (int o = 0; o < 4; o++) {
+	for (int o = 0; o < 3; o++) {
 		sum += noise(p) * weight;
 		p = turn * p * 2.07 + vec2(3.1, 7.7);
 		weight *= 0.5;
 	}
-	return sum / 0.9375;
+	return sum / 0.875;
 }
 // One layer of stars: at most one per cell of a 3D grid laid through the
 // sky, each a round soft point (a gaussian on its distance) at a random spot
@@ -243,19 +243,20 @@ void sky() {
 	}
 	float cover = 0.0;
 	if (detail > 0.5) {
-	// Soft fair-weather clouds: five octaves of smooth noise, each turned
-	// against the last so no grid shows, with feathered edges.
+	// Soft fair-weather clouds: three octaves of smooth noise (the finest
+	// two were lost at this distance and cost a sixth of the frame on
+	// integrated graphics), each turned against the last so no grid shows.
 	vec2 cloud_uv = EYEDIR.xz / max(y + 0.22, 0.1) * 1.6 + vec2(TIME * 0.006, 0.0);
 	mat2 turn = mat2(vec2(0.8, 0.6), vec2(-0.6, 0.8));
 	float cloud = 0.0;
 	float weight = 0.5;
 	vec2 q = cloud_uv;
-	for (int o = 0; o < 5; o++) {
+	for (int o = 0; o < 3; o++) {
 		cloud += noise(q) * weight;
 		q = turn * q * 2.03 + vec2(1.7, 9.2);
 		weight *= 0.5;
 	}
-	cloud /= 0.96875;
+	cloud /= 0.875;
 	cover = smoothstep(0.48, 0.82, cloud) * smoothstep(0.0, 0.2, y);
 	// Clouds catch the light on their sunward side.
 	float lit = 0.3 + 0.5 * max(d, 0.0);
@@ -759,6 +760,7 @@ func _arena_inlay() -> void:
 
 func animate(delta: float) -> void:
 	elapsed += delta
+	_sync_grade()
 	if punch_level > 0.0 or flash_level > 0.0 or drain_level > 0.0:
 		punch_level = move_toward(punch_level, 0.0, delta * 5.5)
 		flash_level = move_toward(flash_level, 0.0, delta * 3.5)
@@ -1194,6 +1196,7 @@ func _lighting() -> void:
 	grade.set_shader_parameter("sharpen", 0.35)
 	grade.set_shader_parameter("grain", 0.012)
 	grade.set_shader_parameter("punch_color", Color("ffd9a0") if current_round != 3 else Color("cfe4ff"))
+	_sync_grade()
 
 ## 0 on the LOW preset (or custom settings with everything off), 1 otherwise:
 ## gates the post effects and the dais key-light shadow.
@@ -1209,8 +1212,10 @@ func _effects_level() -> int:
 		return 0
 	return 1
 
-## The finishing pass: a screen-reading ColorRect on its own canvas layer,
-## under every HUD layer (which start at 1) and over the 3D world.
+## The finishing overlay: a ColorRect on its own canvas layer, under every
+## HUD layer (which start at 1) and over the 3D world. It only adds the
+## vignette, grain, punch and flash; the colour grade set on it by name is
+## applied by the renderer (see _sync_grade).
 func _grade() -> void:
 	var layer := CanvasLayer.new()
 	layer.name = "Grade"
@@ -1224,6 +1229,58 @@ func _grade() -> void:
 	grade_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	grade_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
 	layer.add_child(grade_rect)
+
+## The colour grade (split toning, saturation, contrast) runs in the
+## tonemap pass as a 3D colour lookup, rebuilt only when its values change;
+## the knockout's drain of colour is the Environment's own saturation.
+## Callers keep setting these on `grade` by name (the arena mood, the KO
+## replay's film look, cutscenes) and they are picked up here each frame.
+var _grade_key: Array = []
+static var _lut_cache: Dictionary = {}
+const LUT_SIZE := 17
+func _sync_grade() -> void:
+	if grade == null or environment == null:
+		return
+	var env: Environment = environment.environment
+	var on := grade_rect != null and grade_rect.visible
+	env.adjustment_enabled = on
+	if not on:
+		return
+	var key := [grade.get_shader_parameter("shadow_tint"), grade.get_shader_parameter("highlight_tint"),
+		grade.get_shader_parameter("saturation"), grade.get_shader_parameter("contrast")]
+	if key != _grade_key:
+		_grade_key = key
+		env.adjustment_color_correction = _grade_lut(key)
+	var drain = grade.get_shader_parameter("drain")
+	env.adjustment_saturation = 1.0 - clampf(float(drain) if drain != null else 0.0, 0.0, 1.0)
+
+## The same grade the screen shader used to apply, baked into a small 3D
+## lookup: saturation, then contrast, then shadows and highlights tinted.
+static func _grade_lut(key: Array) -> Texture3D:
+	var cache_key := str(key)
+	if _lut_cache.has(cache_key):
+		return _lut_cache[cache_key]
+	var shadow: Color = key[0] if key[0] is Color else Color(1, 1, 1)
+	var high: Color = key[1] if key[1] is Color else Color(1, 1, 1)
+	var sat: float = float(key[2]) if key[2] != null else 1.0
+	var con: float = float(key[3]) if key[3] != null else 1.0
+	var images: Array[Image] = []
+	for b in LUT_SIZE:
+		var image := Image.create(LUT_SIZE, LUT_SIZE, false, Image.FORMAT_RGB8)
+		for g in LUT_SIZE:
+			for r in LUT_SIZE:
+				var c := Vector3(r, g, b) / float(LUT_SIZE - 1)
+				var luma := c.dot(Vector3(0.3, 0.59, 0.11))
+				c = Vector3(luma, luma, luma).lerp(c, sat)
+				c = ((c - Vector3(0.5, 0.5, 0.5)) * con + Vector3(0.5, 0.5, 0.5)).max(Vector3.ZERO)
+				var t := smoothstep(0.0, 0.85, luma)
+				c *= Vector3(shadow.r, shadow.g, shadow.b).lerp(Vector3(high.r, high.g, high.b), t)
+				image.set_pixel(r, g, Color(minf(c.x, 1.0), minf(c.y, 1.0), minf(c.z, 1.0)))
+		images.append(image)
+	var lut := ImageTexture3D.new()
+	lut.create(Image.FORMAT_RGB8, LUT_SIZE, LUT_SIZE, LUT_SIZE, false, images)
+	_lut_cache[cache_key] = lut
+	return lut
 
 ## An impact seen at `screen_point` (0..1 across the view): a shock ring and
 ## a radial colour split that fade over a few frames. `strength` 1 is a
