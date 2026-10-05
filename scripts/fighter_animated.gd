@@ -1355,23 +1355,58 @@ func fighter_grounded() -> bool:
 	return fighter == null or not fighter.has_method("_is_grounded") or fighter._is_grounded()
 
 ## Imported bodies arrive with whatever finish their exporter chose, often
-## a metallic, glossy plastic. Bring them to a matte skin-and-cloth look
-## that sits in the arena lighting: no metal, a soft rim, sharp mipmaps.
+## a metallic, glossy plastic. Each opaque material becomes the cinematic
+## fighter finish (fighter_skin.gdshader: warm skin held off blowing out,
+## tamed cloth saturation, a soft rim); see-through ones (hair cards) keep
+## a matte standard finish.
+const FIGHTER_FINISH := preload("res://scripts/fighter_skin.gdshader")
+static var _finished: Dictionary = {}
 func _polish_materials() -> void:
 	for mesh: MeshInstance3D in character.find_children("*", "MeshInstance3D", true, false):
+		if mesh.material_override is StandardMaterial3D:
+			mesh.material_override = _finish(mesh.material_override)
+			continue
 		for surface in mesh.mesh.get_surface_count() if mesh.mesh != null else 0:
 			var material := mesh.get_active_material(surface)
-			if not material is StandardMaterial3D or material.has_meta("polished"):
-				continue
+			if material is StandardMaterial3D:
+				mesh.set_surface_override_material(surface, _finish(material))
+
+static func _finish(material: StandardMaterial3D) -> Material:
+	if material.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED:
+		if not material.has_meta("polished"):
 			material.set_meta("polished", true)
 			material.metallic = minf(material.metallic, 0.12)
 			material.roughness = maxf(material.roughness, 0.72)
-			material.metallic_specular = 0.28
-			# A strong edge light lifts each fighter off the arena behind.
 			material.rim_enabled = true
 			material.rim = 0.24
 			material.rim_tint = 0.75
 			material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+		return material
+	if _finished.has(material):
+		return _finished[material]
+	var finish := ShaderMaterial.new()
+	finish.shader = FIGHTER_FINISH
+	finish.set_shader_parameter("albedo_color", material.albedo_color)
+	if material.albedo_texture != null:
+		finish.set_shader_parameter("albedo_tex", material.albedo_texture)
+	if material.normal_enabled and material.normal_texture != null:
+		finish.set_shader_parameter("normal_tex", material.normal_texture)
+		finish.set_shader_parameter("normal_strength", material.normal_scale)
+	var channels := [Vector4(1, 0, 0, 0), Vector4(0, 1, 0, 0), Vector4(0, 0, 1, 0), Vector4(0, 0, 0, 1), Vector4(0.333, 0.333, 0.333, 0)]
+	finish.set_shader_parameter("roughness", material.roughness)
+	if material.roughness_texture != null:
+		finish.set_shader_parameter("roughness_tex", material.roughness_texture)
+		finish.set_shader_parameter("roughness_channel", channels[material.roughness_texture_channel])
+	else:
+		finish.set_shader_parameter("roughness_channel", Vector4(1, 0, 0, 0))
+	finish.set_shader_parameter("metallic", material.metallic)
+	if material.metallic_texture != null:
+		finish.set_shader_parameter("metallic_tex", material.metallic_texture)
+		finish.set_shader_parameter("metallic_channel", channels[material.metallic_texture_channel])
+	else:
+		finish.set_shader_parameter("metallic_channel", Vector4(1, 0, 0, 0))
+	_finished[material] = finish
+	return finish
 
 ## Restarts the current clip on the next update (cutscenes repeating a move).
 func replay() -> void:
