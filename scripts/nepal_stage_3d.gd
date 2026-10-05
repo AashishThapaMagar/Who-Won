@@ -178,10 +178,47 @@ float hash(vec2 p) {
 	p3 += dot(p3, p3.yzx + 33.33);
 	return fract((p3.x + p3.y) * p3.z);
 }
-float hash3(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
+vec3 hash33(vec3 p3) {
+	p3 = fract(p3 * vec3(0.1031, 0.1030, 0.0973));
+	p3 += dot(p3, p3.yxz + 33.33);
+	return fract((p3.xxy + p3.yxx) * p3.zyx);
+}
 float noise(vec2 p) {
 	vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f);
 	return mix(mix(hash(i), hash(i+vec2(1,0)), f.x), mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), f.x), f.y);
+}
+float fbm(vec2 p) {
+	mat2 turn = mat2(vec2(0.8, 0.6), vec2(-0.6, 0.8));
+	float sum = 0.0;
+	float weight = 0.5;
+	for (int o = 0; o < 4; o++) {
+		sum += noise(p) * weight;
+		p = turn * p * 2.07 + vec2(3.1, 7.7);
+		weight *= 0.5;
+	}
+	return sum / 0.9375;
+}
+// One layer of stars: at most one per cell of a 3D grid laid through the
+// sky, each a round soft point (a gaussian on its distance) at a random spot
+// well inside its cell. Most are faint and a few bright, each coloured by
+// its temperature: blue-white, white or orange. `sigma` is the point's
+// radius in cells; `glare` a soft glow round the bright ones for the bloom.
+vec3 star_layer(vec3 dir, float scale, float density, float sigma, float gain, float glare, float shimmer, float time) {
+	vec3 p = dir * scale;
+	vec3 cell = floor(p);
+	vec3 h = hash33(cell);
+	if (h.x > density) {
+		return vec3(0.0);
+	}
+	vec3 centre = cell + 0.3 + 0.4 * hash33(cell + 19.19);
+	float dist = length(p - centre);
+	float magnitude = pow(h.y, 3.0);
+	float core = exp(-dist * dist / (sigma * sigma));
+	float halo = glare * magnitude * exp(-dist / (sigma * 2.5));
+	vec3 tint = mix(vec3(0.72, 0.82, 1.0), vec3(1.0, 0.98, 0.95), smoothstep(0.0, 0.35, h.z));
+	tint = mix(tint, vec3(1.0, 0.8, 0.58), smoothstep(0.7, 1.0, h.z));
+	float twinkle = 1.0 - shimmer * (0.5 + 0.5 * sin(time * (2.3 + h.y * 6.0) + h.x * 80.0));
+	return tint * (core * (0.2 + magnitude) + halo) * gain * twinkle;
 }
 void sky() {
 	float y = EYEDIR.y;
@@ -224,16 +261,24 @@ void sky() {
 	float lit = 0.3 + 0.5 * max(d, 0.0);
 	col = mix(col, mix(horizon_color, sun_color, lit), cover * (0.58 - stars * 0.3));
 	if (stars > 0.0) {
-		vec3 cell = floor(EYEDIR * 260.0);
-		float h = hash3(cell);
-		float twinkle = 0.7 + 0.3 * sin(TIME * (1.5 + h * 3.0) + h * 40.0);
-		float bright = step(0.9968, h) * (0.4 + 0.6 * fract(h * 71.0)) * twinkle;
-		vec3 star_tint = mix(vec3(0.85, 0.9, 1.0), vec3(1.0, 0.92, 0.8), fract(h * 13.0));
-		// The Milky Way: a faint tilted band of finer stars and dust.
-		float band = exp(-pow(dot(EYEDIR, normalize(vec3(0.6, 0.35, -0.7))) * 4.0, 2.0));
-		float dust = noise(EYEDIR.xz * 9.0 + EYEDIR.y * 5.0) * band;
-		col += star_tint * bright * stars * smoothstep(0.02, 0.25, y) * (1.0 - cover);
-		col += vec3(0.5, 0.55, 0.75) * dust * 0.08 * stars * smoothstep(0.05, 0.4, y);
+		// Thick air low down dims the stars and makes them scintillate;
+		// the moon's glare and the clouds hide the faint ones.
+		float clear = smoothstep(0.0, 0.12, y) * (0.6 + 0.4 * smoothstep(0.1, 0.45, y)) * (1.0 - cover);
+		clear *= 1.0 - 0.9 * pow(max(d, 0.0), 40.0);
+		float shimmer = mix(0.55, 0.12, smoothstep(0.05, 0.6, y));
+		// The Milky Way: a tilted band of glow broken by dark dust lanes,
+		// thick with tiny stars.
+		float across = dot(EYEDIR, normalize(vec3(0.62, 0.3, -0.72)));
+		float band = exp(-across * across * 14.0);
+		vec2 along = EYEDIR.xz / max(y + 0.35, 0.2) * 2.2;
+		float glow = band * (0.45 + 0.75 * fbm(along * 1.3));
+		float lanes = smoothstep(0.52, 0.78, fbm(along * 2.6 + 11.0)) * exp(-across * across * 60.0);
+		glow *= 1.0 - 0.75 * lanes;
+		col += mix(vec3(0.42, 0.48, 0.7), vec3(0.7, 0.62, 0.55), band * band) * glow * 0.15 * stars * clear;
+		vec3 field = star_layer(EYEDIR, 180.0, 0.32 + 0.4 * band * (1.0 - lanes), 0.14, 0.55, 0.0, shimmer, TIME);
+		field += star_layer(EYEDIR, 72.0, 0.22, 0.085, 1.1, 0.0, shimmer, TIME + 3.0);
+		field += star_layer(EYEDIR, 29.0, 0.1, 0.045, 2.2, 0.35, shimmer * 0.7, TIME + 7.0);
+		col += field * stars * clear;
 	}
 	}
 	COLOR = col;
