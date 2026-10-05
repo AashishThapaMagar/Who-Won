@@ -10,7 +10,7 @@ const TEXTURES := "res://assets/arenas/textures/"
 ## angular steps, radial steps, noise seed, snow line, ridged].
 const LAYERS := [
 	["Foothills", 62.0, 190.0, -1.5, 13.0, 220, 70, 11, 999.0, false],
-	["Himalaya", 280.0, 470.0, 4.0, 92.0, 260, 60, 29, 34.0, true],
+	["Himalaya", 280.0, 470.0, 4.0, 92.0, 260, 60, 29, 52.0, true],
 ]
 ## Only the arc behind the arena is built; the sides are hidden by houses.
 const ARC := 1.45
@@ -95,10 +95,10 @@ static func _terrain(layer: Array) -> ArrayMesh:
 ## lowest and highest points are `low` and `high` metres.
 static func peak_material(horizon: Color, night: bool, low: float, high: float) -> ShaderMaterial:
 	var span := maxf(high - low, 1.0)
-	var material := _material(["Peaks", 0.0, 0.0, low, high, 0, 0, 0, low + span * 0.3, true], horizon, night, false)
+	var material := _material(["Peaks", 0.0, 0.0, low, high, 0, 0, 0, low + span * 0.45, true], horizon, night, false)
 	material.set_shader_parameter("haze_start", 90.0)
-	material.set_shader_parameter("light_scale", 0.95 if night else 1.0)
-	material.set_shader_parameter("moon_glow", 0.16 if night else 0.0)
+	material.set_shader_parameter("light_scale", 0.7 if night else 1.0)
+	material.set_shader_parameter("moon_glow", 0.07 if night else 0.0)
 	material.set_shader_parameter("mist_height", low + span * 0.2)
 	material.set_shader_parameter("mist_amount", 0.38 if night else 0.3)
 	material.set_shader_parameter("relief", 1.2)
@@ -119,7 +119,9 @@ static func _material(layer: Array, horizon: Color, night: bool, sunset: bool) -
 	var far: bool = layer[9]
 	material.set_shader_parameter("haze_start", 60.0 if not far else 180.0)
 	material.set_shader_parameter("haze_density", (0.0045 if not far else 0.0032) * (0.7 if night else 1.0))
-	material.set_shader_parameter("haze_max", 0.55 if night else (0.4 if sunset else 0.72))
+	# Enough haze to set the range back, not so much it washes the rock
+	# and shadowed snow out to a flat white wall.
+	material.set_shader_parameter("haze_max", 0.45 if night else (0.35 if sunset else 0.5))
 	# Moonlit snow is a fraction as bright as it is by day; the mood's sun
 	# and ambient are already dim, but the scans themselves are shot in sun.
 	material.set_shader_parameter("light_scale", (0.42 if far else 0.3) if night else 1.0)

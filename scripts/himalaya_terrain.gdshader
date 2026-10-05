@@ -78,17 +78,19 @@ void fragment() {
 	if (night > 0.5) {
 		// Moonlight takes the colour out: silver snow, slate rock, and the
 		// low slopes a dark forest silhouette.
-		snow = mix(vec3(dot(snow, vec3(0.33))), snow, 0.35) * vec3(0.92, 0.96, 1.04);
+		snow = mix(vec3(dot(snow, vec3(0.33))), snow, 0.2) * vec3(0.9, 0.93, 0.98);
 		rock = vec3(dot(rock, vec3(0.33))) * vec3(0.55, 0.58, 0.66);
 		grass = vec3(dot(grass, vec3(0.33))) * vec3(0.22, 0.27, 0.3);
 	}
 	// Grass gives way to rock with height and steepness.
 	float rocky = smoothstep(0.35, 0.65, slope) + smoothstep(12.0, 30.0, world_pos.y);
 	vec3 col = mix(grass, rock, clamp(rocky, 0.0, 1.0));
-	// Snow settles above the snow line, thinning out on steep faces and
-	// lying in the gullies longer than on the crests.
+	// Snow settles above the snow line and stays on all but the sheerest
+	// faces, which show dark rock: the bright snow fields against black
+	// rock ribs are what make a range read as high mountains.
 	float line = snow_line + (noise(top / 18.0) - 0.5) * 14.0;
-	float snowy = smoothstep(line, line + 10.0, world_pos.y) * (1.0 - smoothstep(0.55, 0.85, slope));
+	float snowy = smoothstep(line, line + 8.0, world_pos.y) * (1.0 - smoothstep(0.5, 0.8, slope));
+	rock *= mix(1.0, 0.62, smoothstep(0.5, 0.85, slope));
 	col = mix(col, snow, snowy);
 	// Rice-terrace lines along the contours of the foothills.
 	if (terraces > 0.5) {
@@ -105,5 +107,5 @@ void fragment() {
 	ROUGHNESS = mix(0.95, 0.55, snowy);
 	NORMAL = normalize((VIEW_MATRIX * vec4(n, 0.0)).xyz);
 	// Haze also veils the lighting itself, so far peaks go soft and pale.
-	EMISSION = haze_color * haze * 0.55 + snow * snowy * moon_glow * (1.0 - haze);
+	EMISSION = haze_color * haze * 0.3 + snow * snowy * moon_glow * (1.0 - haze);
 }

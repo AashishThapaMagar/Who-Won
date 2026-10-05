@@ -61,7 +61,7 @@ const MOODS := [
 	# Boudha at sunset: a violet-blue sky warming to peach at the horizon,
 	# a low golden sun from the side that rakes across the fighters and
 	# throws long shadows, and a cool dusk fill in the shadows.
-	[Color("3a4688"), Color("e8ae88"), Color("ffbb7a"), 1.2, Color("8e88a8"), 0.36, -12.0, -65.0, Color(1.0, 0.9, 0.82)],
+	[Color("3d5591"), Color("e9bfa0"), Color("ffd3a6"), 1.1, Color("8f98b8"), 0.4, -14.0, -65.0, Color(1.0, 0.93, 0.88)],
 ]
 ## Finishing grade per round (arena_grade.gdshader): [shadow tint,
 ## highlight tint, saturation, contrast, vignette, exposure, glow intensity,
@@ -74,7 +74,9 @@ const GRADES := [
 	[Color(0.96, 0.99, 1.04), Color(1.01, 1.0, 0.98), 1.2, 1.07, 0.2, 1.04, 0.6, 0.95],
 	[Color(0.96, 0.99, 1.04), Color(1.01, 1.0, 0.98), 1.2, 1.07, 0.2, 1.04, 0.6, 0.95],
 	[Color(0.96, 0.99, 1.04), Color(1.01, 1.0, 0.98), 1.22, 1.07, 0.18, 1.05, 0.6, 0.95],
-	[Color(0.93, 0.96, 1.06), Color(1.07, 1.0, 0.9), 1.16, 1.1, 0.26, 1.03, 0.75, 0.9],
+	# Golden hour, not orange: warm highlights, cool shadows, whites kept
+	# white (a strong warm cast turned whitewash and snow to sand).
+	[Color(0.94, 0.97, 1.05), Color(1.04, 1.0, 0.95), 1.06, 1.08, 0.24, 1.0, 0.7, 0.92],
 ]
 ## Night version of any arena (cinematics set force_night): the starlit sky,
 ## lamp glow and teal-and-amber grade Heritage Square used to have.
@@ -1351,7 +1353,7 @@ func _lighting() -> void:
 	env.fog_light_energy = 0.65
 	# Thin mountain air: only the far ridges soften, into blue.
 	# At night the far range sinks into the dark haze, moonlit but dim.
-	env.fog_density = 0.0038 if night else 0.0016
+	env.fog_density = 0.0032 if night else 0.0012
 	env.fog_sky_affect = 0.12
 	# Sunlight scattered into the haze, so fog glows toward the sun.
 	env.fog_sun_scatter = 0.0 if night else 0.2
