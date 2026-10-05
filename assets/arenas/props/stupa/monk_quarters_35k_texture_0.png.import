@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://xl36vvikvfwi"
-path="res://.godot/imported/monastery_hall_src_0.jpg-ff51de629155179e7861ce4ac7f55340.ctex"
+uid="uid://w8hnvqjh7ya2"
+path="res://.godot/imported/monk_quarters_35k_texture_0.png-5a345ac24eccf3a0623f051f9d93ec79.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "65e4dd797739871606e70cc38e497dd1"
+"md5": "64924ecb81652c3f2d6a452a47f17f63"
 }
 
 [deps]
 
-source_file="res://assets/arenas/props/stupa/monastery_hall_src_0.jpg"
-dest_files=["res://.godot/imported/monastery_hall_src_0.jpg-ff51de629155179e7861ce4ac7f55340.ctex"]
+source_file="res://assets/arenas/props/stupa/monk_quarters_35k_texture_0.png"
+dest_files=["res://.godot/imported/monk_quarters_35k_texture_0.png-5a345ac24eccf3a0623f051f9d93ec79.ctex"]
 
 [params]
 

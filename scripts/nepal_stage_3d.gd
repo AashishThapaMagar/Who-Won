@@ -1087,14 +1087,14 @@ const BOUDHA_LAYOUT := [
 	# gompa then goes behind it at z -88).
 	#["stupa_game.res", Vector3(0.0, 0.0, -50.0), 0.0, 18.0],
 	# The gompa closes the far end of the courtyard.
-	["monastery_hall.res", Vector3(0.0, 0.0, -56.0), 0.0, 22.0],
+	["monastery_hall_35k.glb", Vector3(0.0, 0.0, -56.0), 0.0, 1.6],
 	# Monk quarters lining both sides of the approach, facing in.
-	["monk_quarters.res", Vector3(-15.5, 0.0, -10.0), 90.0, 15.0],
-	["monk_quarters.res", Vector3(15.5, 0.0, -10.0), -90.0, 15.0],
-	["monk_quarters.res", Vector3(-15.5, 0.0, -25.0), 90.0, 15.0],
-	["monk_quarters.res", Vector3(15.5, 0.0, -25.0), -90.0, 15.0],
-	["monk_quarters.res", Vector3(-15.5, 0.0, -40.0), 90.0, 15.0],
-	["monk_quarters.res", Vector3(15.5, 0.0, -40.0), -90.0, 15.0],
+	["monk_quarters_35k.glb", Vector3(-15.5, 0.0, -10.0), 90.0, 1.45],
+	["monk_quarters_35k.glb", Vector3(15.5, 0.0, -10.0), -90.0, 1.45],
+	["monk_quarters_35k.glb", Vector3(-15.5, 0.0, -25.0), 90.0, 1.45],
+	["monk_quarters_35k.glb", Vector3(15.5, 0.0, -25.0), -90.0, 1.45],
+	["monk_quarters_35k.glb", Vector3(-15.5, 0.0, -40.0), 90.0, 1.45],
+	["monk_quarters_35k.glb", Vector3(15.5, 0.0, -40.0), -90.0, 1.45],
 	# Prayer wheels close behind the fight; the incense burner part way
 	# down; the butter lamps burn at the foot of the stupa's steps.
 	["prayer_wheels.glb", Vector3(-6.0, 0.0, -12.0), 0.0, 1.0],
@@ -1239,6 +1239,27 @@ func _clear_region(model: Node3D, region: AABB) -> void:
 		if changed:
 			node.mesh = out
 
+## Meshy buildings come with faceted normals: flat wall panels tilt this
+## way and that, and the ones facing away from the sun catch only blue sky
+## light, showing as dark triangles across whitewash. Rebuilt once per mesh
+## with shared vertices welded and smooth normals.
+static var smooth_cache: Dictionary = {}
+static func _smooth_mesh(mesh: ArrayMesh) -> ArrayMesh:
+	if smooth_cache.has(mesh):
+		return smooth_cache[mesh]
+	var out := ArrayMesh.new()
+	for surface in mesh.get_surface_count():
+		var tool := SurfaceTool.new()
+		tool.create_from(mesh, surface)
+		tool.set_smooth_group(0)
+		tool.index()
+		tool.generate_normals()
+		tool.generate_tangents()
+		tool.commit(out)
+		out.surface_set_material(surface, mesh.surface_get_material(surface))
+	smooth_cache[mesh] = out
+	return out
+
 const BACKGROUND_Z := -12.0
 const UNBATCHED_PROPS := ["pagoda", "shikhara", "lion"]
 func _place_prop(path: String, at: Vector3, turn: float, scale := 1.0, tint := Color.WHITE) -> void:
@@ -1270,7 +1291,33 @@ func _place_prop(path: String, at: Vector3, turn: float, scale := 1.0, tint := C
 	# skip them when off screen (merging would fix them at full detail).
 	if path.get_file().get_basename() in UNBATCHED_PROPS:
 		prop.set_meta("unbatched", true)
-	# The import's automatic detail levels fold thin parts (scarves, flags,
+	# Meshy exports whitewash and plaster partly metallic, so walls mirror
+	# the sky in dark facets; buildings get a matte, non-metal finish.
+	if path.get_file().begins_with("monastery_hall") or path.get_file().begins_with("monk_quarters"):
+		for mesh: MeshInstance3D in prop.find_children("*", "MeshInstance3D", true, false):
+			if mesh.mesh is ArrayMesh:
+				mesh.mesh = _smooth_mesh(mesh.mesh)
+			# A low sun stretched their rooftop shadows into jagged blue
+			# shards across the other buildings' whitewash.
+			mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			for surface in mesh.mesh.get_surface_count():
+				var finish := mesh.get_active_material(surface) as StandardMaterial3D
+				if finish != null and not finish.has_meta("matte"):
+					finish.set_meta("matte", true)
+					finish.metallic = 0.0
+					finish.metallic_texture = null
+					finish.roughness = 0.88
+					finish.roughness_texture = null
+					finish.metallic_specular = 0.3
+					# Its baked normal map bends whole wall panels into dark
+					# shards at fight distance; the walls read flatter and
+					# cleaner without it.
+					finish.normal_enabled = false
+					# Meshy's walls are slightly lumpy; under a low grazing sun
+					# each tilt flipped between lit and unlit. Wrapped diffuse
+					# lets light fall off softly across the bumps.
+					finish.diffuse_mode = BaseMaterial3D.DIFFUSE_LAMBERT_WRAP
+		# The import's automatic detail levels fold thin parts (scarves, flags,
 	# finials) into stray triangles at fight-camera distance; hold full
 	# detail far longer.
 	for mesh: MeshInstance3D in prop.find_children("*", "MeshInstance3D", true, false):
