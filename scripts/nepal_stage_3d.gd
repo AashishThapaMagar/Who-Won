@@ -928,7 +928,9 @@ func _dress_heritage(folder: String) -> void:
 	if night:
 		_heritage_night(floor_y)
 	for side in [-1.0, 1.0]:
-		_place_prop(folder + "shikhara.glb", Vector3(side * 8.2, floor_y, -19.5), 0.0)
+		# The towers are 4 m across: centred 5.8 m out they stand clear in
+		# front of the house rows (whose fronts are at 7.9 m), not inside them.
+		_place_prop(folder + "shikhara.glb", Vector3(side * SHIKHARA_X, floor_y, -19.5), 0.0)
 		_place_prop(folder + "lion.glb", Vector3(side * 3.0, floor_y, -19.0), 0.0)
 		_place_prop(folder + "diyo_stand.glb", Vector3(side * 5.5, 0.0, -1.55), 0.0)
 		for z in [-15.0, -8.0]:
@@ -970,6 +972,10 @@ var _tinted: Dictionary = {}
 
 ## Facade pieces (tinted) sit flat on walls: their shadows would only fall
 ## on the wall behind, so they skip the shadow pass.
+const SHIKHARA_X := 5.8
+## The lantern on lamp_post.glb, out along its arm (model space, metres).
+const LAMP_LANTERN := Vector3(0.17, 2.75, 0.0)
+
 ## Night in the square: warm pools under each lamp post, golden light up
 ## the pagoda's tiers and the towers, and a moonlit rim on the lions.
 func _heritage_night(floor_y: float) -> void:
@@ -980,7 +986,7 @@ func _heritage_night(floor_y: float) -> void:
 		[Vector3(0, floor_y + 7.8, -22.4), Color("ffc27a"), 1.2, 6.5],   # upper tiers
 	]
 	for side in [-1.0, 1.0]:
-		lights.append([Vector3(side * 6.9, floor_y + 0.6, -17.6), Color("ffb868"), 1.6, 6.5])  # tower base
+		lights.append([Vector3(side * SHIKHARA_X, floor_y + 0.6, -16.9), Color("ffb868"), 1.6, 6.5])  # tower base
 		for z in [-15.0, -8.0]:
 			lights.append([Vector3(side * 6.7, floor_y + 3.0, z), Color("ffb45a"), 1.8, 6.0])  # lamp posts
 	for spec in lights:
@@ -993,13 +999,12 @@ func _heritage_night(floor_y: float) -> void:
 		lamp.set_meta("base", spec[2])
 		content.add_child(lamp)
 		lamp_lights.append(lamp)
-	# A glowing lantern flame in each lamp post head, and the cone of its
-	# light falling through the night mist to the flagstones.
-	var flame := _flat("post_flame", Color("ffc46a"), 5.0)
+	# The cone of each lamp's light falling from its lantern (which holds
+	# its own candle) through the night mist to the flagstones.
 	for side in [-1.0, 1.0]:
 		for z in [-15.0, -8.0]:
-			_ball(0.07, Vector3(side * 6.9, floor_y + 3.05, z), flame, 1.0).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			_light_cone(Vector3(side * 6.9, floor_y + 2.98, z), 2.9, 1.15, Color(1.0, 0.7, 0.38, 0.16))
+			var lantern: Vector3 = Vector3(side * 6.9, floor_y, z) + Basis(Vector3.UP, -side * PI / 2.0) * LAMP_LANTERN
+			_light_cone(lantern - Vector3(0, 0.3, 0), lantern.y - 0.3 - floor_y, 1.0, Color(1.0, 0.7, 0.38, 0.16))
 	# Butter lamps glowing on the stands at both ends of the fighting floor.
 	for side in [-1.0, 1.0]:
 		var diyo := OmniLight3D.new()
