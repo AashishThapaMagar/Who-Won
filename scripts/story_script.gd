@@ -27,6 +27,11 @@ extends RefCounted
 ## and rewrite any beat of any chapter (the rest stay shared):
 ##   "prologue_arena" / "finale_arena"  arena mood (nepal_stage_3d.gd ROUNDS)
 ##   "title" / "subtitle"               the prologue's title card
+##   "style": "book"                    tell it as an illustrated book: a
+##                                      line's "image" turns to that drawn
+##                                      page (assets/story/<fighter>/<name>.jpg)
+##   "chapter_images": {id: image}      the page each rival's chapter opens on
+##   "ladder": [ids]                    the order of rivals (ending "anant")
 ##   "finale_title"                     the finale's title card
 ## Any line can carry a "banner" that slams a card across the screen before
 ## the line plays (a poster, a headline):
@@ -322,6 +327,162 @@ const ROUTES := {
 					{"who": "player", "pose": "block_hit", "delay": 2.5, "hold": 2.2}],
 				"shot": {"eye": [6.2, 1.2, 2.8], "look": [9.8, 0.9, -0.9], "eye_to": [7.0, 1.3, 2.3], "look_to": [11.8, 1.2, -1.0], "time": 5}},
 			{"speaker": "anug", "text": "Saved! Good shot, though. Again. Harder this time."},
+			{"speaker": "", "text": "THE END.", "shot": "wide"},
+		],
+	},
+	# Supreme: a hill boy who meant to leave Nepal to feed his family, until
+	# the wind brought him a newspaper. Told as a hand-drawn picture, in two
+	# places of his own: his village road and his old guru's hilltop.
+	"sup": {
+		"title": "THE WIND FROM THE HILLS",
+		"subtitle": "THE STORY OF SUPREME",
+		"finale_title": "THE ANSWER",
+		# "style": "book" would tell it with the drawn pages in
+		# assets/story/sup/ instead of animated scenes (on hold).
+		# Each rival's chapter opens on its page (assets/story/sup/).
+		"chapter_images": {"anug": "p07_anug", "ish": "p08_ish", "bib": "p09_bib", "abhi": "p10_abhi", "sab": "p12_ballas", "anant": "p13_hilltop"},
+		# Old friends first; his brother Ballas fifth; then Ananta.
+		"ladder": ["anug", "ish", "bib", "abhi", "sab", "anant"],
+		"prologue": [
+			{"speaker": "", "image": "p01_home", "text": "High on a ridge in the hills of Nepal, the morning comes early.",
+				"set": "hill_road", "cast": {"player": {"at": "home", "face": "camera"}},
+				"shot": "wide"},
+			{"speaker": "", "text": "Supreme lives here with his mother and his two little sisters. The fields don't feed four mouths anymore.",
+				"shot": {"eye": [-2.4, 1.7, 1.8], "look": [-5.6, 1.6, -6.0], "eye_to": [-3.2, 1.8, 1.0], "look_to": [-5.8, 1.7, -6.5], "time": 6}},
+			{"speaker": "sup", "image": "p02_worry", "text": "Ama's medicine. Bahini's school fees. The roof again before the monsoon...", "shot": "hero"},
+			{"speaker": "", "image": "p03_road", "text": "So like thousands of young men from these hills, he has made up his mind. Go abroad. Work. Send money home.",
+				"do": [{"who": "player", "walk": "road", "speed": 1.0, "delay": 0.4, "then_face": [1, 0]}],
+				"shot": {"follow": "player", "offset": [-2.4, 0.2, 3.2]}},
+			{"speaker": "sup", "text": "Qatar. Malaysia. Anywhere. If I can just find the money for the visa..."},
+			{"speaker": "", "image": "p04_wind", "text": "Then, one morning on the road, the wind brought him something.",
+				"do": [{"ball": {"from": [-14.0, 2.6, -1.0], "to": [0.35, 1.15, 0.75], "time": 3.2, "arc": 1.4}, "delay": 0.3},
+					{"who": "player", "face": [-1, 0], "delay": 2.6}],
+				"shot": {"eye": [3.0, 1.6, 4.2], "look": [-4.0, 1.8, -0.5], "eye_to": [2.0, 1.4, 3.0], "look_to": [0.0, 1.3, 0.4], "time": 4}},
+			{"speaker": "", "text": "A newspaper. And across the top, a headline.",
+				"banner": {"eyebrow": "OPEN TOURNAMENT", "title": "THE ROAD TO ANANTA", "subtitle": "BEAT ANANTA  /  WIN RS 5 CRORE", "red": true},
+				"shot": "close_player"},
+			{"speaker": "sup", "image": "p05_paper", "text": "The Road to Ananta... five crore to whoever beats him?"},
+			{"speaker": "sup", "text": "Five crore. No visa. No leaving home. No leaving them.", "shot": "hero"},
+			{"speaker": "", "text": "Ananta. A name Supreme had never heard. And yet something in it felt like a voice from long ago."},
+			{"speaker": "", "image": "p06_leave", "text": "He packed his fighting clothes that same night, and took the first bus down the hill.",
+				"do": [{"who": "player", "walk": "shelter", "speed": 1.3, "delay": 0.6}],
+				"shot": {"eye": [-2.0, 2.0, 6.5], "look": [3.0, 1.2, -1.0], "eye_to": [4.0, 2.0, 6.0], "look_to": [10.0, 1.2, -1.4], "time": 7}},
+			{"speaker": "sup", "text": "Ama. I'll be back. With enough for all of us."},
+		],
+		"chapters": {
+			"anug": {
+				"intro": [
+					{"speaker": "anug", "text": "Supreme? You came all the way down from the hills for this?"},
+					{"speaker": "sup", "text": "Same reason as you, Anug. Bills don't wait."},
+					{"speaker": "anug", "text": "Then no holding back, friend."},
+				],
+				"victory": [
+					{"speaker": "anug", "text": "Go on. Win it for both of us."},
+					{"speaker": "sup", "text": "If I do, you're getting a real pitch."},
+				],
+				"defeat": [
+					{"speaker": "anug", "text": "Nothing gets past me, hill boy. Try again."},
+				],
+			},
+			"ish": {
+				"intro": [
+					{"speaker": "ish", "text": "Supreme! Last time we fought, it was over the last plate of momo."},
+					{"speaker": "sup", "text": "This time it's for my family, Ish."},
+					{"speaker": "ish", "text": "Then I'll hit you twice as fast."},
+				],
+				"victory": [
+					{"speaker": "ish", "text": "...You were always faster than you looked."},
+				],
+				"defeat": [
+					{"speaker": "ish", "text": "Too slow today. Shake it off and come again."},
+				],
+			},
+			"bib": {
+				"intro": [
+					{"speaker": "bib", "text": "Race you to Ananta?"},
+					{"speaker": "sup", "text": "It's not a race, Bib. It's a climb. And I grew up climbing."},
+				],
+				"victory": [
+					{"speaker": "bib", "text": "Okay, okay. Go. Don't look back."},
+				],
+				"defeat": [
+					{"speaker": "bib", "text": "Ha! Climb faster!"},
+				],
+			},
+			"abhi": {
+				"intro": [
+					{"speaker": "abhi", "text": "The hill boy! Did you bring a goat to cheer for you?"},
+					{"speaker": "sup", "text": "Just my sisters' school fees."},
+					{"speaker": "abhi", "text": "...Respect. But I'm still not losing."},
+				],
+				"victory": [
+					{"speaker": "abhi", "text": "The Loud Thunder... gone quiet. Go on, brother."},
+				],
+				"defeat": [
+					{"speaker": "abhi", "text": "Louder next time, hill boy!"},
+				],
+			},
+			"sab": {
+				"intro": [
+					{"speaker": "", "text": "The fifth name on the board stops Supreme cold.",
+						"banner": {"eyebrow": "CHAPTER FIVE", "title": "BALLAS", "subtitle": "THE UNFINISHED MATCH"}},
+					{"speaker": "sab", "text": "Brother."},
+					{"speaker": "sup", "text": "Ballas... of everyone on this road, it had to be you."},
+					{"speaker": "sab", "image": "p11_fair", "text": "The Dashain fair, five years ago. Our match never finished. The storm came and they rang the bell."},
+					{"speaker": "sup", "text": "I remember. I was winning."},
+					{"speaker": "sab", "image": "p12_ballas", "text": "You were losing. Let's finish it."},
+				],
+				"victory": [
+					{"speaker": "sab", "text": "...Fine. You were winning."},
+					{"speaker": "sup", "text": "Let's call it a draw, brother."},
+					{"speaker": "sab", "text": "No. It's yours. Now go and bring it home."},
+				],
+				"defeat": [
+					{"speaker": "sab", "text": "Again. Brothers don't stop halfway."},
+				],
+			},
+			"anant": {
+				"intro": [
+					{"speaker": "", "text": "The last match isn't in any arena. A hilltop at dusk, far from the crowds. And Supreme knows this place.",
+						"set": "ananta_ground", "cast": {"player": {"at": "edge", "face": "dummy"}, "rival": {"at": "dummy", "face": "player"}},
+						"shot": "wide"},
+					{"speaker": "sup", "text": "This is where Guruji trained me. Every morning, before school..."},
+					{"speaker": "anant", "text": "And you still drop your left hand when you're tired.", "shot": "close_rival"},
+					{"speaker": "sup", "image": "p14_shock", "text": "...Guruji? No. No, you're dead. Everyone said you were dead!", "shot": "close_player"},
+					{"speaker": "anant", "text": "Ananta is only a name. Your Guruji was a man who ran away."},
+					{"speaker": "sup", "text": "Why? Why did you leave us?"},
+					{"speaker": "anant", "image": "p15_challenge", "text": "Beat me. Then you will have your answer.", "shot": "two"},
+				],
+				"victory": [
+					{"speaker": "anant", "text": "...You didn't drop it. Not once."},
+				],
+				"defeat": [
+					{"speaker": "anant", "text": "Left hand. Again."},
+				],
+			},
+		},
+		"finale": [
+			{"speaker": "", "image": "p16_log", "text": "Afterwards, they sat together on the old log, the way they used to after training.",
+				"set": "ananta_ground",
+				"cast": {"player": {"at": "log_left", "face": "log_right"}, "anant": {"fighter": "anant", "at": "log_right", "face": "player"}},
+				"shot": "wide"},
+			{"speaker": "anant", "text": "Do you remember? You hit this dummy so hard the whole village complained."},
+			{"speaker": "sup", "text": "And you made me apologise to every house. Twice."},
+			{"speaker": "", "text": "Then, quietly, Ananta told him the truth.", "shot": "two"},
+			{"speaker": "anant", "image": "p17_final", "text": "Years ago, I fought for Nepal. An international final."},
+			{"speaker": "anant", "text": "One mistake... one silly mistake. I dropped my guard to celebrate before the bell."},
+			{"speaker": "anant", "image": "p18_shame", "text": "I lost. The whole country watched. They laughed. Strangers spat my name in the street."},
+			{"speaker": "anant", "text": "I couldn't face them. So I disappeared, and let everyone believe I was gone."},
+			{"speaker": "sup", "text": "And the Road to Ananta?"},
+			{"speaker": "anant", "text": "I had to know if that mistake mattered."},
+			{"speaker": "anant", "text": "So tonight I left you the same opening. The very same one I left that night."},
+			{"speaker": "anant", "text": "You saw it. You punished it. And I lost again."},
+			{"speaker": "sup", "text": "Guruji..."},
+			{"speaker": "anant", "text": "And I am glad. Even if I had won that final, someone like you would have beaten me one day."},
+			{"speaker": "anant", "text": "Losing was never the end of me. Hiding was."},
+			{"speaker": "anant", "image": "p19_together", "text": "Tomorrow I walk down to the city. As myself."},
+			{"speaker": "sup", "text": "Then I'm walking with you."},
+			{"speaker": "sup", "image": "p20_hall", "text": "And the prize... we build a training hall. Here, in the hills. So nobody has to leave home to make a living.", "shot": "hero"},
 			{"speaker": "", "text": "THE END.", "shot": "wide"},
 		],
 	},

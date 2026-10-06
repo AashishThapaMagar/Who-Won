@@ -8,11 +8,21 @@ extends Node3D
 ##   street   a city street at night; a temple wall with the tournament poster
 ##   pitch    a dusty neighbourhood pitch at dusk, one goal
 ##   academy  the same pitch rebuilt: grass, floodlights, academy banner
+##   hill_road      Supreme's hill village road on a bright morning: his home,
+##                  the teahouse, a bus shelter, a stone water spout; the
+##                  set's ball is a newspaper the wind carries to him
+##   ananta_ground  a hilltop at dusk: Ananta's old training dummy and a log
+##                  to sit on, prayer flags, the range glowing behind
+##   (both dressed with Tripo models from assets/arenas/props/hill and
+##   props/story_sup)
 ##
 ## Sets face the camera from +Z like the arenas, with the floor at y = 0.
 const PHOTO_SURFACE := preload("res://scripts/arena_photo_surface.gdshader")
 const UI := preload("res://scripts/ui_kit.gd")
-const NAMES := ["gym", "street", "pitch", "academy"]
+const NAMES := ["gym", "street", "pitch", "academy", "hill_road", "ananta_ground"]
+const HIMALAYA := preload("res://scripts/himalaya_backdrop.gd")
+const HILL_PROPS := "res://assets/arenas/props/hill/"
+const SUP_PROPS := "res://assets/arenas/props/story_sup/"
 
 ## Mark name -> Vector3 on the floor.
 var marks: Dictionary = {}
@@ -22,6 +32,7 @@ var wide: Array = []
 var ball: MeshInstance3D
 var night := false
 var _flicker: Array[OmniLight3D] = []
+var _flutter: Array[Node3D] = []
 var _elapsed := 0.0
 
 static func make(set_name: String) -> Node3D:
@@ -40,11 +51,18 @@ func build(set_name: String) -> void:
 			_pitch(false)
 		"academy":
 			_pitch(true)
+		"hill_road":
+			_hill_road()
+		"ananta_ground":
+			_ananta_ground()
 		_:
 			push_warning("Unknown story set %s" % set_name)
 
 func animate(delta: float) -> void:
 	_elapsed += delta
+	# Prayer flags flutter in the wind.
+	for i in _flutter.size():
+		_flutter[i].rotation.x = sin(_elapsed * 3.0 - i * 0.5) * 0.35
 	# A tired tube light that never quite settles.
 	for i in _flicker.size():
 		var buzz := sin(_elapsed * 37.0 + i * 5.0) * sin(_elapsed * 3.1 + i)
@@ -231,6 +249,122 @@ func _pitch(academy: bool) -> void:
 	wide = [Vector3(0.0, 2.6, 8.0), Vector3(8.0, 1.0, -1.0), Vector3(4.0, 1.9, 6.2), Vector3(10.0, 1.1, -1.0)]
 
 # ── Building blocks ─────────────────────────────────────────────────────
+
+## Supreme's village: a dirt road along a ridge on a clear morning.
+func _hill_road() -> void:
+	_environment(Color("c9dcef"), Color("b7c6d8"), 0.55, 0.004, Color("3f7bd2"))
+	_sun(Vector3(-38, -50, 0), Color("fff1dc"), 1.15)
+	_ground(Color(0.66, 0.58, 0.48), Color(0.62, 0.74, 0.46))
+	# The road, a strip of packed earth across the set.
+	_box(Vector3(60, 0.04, 3.2), Vector3(0, 0.0, 0.4), _flat(Color("9c8268"), 0.95))
+	_prop(HILL_PROPS + "hill_house.glb", Vector3(-6.0, 0, -8.0), 20.0, 1.7)
+	_prop(HILL_PROPS + "tea_house.glb", Vector3(6.0, 0, -8.5), -15.0, 1.3)
+	_prop(SUP_PROPS + "bus_shelter.glb", Vector3(11.0, 0, -2.6), -10.0, 1.0)
+	_prop(SUP_PROPS + "dhunge_dhara.glb", Vector3(-11.0, 0, -3.0), 25.0, 1.0)
+	_prop(HILL_PROPS + "chautara.glb", Vector3(1.0, 0, -9.5), 0.0, 5.0)
+	for spot in [[-9.0, -8.0, 0.0, 8.0], [9.5, -9.5, 80.0, 7.0], [-14.0, -6.5, 160.0, 7.5]]:
+		_prop(HILL_PROPS + "rhododendron.glb", Vector3(spot[0], 0, spot[1]), spot[2], spot[3])
+	add_child(HIMALAYA.build(Color("c9dcef"), false, false))
+	_flags(Vector3(-5.5, 3.6, -7.0), Vector3(5.8, 3.4, -7.6))
+	# The newspaper: a folded sheet with a red headline band.
+	ball = MeshInstance3D.new()
+	var sheet := BoxMesh.new()
+	sheet.size = Vector3(0.42, 0.006, 0.3)
+	ball.mesh = sheet
+	ball.material_override = _flat(Color("ece6d6"), 0.9)
+	ball.position = Vector3(-14.0, 2.5, -1.0)
+	add_child(ball)
+	var band := _box(Vector3(0.4, 0.008, 0.07), Vector3(0, 0.001, -0.1), _flat(Color("b3202a"), 0.8))
+	remove_child(band)
+	ball.add_child(band)
+	marks = {"home": Vector3(-5.2, 0, -4.4), "road": Vector3(0.0, 0, 0.4), "east": Vector3(14.0, 0, 0.4),
+		"west": Vector3(-14.0, 0, 0.4), "shelter": Vector3(10.6, 0, -1.4), "tap": Vector3(-10.0, 0, -1.6)}
+	wide = [Vector3(-8.0, 2.6, 8.5), Vector3(-2.0, 1.6, -4.0), Vector3(-2.0, 2.2, 7.0), Vector3(1.0, 1.6, -4.0)]
+
+## The hilltop where Ananta trained his student, at dusk.
+func _ananta_ground() -> void:
+	_environment(Color("e3a77c"), Color("8f86a8"), 0.5, 0.006, Color("3b4a8c"))
+	_sun(Vector3(-10, -70, 0), Color("ffc58c"), 1.2)
+	_ground(Color(0.6, 0.55, 0.5), Color(0.55, 0.62, 0.4))
+	_prop(SUP_PROPS + "training_dummy.glb", Vector3(-2.6, 0, -2.4), 30.0, 1.0)
+	_prop(SUP_PROPS + "sitting_log.glb", Vector3(1.6, 0, -1.2), -10.0, 1.0)
+	_prop(HILL_PROPS + "chautara.glb", Vector3(4.5, 0, -7.0), 0.0, 5.5)
+	_prop(HILL_PROPS + "rhododendron.glb", Vector3(-6.5, 0, -6.0), 40.0, 7.5)
+	add_child(HIMALAYA.build(Color("e3a77c"), false, true))
+	_flags(Vector3(-6.0, 3.6, -5.5), Vector3(4.5, 5.2, -6.6))
+	marks = {"dummy": Vector3(-2.0, 0, -1.4), "log_left": Vector3(1.0, 0, -0.7), "log_right": Vector3(2.2, 0, -0.8),
+		"edge": Vector3(-1.0, 0, 1.4), "far": Vector3(-8.0, 0, 1.0)}
+	wide = [Vector3(-5.0, 2.4, 7.0), Vector3(0.0, 1.4, -3.0), Vector3(-1.5, 1.8, 5.6), Vector3(1.0, 1.2, -2.0)]
+
+## Packed earth underfoot and meadow beyond, from the arenas' aerial scans.
+func _ground(earth: Color, grass: Color) -> void:
+	var near := PlaneMesh.new()
+	near.size = Vector2(40, 24)
+	var dirt := MeshInstance3D.new()
+	dirt.mesh = near
+	dirt.position = Vector3(0, -0.01, -2)
+	dirt.material_override = _scan("aerial_rocks_02", 5.0, earth)
+	add_child(dirt)
+	var far := PlaneMesh.new()
+	far.size = Vector2(400, 400)
+	var meadow := MeshInstance3D.new()
+	meadow.mesh = far
+	meadow.position = Vector3(0, -0.03, -60)
+	meadow.material_override = _scan("aerial_grass_rock", 9.0, grass)
+	add_child(meadow)
+
+func _scan(folder: String, world_size: float, tint: Color) -> StandardMaterial3D:
+	var path := "res://assets/arenas/textures/%s/%s_" % [folder, folder]
+	var material := StandardMaterial3D.new()
+	material.albedo_texture = load(path + "diff_1k.jpg")
+	material.albedo_color = tint
+	material.roughness = 0.95
+	material.uv1_triplanar = true
+	material.uv1_world_triplanar = true
+	material.uv1_scale = Vector3.ONE / world_size
+	return material
+
+## A Tripo model, turned (degrees) and scaled, standing on the floor (Tripo
+## models are centred on their origin).
+func _prop(path: String, at: Vector3, turn: float, scale_by: float) -> void:
+	if not ResourceLoader.exists(path):
+		return
+	var prop := (load(path) as PackedScene).instantiate() as Node3D
+	var low := INF
+	for mesh: MeshInstance3D in prop.find_children("*", "MeshInstance3D", true, false):
+		var xform := Transform3D.IDENTITY
+		var node: Node = mesh
+		while node != null and node != prop:
+			if node is Node3D:
+				xform = (node as Node3D).transform * xform
+			node = node.get_parent()
+		low = minf(low, (xform * mesh.get_aabb()).position.y)
+	prop.position = at - Vector3(0, low * scale_by if is_finite(low) else 0.0, 0)
+	prop.rotation.y = deg_to_rad(turn)
+	prop.scale = Vector3.ONE * scale_by
+	add_child(prop)
+
+## A line of prayer flags that flutter (see animate).
+func _flags(a: Vector3, b: Vector3) -> void:
+	var colors := [Color("2f6fc4"), Color("f1ede2"), Color("c8342c"), Color("2f8f4e"), Color("e6b62f")]
+	var count := 22
+	for i in range(1, count):
+		var t := float(i) / count
+		var point := a.lerp(b, t) - Vector3(0, sin(t * PI) * 0.5, 0)
+		var hanger := Node3D.new()
+		hanger.position = point
+		hanger.rotation.y = -atan2((b - a).z, (b - a).x)
+		add_child(hanger)
+		var flag := MeshInstance3D.new()
+		var quad := QuadMesh.new()
+		quad.size = Vector2(0.22, 0.26)
+		flag.mesh = quad
+		flag.position = Vector3(0, -0.14, 0)
+		var material := _flat(colors[(i - 1) % 5], 0.9)
+		material.cull_mode = BaseMaterial3D.CULL_DISABLED
+		flag.material_override = material
+		hanger.add_child(flag)
+		_flutter.append(hanger)
 
 func _environment(background: Color, ambient: Color, ambient_energy: float, fog: float, horizon := Color()) -> void:
 	var world := WorldEnvironment.new()

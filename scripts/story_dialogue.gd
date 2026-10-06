@@ -119,6 +119,10 @@ func _build_world() -> void:
 	view.stretch_mode = TextureRect.STRETCH_SCALE
 	view.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(view)
+	# Some storylines are told like an old picture book: one still,
+	# school-book illustration per line, turning page to page.
+	if StoryDirector.route().get("style", "") == "book":
+		_build_book(view)
 
 func _build_overlay() -> void:
 	var vignette := ColorRect.new()
@@ -212,7 +216,7 @@ func _open_beat() -> void:
 			_card("PROLOGUE", route.get("title", "THE ROAD TO " + ROSTER.profile(6).name), route.get("subtitle", place), UI.GOLD)
 		StoryDirector.Phase.INTRO:
 			var boss: bool = MatchSetup.is_final_boss()
-			_card("FINAL CHAPTER" if boss else "CHAPTER %02d" % chapter, rival.name, rival.title.to_upper() + "   /   " + place, UI.CRIMSON if boss else UI.GOLD)
+			_card("FINAL CHAPTER" if boss else "CHAPTER %02d" % chapter, rival.name, rival.title.to_upper() + ("   /   " + place if place != "" else ""), UI.CRIMSON if boss else UI.GOLD)
 		StoryDirector.Phase.VICTORY:
 			_pose("rival", "ko")
 			_pose("player", "victory")
@@ -799,6 +803,7 @@ func _exit_tree() -> void:
 
 func _process(delta: float) -> void:
 	elapsed += delta
+	_update_book(delta)
 	if stage != null and stage.is_inside_tree():
 		stage.animate(delta)
 	if is_instance_valid(story_set):
@@ -811,6 +816,112 @@ func _process(delta: float) -> void:
 			if animated != null:
 				animated.replay()
 	_update_camera(delta)
+
+# ── Picture book ───────────────────────────────────────────────────────
+## Storylines with "style": "book" are told as an illustrated book: the 3D
+## scene is hidden and each line shows a drawn page from
+## assets/story/<fighter>/<name>.jpg. A line's "image" turns to a new page;
+## lines without one stay on the current page. A chapter opens on its
+## route "chapter_images" page; the prologue and finale on their first.
+const TURN_TIME := 0.9
+## The old page curling away: right of the fold it is gone (with the fold's
+## shadow on the new page), just left of it the leaf's back folds over.
+const TURN_SHADER := """shader_type canvas_item;
+uniform float turn = 0.0;
+uniform vec3 back : source_color = vec3(0.88, 0.82, 0.66);
+void fragment() {
+	float fold = 1.0 - turn;
+	float flap = min(fold, (1.0 - fold) * 0.5);
+	vec4 page = texture(TEXTURE, UV);
+	if (UV.x > fold) {
+		float d = (UV.x - fold) / 0.09;
+		COLOR = vec4(0.0, 0.0, 0.0, 0.45 * max(1.0 - d, 0.0) * step(0.001, turn));
+	} else if (UV.x > fold - flap) {
+		float k = (fold - UV.x) / max(flap, 0.0001);
+		COLOR = vec4(back * (0.72 + 0.28 * k), 1.0);
+	} else {
+		COLOR = page;
+	}
+}
+"""
+var book := false
+var _page: TextureRect
+var _turning: TextureRect
+var _page_line := -1
+var _page_name := ""
+
+func _build_book(live: TextureRect) -> void:
+	book = true
+	live.visible = false
+	# The open book: aged paper behind the page.
+	var desk := ColorRect.new()
+	desk.color = Color(0.83, 0.76, 0.58)
+	desk.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	desk.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(desk)
+	move_child(desk, live.get_index() + 1)
+	_page = _page_rect()
+	add_child(_page)
+	move_child(_page, desk.get_index() + 1)
+	_turning = _page_rect()
+	var curl := ShaderMaterial.new()
+	curl.shader = Shader.new()
+	curl.shader.code = TURN_SHADER
+	_turning.material = curl
+	_turning.visible = false
+	add_child(_turning)
+	move_child(_turning, _page.get_index() + 1)
+
+func _page_rect() -> TextureRect:
+	var rect := TextureRect.new()
+	rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	rect.offset_top = BAR + 6
+	rect.offset_bottom = -BAR - 6
+	rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return rect
+
+func _update_book(_delta: float) -> void:
+	if not book or line_index == _page_line or line_index >= lines.size():
+		return
+	_page_line = line_index
+	var name := _page_name
+	if line_index == 0 or name == "":
+		name = StoryDirector.route().get("chapter_images", {}).get(StoryDirector.opponent_id, "")
+		if StoryDirector.phase in [StoryDirector.Phase.PROLOGUE, StoryDirector.Phase.FINALE]:
+			name = ""
+	var line: Dictionary = lines[line_index]
+	if line.has("image"):
+		name = line.image
+	if name != "" and name != _page_name:
+		_show_page(name)
+
+## Turns to the named page: the old page curls away over the new one.
+func _show_page(name: String) -> void:
+	var path := "res://assets/story/%s/%s.jpg" % [ROSTER.profile(MatchSetup.selected_fighters[0]).id, name]
+	var picture: Texture2D = null
+	if ResourceLoader.exists(path):
+		picture = load(path)
+	elif FileAccess.file_exists(path):
+		picture = ImageTexture.create_from_image(Image.load_from_file(path))
+	if picture == null:
+		return
+	_page_name = name
+	var old: Texture2D = _page.texture
+	_page.texture = picture
+	if old == null:
+		_page.modulate.a = 0.0
+		create_tween().tween_property(_page, "modulate:a", 1.0, 0.5)
+		return
+	preload("res://scripts/sfx.gd").fire("menu_move", -8.0)
+	_turning.texture = old
+	_turning.visible = true
+	var curl: ShaderMaterial = _turning.material
+	curl.set_shader_parameter("turn", 0.0)
+	var turn := create_tween()
+	turn.tween_method(func(t: float): curl.set_shader_parameter("turn", t), 0.0, 1.0, TURN_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	turn.tween_callback(func(): _turning.visible = false)
 
 func _unhandled_input(event: InputEvent) -> void:
 	# Marked handled BEFORE acting: _advance_flow()/_next_line() can call

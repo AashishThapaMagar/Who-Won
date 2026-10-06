@@ -36,6 +36,16 @@ func begin_arcade() -> void:
 		if i != selected_fighters[0]:
 			arcade_opponents.append(i)
 	arcade_opponents.append(6)
+	# A storyline can set its own order of rivals (story_script.gd ROUTES).
+	if story:
+		var roster := preload("res://scripts/fighter_roster.gd")
+		var route: Dictionary = load("res://scripts/story_script.gd").ROUTES.get(roster.profile(selected_fighters[0]).id, {})
+		if route.has("ladder"):
+			arcade_opponents.clear()
+			for id in route.ladder:
+				for i in 7:
+					if roster.profile(i).id == id and i != selected_fighters[0]:
+						arcade_opponents.append(i)
 	arcade_index = 0
 	selected_fighters[1] = arcade_opponents[0]
 	vs_ai = true
