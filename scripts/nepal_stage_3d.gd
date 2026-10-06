@@ -1260,7 +1260,6 @@ func _dress_hill(folder: String) -> void:
 const HIMALAYA_LAYOUT := [
 	["sherpa_lodge.glb", Vector3(-11.0, 0.0, -16.0), 20.0, 2.6],
 	["chorten.glb", Vector3(3.0, 0.0, -32.0), 0.0, 2.6],
-	["mani_wall.glb", Vector3(-2.0, 0.0, -14.0), 0.0, 2.2],
 	["prayer_pole.glb", Vector3(10.5, 0.0, -13.0), 0.0, 2.4],
 	["prayer_pole.glb", Vector3(-6.5, 0.0, -24.0), 0.0, 2.2],
 ]
