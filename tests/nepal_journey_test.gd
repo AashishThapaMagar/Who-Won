@@ -61,11 +61,10 @@ func run() -> void:
 		check(model.get_meta("source_glb") == stage.ARENA_MODELS[index], "Each round loads its supplied arena model")
 		check(stage.batched_pieces > 100, "Each imported arena retains its modelled architecture (merged into batches)")
 		check(stage.content.find_children("Batched", "MeshInstance3D", false, false).size() < 60, "Static scenery is merged into a few draw batches")
-		check(stage.lamp_lights.size() >= 2, "Imported practical lamps are registered for flicker")
+		# The Terai village is a daytime yard on open plains, without lamps.
+		check(index == 1 or stage.lamp_lights.size() >= 2, "Imported practical lamps are registered for flicker")
 		check(stage.environment.environment.fog_enabled, "Arena lighting includes atmospheric depth")
-		if index == 1:
-			check(stage.lanterns.size() == 24, "All imported paper lanterns sway from their hanger pivots")
-		elif index != 3:
+		if index in [0, 2]:
 			# The gompa courtyard drops the model's flag strings with its stupa.
 			check(not stage.flags.is_empty(), "Imported prayer flags retain animated pivots")
 		if index == 3:

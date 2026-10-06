@@ -4,7 +4,7 @@ extends Node3D
 ## Procedural construction helpers remain below for future scenery edits.
 const ROUNDS := [
 	{"name": "HERITAGE SQUARE", "night": true, "detail": "NIGHT / Lamplit carvings and a three-tier pagoda under the moon"},
-	{"name": "LANTERN SQUARE", "night": false, "detail": "MORNING / Paper lanterns strung across the old square"},
+	{"name": "TERAI PLAINS", "night": false, "detail": "MORNING / A Tharu village on the green plains of the south"},
 	{"name": "TERRACE OVERLOOK", "night": false, "detail": "AFTERNOON / Terraced hills and the Himalaya in full sun"},
 	{"name": "GOMPA COURTYARD", "night": false, "detail": "SUNSET / A monastery courtyard glowing gold at dusk"},
 ]
@@ -24,6 +24,7 @@ const HIMALAYA := preload("res://scripts/himalaya_backdrop.gd")
 ## original pieces.
 const PROPS := {
 	0: "res://assets/arenas/props/heritage/",
+	1: "res://assets/arenas/props/terai/",
 	3: "res://assets/arenas/props/stupa/",
 }
 ## Photo-scanned surfaces from Poly Haven (CC0), in assets/arenas/textures/:
@@ -56,7 +57,8 @@ const AMBIENCE := [
 ## nearly white sun high enough to light faces, and a soft sky-blue fill.
 const MOODS := [
 	[Color("2f6fd6"), Color("bcd8f2"), Color("fff6ea"), 0.9, Color("b4c8e4"), 0.34, -40.0, -35.0, Color(1, 1, 1)],
-	[Color("3a7ad8"), Color("c4dcf2"), Color("fff7ec"), 0.9, Color("b8cbe4"), 0.34, -38.0, 30.0, Color(1, 1, 1)],
+	# Terai: a humid, golden morning over flat green plains.
+	[Color("4f86cf"), Color("dfe6d8"), Color("fff0d2"), 0.95, Color("b9c9b0"), 0.38, -30.0, 40.0, Color(1, 1, 1)],
 	[Color("2c6cd4"), Color("b8d6f2"), Color("fff4e4"), 0.92, Color("b2c6e2"), 0.33, -42.0, 28.0, Color(1, 1, 1)],
 	# Boudha at sunset: a violet-blue sky warming to peach at the horizon,
 	# a low golden sun from the side that rakes across the fighters and
@@ -386,6 +388,8 @@ func show_round(index: int) -> void:
 		_dress_heritage(PROPS[index])
 	elif PROPS.has(index) and ResourceLoader.exists(PROPS[index] + "stupa_game.res"):
 		_dress_stupa(PROPS[index])
+	elif PROPS.has(index) and ResourceLoader.exists(PROPS[index] + "tharu_house.glb"):
+		_dress_terai(PROPS[index])
 	content.add_child(HIMALAYA.build(_mood()[1], night, index in [2, 3], index == 3))
 	_fight_lighting()
 	_arena_inlay()
@@ -1144,6 +1148,47 @@ func _dress_stupa(folder: String) -> void:
 		var reach: float = stupa[3] * 0.5
 		_flag_line(peak, base + Vector3(sin(angle) * reach, stupa[3] * 0.14, cos(angle) * reach), 1.0, 22, false)
 
+## Terai Plains: the old square's houses, lanterns and flags are cleared
+## and the fight sits in a Tharu village yard of packed earth on open green
+## plains: thatched mud houses painted with folk motifs, a bullock cart
+## loaded with rice straw, a shrine under a great pipal tree and tall sal
+## trees (Tripo models in props/terai/). Rows as BOUDHA_LAYOUT: [file,
+## position, turn (degrees), scale]; the Tripo models come small, hence the
+## large scales.
+const TERAI_LAYOUT := [
+	["tharu_house.glb", Vector3(-10.5, 0.0, -15.0), 20.0, 2.0],
+	["tharu_house.glb", Vector3(9.5, 0.0, -21.0), -15.0, 2.0],
+	["pipal_shrine.glb", Vector3(-1.5, 0.0, -27.0), 0.0, 10.0],
+	["bullock_cart.glb", Vector3(5.2, 0.0, -10.5), -35.0, 2.3],
+	["sal_tree.glb", Vector3(-16.0, 0.0, -28.0), 0.0, 5.0],
+	["sal_tree.glb", Vector3(15.5, 0.0, -34.0), 70.0, 5.6],
+	["sal_tree.glb", Vector3(-6.0, 0.0, -42.0), 140.0, 5.3],
+	["sal_tree.glb", Vector3(18.0, 0.0, -12.0), 200.0, 4.6],
+	["sal_tree.glb", Vector3(-19.0, 0.0, -8.0), 260.0, 4.8],
+	["sal_tree.glb", Vector3(6.0, 0.0, -48.0), 310.0, 5.8],
+]
+func _dress_terai(folder: String) -> void:
+	var model := content.get_node_or_null("ArenaModel") as Node3D
+	var floor_y := -0.12
+	if model != null:
+		for list in [flags, lanterns]:
+			for pivot in list.duplicate():
+				if pivot.is_inside_tree() and model.is_ancestor_of(pivot):
+					list.erase(pivot)
+					pivot.queue_free()
+		# Everything but the fighting dais.
+		_clear_region(model, AABB(Vector3(-200, -1.0, -200), Vector3(400, 80, 197.4)))
+		_clear_region(model, AABB(Vector3(-200, -1.0, 2.6), Vector3(400, 80, 200)))
+		for side in [-1.0, 1.0]:
+			_clear_region(model, AABB(Vector3(6.6 if side > 0.0 else -206.6, -1.0, -2.6), Vector3(200, 80, 5.2)))
+		_clear_region(model, AABB(Vector3(-6.6, 0.4, -2.6), Vector3(13.2, 80, 5.2)))
+		for light in model.find_children("*", "OmniLight3D", true, false):
+			lamp_lights.erase(light)
+			light.queue_free()
+		floor_y = _open_ground(model, "aerial_rocks_02", 6.0, Color(0.62, 0.55, 0.47), Color(0.7, 0.86, 0.5))
+	for row: Array in TERAI_LAYOUT:
+		_place_prop(folder + row[0], row[1] + Vector3(0.0, floor_y, 0.0), deg_to_rad(row[2]), row[3])
+
 ## A Meshy model baked to a game mesh (unit footprint, standing on y = 0),
 ## placed `width` metres across. Kept out of the static merge so its LODs
 ## and culling apply; background pieces cast no shadow.
@@ -1164,7 +1209,7 @@ func _place_baked(path: String, at: Vector3, turn: float, width: float) -> void:
 ## meadow beyond it out to the foothills, in place of the brick plaza. One
 ## world-projected texture layer each (the photo materials' full stack is
 ## the HIGH preset's expensive part).
-func _open_ground(model: Node3D) -> float:
+func _open_ground(model: Node3D, court_folder := "medieval_blocks_03", court_size := 2.4, court_tint := Color(0.96, 0.9, 0.82), meadow_tint := Color(0.62, 0.7, 0.5)) -> float:
 	var ground_y := -0.12
 	for node: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
 		if node.mesh == null:
@@ -1173,17 +1218,17 @@ func _open_ground(model: Node3D) -> float:
 		if box.size.x > 80.0 and box.size.y < 0.5:
 			ground_y = box.end.y
 			node.visible = false
-	var meadow := _ground_material("aerial_grass_rock", 9.0, Color(0.62, 0.7, 0.5))
+	var meadow := _ground_material("aerial_grass_rock", 9.0, meadow_tint)
 	var grass := PlaneMesh.new()
 	grass.size = Vector2(320, 320)
 	_piece(grass, Vector3(0, ground_y - 0.02, -40), meadow).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var court := PlaneMesh.new()
 	court.size = Vector2(26, 84)
-	_piece(court, Vector3(0, ground_y, -34), _ground_material("medieval_blocks_03", 2.4, Color(0.96, 0.9, 0.82))).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_piece(court, Vector3(0, ground_y, -34), _ground_material(court_folder, court_size, court_tint)).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return ground_y
 
 func _ground_material(folder: String, world_size: float, tint: Color) -> StandardMaterial3D:
-	var key := "ground_" + folder
+	var key := "ground_%s_%s" % [folder, tint.to_html()]
 	if materials.has(key):
 		return materials[key]
 	var path := "res://assets/arenas/textures/%s/%s_" % [folder, folder]
@@ -1260,6 +1305,18 @@ static func _smooth_mesh(mesh: ArrayMesh) -> ArrayMesh:
 	smooth_cache[mesh] = out
 	return out
 
+## Prop folders made with Tripo (models centred on their origin).
+const TRIPO_PROP_FOLDERS := ["terai", "hill", "himalaya"]
+## A mesh's bounds in its prop's own space, before the prop joins the tree.
+static func _local_aabb(prop: Node3D, mesh: MeshInstance3D) -> AABB:
+	var xform := Transform3D.IDENTITY
+	var node: Node = mesh
+	while node != null and node != prop:
+		if node is Node3D:
+			xform = (node as Node3D).transform * xform
+		node = node.get_parent()
+	return xform * mesh.get_aabb()
+
 const BACKGROUND_Z := -12.0
 const UNBATCHED_PROPS := ["pagoda", "shikhara", "lion"]
 func _place_prop(path: String, at: Vector3, turn: float, scale := 1.0, tint := Color.WHITE) -> void:
@@ -1274,6 +1331,16 @@ func _place_prop(path: String, at: Vector3, turn: float, scale := 1.0, tint := C
 	if not ResourceLoader.exists(path):
 		return
 	var prop := (load(path) as PackedScene).instantiate() as Node3D
+	# Tripo models are centred on their origin rather than standing on it:
+	# lift them so their base sits on the floor.
+	var low := INF
+	var high := -INF
+	for mesh: MeshInstance3D in prop.find_children("*", "MeshInstance3D", true, false):
+		var box: AABB = prop.global_transform.affine_inverse() * mesh.global_transform * mesh.get_aabb() if prop.is_inside_tree() else _local_aabb(prop, mesh)
+		low = minf(low, box.position.y)
+		high = maxf(high, box.end.y)
+	if path.get_base_dir().get_file() in TRIPO_PROP_FOLDERS and low < -0.05 * (high - low):
+		at.y -= low * scale
 	prop.position = at
 	prop.rotation.y = turn
 	prop.scale = Vector3.ONE * scale
