@@ -1133,6 +1133,12 @@ const BOUDHA_LAYOUT := [
 	["prayer_wheels.glb", Vector3(6.0, 0.0, -12.0), 0.0, 1.0],
 	["incense_burner.glb", Vector3(-8.0, 0.0, -26.0), 0.0, 1.0],
 	["butter_lamps.glb", Vector3(0.0, 0.0, -42.0), 0.0, 1.4],
+	# Before the hall's steps: the great drum and the long dungchen horns
+	# (Tripo), and prayer-flag poles at the corners of the court.
+	["monastery_drum.glb", Vector3(-5.5, 0.0, -46.0), 25.0, 2.2],
+	["dungchen_horns.glb", Vector3(5.5, 0.0, -46.0), -20.0, 1.6],
+	["../himalaya/prayer_pole.glb", Vector3(-9.5, 0.0, -30.0), 0.0, 2.6],
+	["../himalaya/prayer_pole.glb", Vector3(9.5, 0.0, -30.0), 90.0, 2.6],
 ]
 ## Height of the stupa's spire tip over its footprint width (where the
 ## prayer-flag lines start).
@@ -1576,6 +1582,8 @@ static func _smooth_mesh(mesh: ArrayMesh) -> ArrayMesh:
 
 ## Prop folders made with Tripo (models centred on their origin).
 const TRIPO_PROP_FOLDERS := ["terai", "hill", "himalaya"]
+## Tripo props in otherwise non-Tripo folders.
+const TRIPO_PROPS := ["monastery_drum.glb", "dungchen_horns.glb"]
 ## A mesh's bounds in its prop's own space, before the prop joins the tree.
 static func _local_aabb(prop: Node3D, mesh: MeshInstance3D) -> AABB:
 	var xform := Transform3D.IDENTITY
@@ -1608,7 +1616,7 @@ func _place_prop(path: String, at: Vector3, turn: float, scale := 1.0, tint := C
 		var box: AABB = prop.global_transform.affine_inverse() * mesh.global_transform * mesh.get_aabb() if prop.is_inside_tree() else _local_aabb(prop, mesh)
 		low = minf(low, box.position.y)
 		high = maxf(high, box.end.y)
-	if path.get_base_dir().get_file() in TRIPO_PROP_FOLDERS and low < -0.05 * (high - low):
+	if (path.get_base_dir().get_file() in TRIPO_PROP_FOLDERS or path.get_file() in TRIPO_PROPS) and low < -0.05 * (high - low):
 		at.y -= low * scale
 	prop.position = at
 	prop.rotation.y = turn
