@@ -58,7 +58,7 @@ const AMBIENCE := [
 const MOODS := [
 	[Color("2f6fd6"), Color("bcd8f2"), Color("fff6ea"), 0.9, Color("b4c8e4"), 0.34, -40.0, -35.0, Color(1, 1, 1)],
 	# Terai: a humid, golden morning over flat green plains.
-	[Color("4f86cf"), Color("dfe6d8"), Color("fff0d2"), 0.95, Color("b9c9b0"), 0.38, -30.0, 40.0, Color(1, 1, 1)],
+	[Color("4f86cf"), Color("a9c6d2"), Color("fff0d2"), 0.95, Color("b9c9b0"), 0.38, -30.0, 40.0, Color(1, 1, 1)],
 	[Color("2c6cd4"), Color("b8d6f2"), Color("fff4e4"), 0.92, Color("b2c6e2"), 0.33, -42.0, 28.0, Color(1, 1, 1)],
 	# Boudha at sunset: a violet-blue sky warming to peach at the horizon,
 	# a low golden sun from the side that rakes across the fighters and
@@ -1203,6 +1203,7 @@ func _dress_terai(folder: String) -> void:
 				continue
 			var depth := rng.randf_range(band[1], band[0])
 			_place_prop(folder + "sal_tree.glb", Vector3(across, floor_y, depth), rng.randf_range(0.0, TAU), rng.randf_range(band[3], band[4]))
+	_forest_wall(floor_y)
 	# Sal forest along the horizon beyond the fields (far copies draw at
 	# their import LODs).
 	for i in 22:
@@ -1217,6 +1218,48 @@ func _dress_terai(folder: String) -> void:
 			if node.material_override == floor_material:
 				node.material_override = clay
 		floor_material = clay
+
+## Deep jungle behind the trees: a curved band of dense foliage with an
+## uneven canopy edge, so the gaps between trunks show forest, not sky.
+const FOREST_WALL := """
+shader_type spatial;
+render_mode cull_disabled;
+uniform vec3 leaf_dark : source_color = vec3(0.06, 0.11, 0.05);
+uniform vec3 leaf_light : source_color = vec3(0.19, 0.29, 0.12);
+varying vec3 world;
+float hash(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+float noise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y); }
+void vertex() { world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz; }
+void fragment() {
+	float around = atan(world.x, world.z) * 60.0;
+	vec2 p = vec2(around, world.y);
+	float crown = 0.55 * noise(p * vec2(0.18, 0.0)) + 0.3 * noise(p * vec2(0.6, 0.0)) + 0.15 * noise(p * vec2(1.7, 0.0));
+	float top = 9.0 + crown * 9.0;
+	if (world.y > top) { discard; }
+	float leaves = noise(p * 1.4) * 0.6 + noise(p * 4.0) * 0.4;
+	float lit = smoothstep(0.0, 1.0, (world.y - 1.0) / (top - 1.0));
+	ALBEDO = mix(leaf_dark, leaf_light, leaves * (0.35 + 0.65 * lit));
+	ROUGHNESS = 0.95;
+	SPECULAR = 0.1;
+}
+"""
+func _forest_wall(floor_y: float) -> void:
+	var shader := Shader.new()
+	shader.code = FOREST_WALL
+	var material := ShaderMaterial.new()
+	material.shader = shader
+	var band := CylinderMesh.new()
+	band.top_radius = 92.0
+	band.bottom_radius = 92.0
+	band.height = 20.0
+	band.radial_segments = 96
+	band.rings = 1
+	band.cap_top = false
+	band.cap_bottom = false
+	var wall := _piece(band, Vector3(0, floor_y + 9.5, -20.0), material)
+	wall.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	wall.set_meta("unbatched", true)
 
 ## A Meshy model baked to a game mesh (unit footprint, standing on y = 0),
 ## placed `width` metres across. Kept out of the static merge so its LODs
@@ -1491,7 +1534,7 @@ func _lighting() -> void:
 	env.fog_light_color = mood[1]
 	if current_round == 1:
 		# Humid plains air: a warm haze that softens the forest line.
-		env.fog_light_color = Color("e6dcc2")
+		env.fog_light_color = Color("9fb39a")
 		env.fog_density = 0.0045
 	if current_round == 3 and not night:
 		# Dusk air is cool violet in the distance; a warm haze would turn
