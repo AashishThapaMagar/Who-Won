@@ -81,7 +81,9 @@ const TRIPO_MOVES := {
 	"anant": {
 		# A spinning high kick: he turns his back, whips the leg up head
 		# high and lands facing forward again.
-		"kick_spin": ["spin_kick.glb", "front_kick_02"],
+		# Windowed by hand: the measured "furthest reach" caught the leg still
+		# chambered at hip height (0.7 s); the foot peaks head high at 0.8 s.
+		"kick_spin": ["spin_kick.glb", "front_kick_02", [0.3, 0.8, 1.35]],
 	},
 }
 const MESHY_MOVES := {
