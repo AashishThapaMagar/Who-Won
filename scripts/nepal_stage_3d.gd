@@ -387,7 +387,7 @@ func show_round(index: int) -> void:
 		remove_child(content)
 		content.queue_free()
 	flags.clear()
-	yak = null
+	yaks.clear()
 	lamp_lights.clear()
 	lanterns.clear()
 	content = Node3D.new()
@@ -1291,69 +1291,104 @@ func _dress_himalaya(folder: String) -> void:
 				node.material_override = slate
 		floor_material = slate
 
-## A yak that wanders the snow behind the fight: Tripo's quadruped rig and
-## walk preset, steered in animate() between random points in its pasture.
-var yak: Node3D = null
-var _yak_goal := Vector3.ZERO
-var _yak_rest := 0.0
-var _yak_anim: AnimationPlayer = null
+## Yaks that wander the snow behind the fight: Tripo's quadruped rig and
+## walk preset, steered in animate(). Each walks to a random point in its
+## pasture, stops and lowers its head to graze, then moves on.
+var yaks: Array[Dictionary] = []
 var _yak_rng := RandomNumberGenerator.new()
-## The yak's pasture: a box of the snow behind and right of the fight.
-const YAK_AREA := AABB(Vector3(5.0, 0.0, -30.0), Vector3(12.0, 0.0, 14.0))
+## Pastures (start point, area) behind and to the sides of the fight.
+const YAK_HERD := [
+	[Vector3(9.0, 0.0, -20.0), AABB(Vector3(5.0, 0.0, -30.0), Vector3(12.0, 0.0, 14.0))],
+	[Vector3(-4.0, 0.0, -34.0), AABB(Vector3(-9.0, 0.0, -42.0), Vector3(8.0, 0.0, 10.0))],
+]
 const YAK_SPEED := 0.9
+## The neck and head bones of Tripo's yak rig, bent down to graze.
+const YAK_NECK := ["bone_5", "bone_6"]
 func _add_yak(folder: String, floor_y: float) -> void:
-	yak = null
+	yaks.clear()
 	var path := folder + "yak_walk.glb"
 	if not ResourceLoader.exists(path):
 		_place_prop(folder + "yak.glb", Vector3(9.0, floor_y, -20.0), deg_to_rad(-60.0), 1.4)
 		return
-	var body := (load(path) as PackedScene).instantiate() as Node3D
-	var low := INF
-	for mesh: MeshInstance3D in body.find_children("*", "MeshInstance3D", true, false):
-		low = minf(low, _local_aabb(body, mesh).position.y)
-	var holder := Node3D.new()
-	holder.name = "Yak"
-	content.add_child(holder)
-	holder.add_child(body)
-	body.scale = Vector3.ONE * 1.4
-	body.position.y = -low * 1.4 if is_finite(low) else 0.0
-	holder.position = Vector3(9.0, floor_y, -20.0)
-	yak = holder
 	_yak_rng.seed = 11
-	_yak_goal = holder.position
-	_yak_rest = 1.0
-	var players := body.find_children("*", "AnimationPlayer", true, false)
-	_yak_anim = players[0] if not players.is_empty() else null
-	if _yak_anim != null:
-		var clip: String = _yak_anim.get_animation_list()[0]
-		_yak_anim.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
-		_yak_anim.play(clip)
-		_yak_anim.pause()
+	for spot: Array in YAK_HERD:
+		var body := (load(path) as PackedScene).instantiate() as Node3D
+		var low := INF
+		for mesh: MeshInstance3D in body.find_children("*", "MeshInstance3D", true, false):
+			low = minf(low, _local_aabb(body, mesh).position.y)
+		var holder := Node3D.new()
+		holder.name = "Yak"
+		content.add_child(holder)
+		holder.add_child(body)
+		var size := _yak_rng.randf_range(1.25, 1.5)
+		body.scale = Vector3.ONE * size
+		body.position.y = -low * size if is_finite(low) else 0.0
+		holder.position = spot[0] + Vector3(0.0, floor_y, 0.0)
+		holder.rotation.y = _yak_rng.randf_range(0.0, TAU)
+		var players := body.find_children("*", "AnimationPlayer", true, false)
+		var anim: AnimationPlayer = players[0] if not players.is_empty() else null
+		if anim != null:
+			var clip: String = anim.get_animation_list()[0]
+			anim.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
+			anim.play(clip)
+			anim.seek(_yak_rng.randf_range(0.0, anim.current_animation_length), true)
+			anim.pause()
+		var skeletons := body.find_children("*", "Skeleton3D", true, false)
+		yaks.append({"node": holder, "anim": anim, "skeleton": skeletons[0] if not skeletons.is_empty() else null,
+			"area": spot[1], "floor": floor_y, "goal": holder.position,
+			"rest": _yak_rng.randf_range(1.0, 4.0), "graze": 1.0})
 
 ## Walk to a goal, stand and graze a few seconds, pick another goal.
 func _wander_yak(delta: float) -> void:
-	if yak == null or not is_instance_valid(yak):
+	for yak in yaks:
+		var node: Node3D = yak.node
+		if not is_instance_valid(node):
+			continue
+		var anim: AnimationPlayer = yak.anim
+		var to: Vector3 = yak.goal - node.position
+		to.y = 0.0
+		var walking := false
+		if yak.rest > 0.0:
+			yak.rest -= delta
+			if yak.rest <= 0.0:
+				var area: AABB = yak.area
+				yak.goal = Vector3(_yak_rng.randf_range(area.position.x, area.end.x), yak.floor, _yak_rng.randf_range(area.position.z, area.end.z))
+		elif to.length() < 0.25:
+			yak.rest = _yak_rng.randf_range(3.0, 7.0)
+		else:
+			walking = true
+			# The model faces -Z: turn that toward the goal before and while
+			# walking, as a heavy animal does.
+			var want := atan2(-to.x, -to.z)
+			node.rotation.y = lerp_angle(node.rotation.y, want, 1.0 - exp(-1.6 * delta))
+			var ahead := Vector3(-sin(node.rotation.y), 0.0, -cos(node.rotation.y))
+			node.position += ahead * YAK_SPEED * delta * clampf(ahead.dot(to.normalized()), 0.0, 1.0)
+		if anim != null:
+			if walking and not anim.is_playing():
+				anim.play()
+			elif not walking and anim.is_playing():
+				anim.pause()
+		# Grazing: the neck sinks to the snow while it stands, rises to walk.
+		yak.graze = move_toward(yak.graze, 0.0 if walking else 1.0, delta * 0.8)
+		_bend_neck(yak)
+
+## Bends the yak's neck and head down about its body's side axis by the
+## current graze amount (added on top of the walk clip's pose).
+func _bend_neck(yak: Dictionary) -> void:
+	var skeleton: Skeleton3D = yak.skeleton
+	if skeleton == null:
 		return
-	var to := _yak_goal - yak.position
-	to.y = 0.0
-	if _yak_rest > 0.0:
-		_yak_rest -= delta
-		if _yak_anim != null and _yak_anim.is_playing():
-			_yak_anim.pause()
-		if _yak_rest <= 0.0:
-			_yak_goal = Vector3(_yak_rng.randf_range(YAK_AREA.position.x, YAK_AREA.end.x), yak.position.y, _yak_rng.randf_range(YAK_AREA.position.z, YAK_AREA.end.z))
-		return
-	if to.length() < 0.2:
-		_yak_rest = _yak_rng.randf_range(2.5, 6.0)
-		return
-	if _yak_anim != null and not _yak_anim.is_playing():
-		_yak_anim.play()
-	# Turn toward the goal before and while walking, as a heavy animal does.
-	var want := atan2(to.x, to.z)
-	yak.rotation.y = lerp_angle(yak.rotation.y, want, 1.0 - exp(-2.0 * delta))
-	var ahead := Vector3(sin(yak.rotation.y), 0.0, cos(yak.rotation.y))
-	var facing := ahead.dot(to.normalized())
-	yak.position += ahead * YAK_SPEED * delta * clampf(facing, 0.0, 1.0)
+	var amount: float = smoothstep(0.0, 1.0, yak.graze)
+	var side: Vector3 = (skeleton.global_transform.basis.orthonormalized().inverse() * (yak.node as Node3D).global_transform.basis.x).normalized()
+	for i in YAK_NECK.size():
+		var bone := skeleton.find_bone(YAK_NECK[i])
+		if bone < 0:
+			continue
+		if not yak.has("rest_" + str(bone)):
+			yak["rest_" + str(bone)] = skeleton.get_bone_pose_rotation(bone)
+		var base: Quaternion = yak["rest_" + str(bone)] if not (yak.anim as AnimationPlayer).is_playing() else skeleton.get_bone_pose_rotation(bone)
+		var axis: Vector3 = (skeleton.get_bone_global_pose(bone).basis.orthonormalized().inverse() * side).normalized()
+		skeleton.set_bone_pose_rotation(bone, base * Quaternion(axis, -0.95 * amount if i == 0 else -0.6 * amount))
 
 ## Per-arena changes to the distant ranges, once they are built.
 func _shape_backdrop(index: int, backdrop: Node3D) -> void:
