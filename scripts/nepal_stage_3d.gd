@@ -5,7 +5,7 @@ extends Node3D
 const ROUNDS := [
 	{"name": "HERITAGE SQUARE", "night": true, "detail": "NIGHT / Lamplit carvings and a three-tier pagoda under the moon"},
 	{"name": "TERAI PLAINS", "night": false, "detail": "MORNING / A Tharu village on the green plains of the south"},
-	{"name": "TERRACE OVERLOOK", "night": false, "detail": "AFTERNOON / Terraced hills and the Himalaya in full sun"},
+	{"name": "HILL VILLAGE", "night": false, "detail": "MORNING / A ridge village above terraced valleys and the Himalaya"},
 	{"name": "GOMPA COURTYARD", "night": false, "detail": "SUNSET / A monastery courtyard glowing gold at dusk"},
 ]
 const ARENA_MODELS := [
@@ -25,6 +25,7 @@ const HIMALAYA := preload("res://scripts/himalaya_backdrop.gd")
 const PROPS := {
 	0: "res://assets/arenas/props/heritage/",
 	1: "res://assets/arenas/props/terai/",
+	2: "res://assets/arenas/props/hill/",
 	3: "res://assets/arenas/props/stupa/",
 }
 ## Photo-scanned surfaces from Poly Haven (CC0), in assets/arenas/textures/:
@@ -391,6 +392,8 @@ func show_round(index: int) -> void:
 		_dress_stupa(PROPS[index])
 	elif PROPS.has(index) and ResourceLoader.exists(PROPS[index] + "tharu_house.glb"):
 		_dress_terai(PROPS[index])
+	elif PROPS.has(index) and ResourceLoader.exists(PROPS[index] + "hill_house.glb"):
+		_dress_hill(PROPS[index])
 	# The Terai is flat: no ranges behind it, a forest line instead.
 	if index != 1:
 		content.add_child(HIMALAYA.build(_mood()[1], night, index in [2, 3], index == 3))
@@ -1170,24 +1173,83 @@ const TERAI_LAYOUT := [
 	["sal_tree.glb", Vector3(-19.0, 0.0, -8.0), 260.0, 4.8],
 	["sal_tree.glb", Vector3(6.0, 0.0, -48.0), 310.0, 5.8],
 ]
+## Hill Village: a stone-paved yard on a ridge, with Gurung houses, a bhatti
+## teahouse, a chautara under its tree and rhododendrons in bloom; past the
+## low stone wall the ground falls away to a valley crossed by a prayer-flag
+## suspension bridge, the terraced foothills and the snowy range beyond
+## (Tripo models in props/hill/). Rows as BOUDHA_LAYOUT.
+const HILL_EDGE := -27.0
+const HILL_DROP := 18.0
+const HILL_LAYOUT := [
+	["hill_house.glb", Vector3(-11.5, 0.0, -14.0), 25.0, 2.8],
+	["hill_house.glb", Vector3(12.0, 0.0, -19.5), -30.0, 2.8],
+	["tea_house.glb", Vector3(-6.5, 0.0, -22.5), 10.0, 1.9],
+	["chautara.glb", Vector3(3.5, 0.0, -21.0), 0.0, 6.0],
+	["rhododendron.glb", Vector3(-15.5, 0.0, -24.0), 0.0, 9.0],
+	["rhododendron.glb", Vector3(15.5, 0.0, -9.5), 120.0, 8.0],
+	["rhododendron.glb", Vector3(-17.5, 0.0, -5.0), 200.0, 8.5],
+	["rhododendron.glb", Vector3(9.5, 0.0, -25.5), 60.0, 7.5],
+	# Across the valley, below the ridge.
+	# Hung across the valley at ridge height (its towers drop out of
+	# sight below the wall line).
+	["suspension_bridge.glb", Vector3(20.0, -9.0, -85.0), 60.0, 7.0],
+]
+func _dress_hill(folder: String) -> void:
+	var model := content.get_node_or_null("ArenaModel") as Node3D
+	var floor_y := -0.12
+	if model != null:
+		_strip_to_dais(model)
+		for node: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+			if node.mesh == null:
+				continue
+			var box: AABB = node.global_transform * node.get_aabb()
+			if box.size.x > 80.0 and box.size.y < 0.5:
+				floor_y = box.end.y
+				node.visible = false
+	# The ridge yard of slate-grey stone, a low dry-stone wall at its edge,
+	# and the valley floor far below.
+	var yard := PlaneMesh.new()
+	yard.size = Vector2(44, 40)
+	_piece(yard, Vector3(0, floor_y, HILL_EDGE + 20.0), _ground_material("medieval_blocks_03", 2.2, Color(0.8, 0.8, 0.82))).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var cliff := BoxMesh.new()
+	cliff.size = Vector3(44, HILL_DROP, 1.0)
+	_piece(cliff, Vector3(0, floor_y - HILL_DROP * 0.5, HILL_EDGE - 0.5), _ground_material("aerial_rocks_02", 8.0, Color(0.72, 0.68, 0.62))).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var wall := _surface("kerb", 1, Color("7d7466"), Color("3f3a33"))
+	_box(Vector3(44, 0.7, 0.6), Vector3(0, floor_y + 0.35, HILL_EDGE + 0.3), wall)
+	var valley := PlaneMesh.new()
+	valley.size = Vector2(400, 300)
+	_piece(valley, Vector3(0, floor_y - HILL_DROP, -160), _ground_material("aerial_grass_rock", 12.0, Color(0.6, 0.72, 0.45))).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	for row: Array in HILL_LAYOUT:
+		_place_prop(folder + row[0], row[1] + Vector3(0.0, floor_y, 0.0), deg_to_rad(row[2]), row[3])
+	# The terraced foothills rise from the valley floor, not the ridge.
+	var backdrop := content.get_node_or_null("HimalayaBackdrop") as Node3D
+	if backdrop != null:
+		backdrop.position.y = floor_y - HILL_DROP + 2.0
+	# Prayer flags strung between the two houses, still in the morning air.
+	_flag_line(Vector3(-11.0, floor_y + 6.2, -13.0), Vector3(11.5, floor_y + 6.6, -18.5), 0.9, 34, false)
+
+## Strips an imported arena model down to its fighting dais: its buildings,
+## flags, lanterns and lamps go, for an arena dressed from scratch.
+func _strip_to_dais(model: Node3D) -> void:
+	for list in [flags, lanterns]:
+		for pivot in list.duplicate():
+			if pivot.is_inside_tree() and model.is_ancestor_of(pivot):
+				list.erase(pivot)
+				pivot.queue_free()
+	_clear_region(model, AABB(Vector3(-200, -1.0, -200), Vector3(400, 80, 197.4)))
+	_clear_region(model, AABB(Vector3(-200, -1.0, 2.6), Vector3(400, 80, 200)))
+	for side in [-1.0, 1.0]:
+		_clear_region(model, AABB(Vector3(6.6 if side > 0.0 else -206.6, -1.0, -2.6), Vector3(200, 80, 5.2)))
+	_clear_region(model, AABB(Vector3(-6.6, 0.4, -2.6), Vector3(13.2, 80, 5.2)))
+	for light in model.find_children("*", "OmniLight3D", true, false):
+		lamp_lights.erase(light)
+		light.queue_free()
+
 func _dress_terai(folder: String) -> void:
 	var model := content.get_node_or_null("ArenaModel") as Node3D
 	var floor_y := -0.12
 	if model != null:
-		for list in [flags, lanterns]:
-			for pivot in list.duplicate():
-				if pivot.is_inside_tree() and model.is_ancestor_of(pivot):
-					list.erase(pivot)
-					pivot.queue_free()
-		# Everything but the fighting dais.
-		_clear_region(model, AABB(Vector3(-200, -1.0, -200), Vector3(400, 80, 197.4)))
-		_clear_region(model, AABB(Vector3(-200, -1.0, 2.6), Vector3(400, 80, 200)))
-		for side in [-1.0, 1.0]:
-			_clear_region(model, AABB(Vector3(6.6 if side > 0.0 else -206.6, -1.0, -2.6), Vector3(200, 80, 5.2)))
-		_clear_region(model, AABB(Vector3(-6.6, 0.4, -2.6), Vector3(13.2, 80, 5.2)))
-		for light in model.find_children("*", "OmniLight3D", true, false):
-			lamp_lights.erase(light)
-			light.queue_free()
+		_strip_to_dais(model)
 		floor_y = _open_ground(model, "aerial_rocks_02", 6.0, Color(0.62, 0.55, 0.47), Color(0.7, 0.86, 0.5))
 	for row: Array in TERAI_LAYOUT:
 		_place_prop(folder + row[0], row[1] + Vector3(0.0, floor_y, 0.0), deg_to_rad(row[2]), row[3])
