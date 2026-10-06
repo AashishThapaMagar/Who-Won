@@ -74,7 +74,8 @@ const MOODS := [
 ## the shadows and a light vignette.
 const GRADES := [
 	[Color(0.96, 0.99, 1.04), Color(1.01, 1.0, 0.98), 1.2, 1.07, 0.2, 1.04, 0.6, 0.95],
-	[Color(0.96, 0.99, 1.04), Color(1.01, 1.0, 0.98), 1.2, 1.07, 0.2, 1.04, 0.6, 0.95],
+	# Terai: warm, lush and golden; greens rich, shadows a touch warm.
+	[Color(1.0, 0.99, 0.93), Color(1.05, 1.0, 0.9), 1.16, 1.06, 0.22, 1.03, 0.6, 0.95],
 	[Color(0.96, 0.99, 1.04), Color(1.01, 1.0, 0.98), 1.22, 1.07, 0.18, 1.05, 0.6, 0.95],
 	# Golden hour, not orange: warm highlights, cool shadows, whites kept
 	# white (a strong warm cast turned whitewash and snow to sand).
@@ -390,7 +391,9 @@ func show_round(index: int) -> void:
 		_dress_stupa(PROPS[index])
 	elif PROPS.has(index) and ResourceLoader.exists(PROPS[index] + "tharu_house.glb"):
 		_dress_terai(PROPS[index])
-	content.add_child(HIMALAYA.build(_mood()[1], night, index in [2, 3], index == 3))
+	# The Terai is flat: no ranges behind it, a forest line instead.
+	if index != 1:
+		content.add_child(HIMALAYA.build(_mood()[1], night, index in [2, 3], index == 3))
 	_fight_lighting()
 	_arena_inlay()
 	if RAILINGS:
@@ -1188,6 +1191,22 @@ func _dress_terai(folder: String) -> void:
 		floor_y = _open_ground(model, "aerial_rocks_02", 6.0, Color(0.62, 0.55, 0.47), Color(0.7, 0.86, 0.5))
 	for row: Array in TERAI_LAYOUT:
 		_place_prop(folder + row[0], row[1] + Vector3(0.0, floor_y, 0.0), deg_to_rad(row[2]), row[3])
+	# Sal forest along the horizon beyond the fields (far copies draw at
+	# their import LODs).
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	for i in 22:
+		var across := lerpf(-70.0, 70.0, (i + rng.randf_range(-0.3, 0.3)) / 21.0)
+		var depth := -62.0 - rng.randf_range(0.0, 22.0) - absf(across) * 0.15
+		_place_prop(folder + "sal_tree.glb", Vector3(across, floor_y, depth), rng.randf_range(0.0, TAU), rng.randf_range(5.5, 7.5))
+	# Maato tiles: the dais in sun-baked earthen clay instead of grey stone.
+	if model != null:
+		var clay := _surface("dais_terai", 5, Color("a87b52"), Color("5e3f28"))
+		clay.set_shader_parameter("wetness", 0.0)
+		for node: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+			if node.material_override == floor_material:
+				node.material_override = clay
+		floor_material = clay
 
 ## A Meshy model baked to a game mesh (unit footprint, standing on y = 0),
 ## placed `width` metres across. Kept out of the static merge so its LODs
@@ -1460,6 +1479,10 @@ func _lighting() -> void:
 	# naturally into the sky. Supported by the Compatibility renderer.
 	env.fog_enabled = true
 	env.fog_light_color = mood[1]
+	if current_round == 1:
+		# Humid plains air: a warm haze that softens the forest line.
+		env.fog_light_color = Color("e6dcc2")
+		env.fog_density = 0.0045
 	if current_round == 3 and not night:
 		# Dusk air is cool violet in the distance; a warm haze would turn
 		# the snow catching the last light into sand.
