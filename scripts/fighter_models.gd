@@ -73,6 +73,17 @@ const STRIKES := ["jab", "cross", "hook", "punch_heavy", "uppercut", "kick", "ki
 ## Fighters with Meshy's own moves (a "Merged Animations" .fbx, kept local
 ## like the Mixamo files): logical clip -> Meshy animation name. These
 ## replace the shared strikes, so each hit of a combo has its own motion.
+## Animations made with Tripo (auto-rig + preset retarget) for one fighter,
+## one clip per .glb in assets/fighters/<id>/tripo/: logical move ->
+## [file, clip name, optional [start, impact, end] window]. Without a window
+## a strike's impact is measured from the clip (furthest reach).
+const TRIPO_MOVES := {
+	"anant": {
+		# A spinning high kick: he turns his back, whips the leg up head
+		# high and lands facing forward again.
+		"kick_spin": ["spin_kick.glb", "front_kick_02"],
+	},
+}
 const MESHY_MOVES := {
 	"anug": {
 		"jab": "Left_Jab_from_Guard", "cross": "Right_Jab_from_Guard", "hook": "Left_Hook_from_Guard",
@@ -359,6 +370,18 @@ static func _mixamo(fighter_id: String) -> Dictionary:
 				names[logical] = entry
 				timing.erase(logical)
 		meshy = {"file": meshy_file, "clips": names}
+	var tripo: Array = []
+	for logical in TRIPO_MOVES.get(fighter_id, {}):
+		var entry: Array = TRIPO_MOVES[fighter_id][logical]
+		var tripo_file := "res://assets/fighters/%s/tripo/%s" % [fighter_id, entry[0]]
+		if not ResourceLoader.exists(tripo_file):
+			continue
+		tripo.append({"file": tripo_file, "clips": {logical: entry[1]}})
+		clips[logical] = "meshy_" + logical
+		if entry.size() > 2:
+			timing[logical] = entry[2]
+		else:
+			timing.erase(logical)
 	# A fighter's own rigged body (assets/fighters/<id>/body.fbx, from Mixamo
 	# "With Skin") replaces the X Bot and keeps its real textures untinted.
 	var body := "res://assets/fighters/%s/body.fbx" % fighter_id
@@ -379,6 +402,7 @@ static func _mixamo(fighter_id: String) -> Dictionary:
 		"clips": clips,
 		"timing": timing,
 		"meshy": meshy,
+		"tripo": tripo,
 		"reversed": pack.get("reversed", []),
 		"throw_posture": style.get("throw_posture", 0.0),
 		# The shared knockout stands still for 1.6 s before the body drops:

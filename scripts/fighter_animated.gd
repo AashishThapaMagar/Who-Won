@@ -52,6 +52,14 @@ const SCRUBBED := ["jab", "cross", "hook", "punch_heavy", "uppercut", "kick", "k
 const MESHY_BONES := {"spine02": "spine", "spine01": "spine1", "spine": "spine2", "neck": "neck",
 	"head_end": "headtop_end", "lefthand_end": "", "righthand_end": "", "headfront": "",
 	"lefttoe_end": "lefttoe_end", "righttoe_end": "righttoe_end"}
+## Tripo's auto-rig (spec "tripo") names -> Mixamo bone keys. Twist bones
+## and the pelvis stay unmapped; their rest pose holds.
+const TRIPO_BONES := {"hip": "hips", "waist": "spine", "spine01": "spine1", "spine02": "spine2",
+	"necktwist01": "neck", "head": "head",
+	"l_clavicle": "leftshoulder", "l_upperarm": "leftarm", "l_forearm": "leftforearm", "l_hand": "lefthand",
+	"r_clavicle": "rightshoulder", "r_upperarm": "rightarm", "r_forearm": "rightforearm", "r_hand": "righthand",
+	"l_thigh": "leftupleg", "l_calf": "leftleg", "l_foot": "leftfoot", "l_toebase": "lefttoebase",
+	"r_thigh": "rightupleg", "r_calf": "rightleg", "r_foot": "rightfoot", "r_toebase": "righttoebase"}
 var visual: Node
 var root: Node3D
 var character: Node3D
@@ -501,6 +509,8 @@ func _clip_cache_key(files: Dictionary, meshy: Dictionary, skeleton: Skeleton3D,
 		parts.append([name, files[name], FileAccess.get_modified_time(files[name])])
 	if not meshy.is_empty():
 		parts.append([meshy.get("file", ""), FileAccess.get_modified_time(str(meshy.get("file", ""))), meshy.get("clips", {})])
+	for extra in config.get("tripo", []):
+		parts.append([extra.file, FileAccess.get_modified_time(str(extra.file)), extra.clips])
 	var timing_keys: Array = config.get("timing", {}).keys()
 	timing_keys.sort()
 	parts.append(timing_keys)
@@ -543,6 +553,10 @@ func _build_clip_files(files: Dictionary, meshy: Dictionary, target: Skeleton3D,
 		scene.free()
 	if not meshy.is_empty() and ResourceLoader.exists(meshy.file):
 		_add_meshy_clips(library, meshy.file, meshy.clips, skeleton[0], to_skeleton)
+	# Tripo animations (one clip per file), retargeted the same way.
+	for extra in config.get("tripo", []):
+		if ResourceLoader.exists(extra.file):
+			_add_meshy_clips(library, extra.file, extra.clips, skeleton[0], to_skeleton)
 	return library
 
 ## Meshy's own animations (its "Merged Animations" download) retargeted onto
@@ -567,11 +581,16 @@ func _add_meshy_clips(library: AnimationLibrary, path: String, wanted: Dictionar
 	# Meshy's own names only when the rig uses them (its biped FBX); its
 	# rigged .glb already uses Mixamo's.
 	var native := false
+	var tripo := false
 	for bone in source.get_bone_count():
-		native = native or _bone_key(source.get_bone_name(bone)) == "spine02"
+		tripo = tripo or _bone_key(source.get_bone_name(bone)) == "l_thigh"
+	for bone in source.get_bone_count():
+		native = native or (_bone_key(source.get_bone_name(bone)) == "spine02" and not tripo)
 	for bone in source.get_bone_count():
 		var key := _bone_key(source.get_bone_name(bone))
-		if native:
+		if tripo:
+			key = TRIPO_BONES.get(key, "")
+		elif native:
 			key = MESHY_BONES.get(key, key)
 		elif key in ["headfront", "lefthandmiddle4", "righthandmiddle4"]:
 			key = ""
