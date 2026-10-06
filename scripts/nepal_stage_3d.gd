@@ -7,12 +7,15 @@ const ROUNDS := [
 	{"name": "TERAI PLAINS", "night": false, "detail": "MORNING / A Tharu village on the green plains of the south"},
 	{"name": "HILL VILLAGE", "night": false, "detail": "MORNING / A ridge village above terraced valleys and the Himalaya"},
 	{"name": "GOMPA COURTYARD", "night": false, "detail": "SUNSET / A monastery courtyard glowing gold at dusk"},
+	{"name": "HIMALAYAN PASS", "night": false, "detail": "HIGH NOON / Prayer flags and a chorten among the snows"},
 ]
 const ARENA_MODELS := [
 	"res://assets/arenas/models/heritage-square.glb",
 	"res://assets/arenas/models/lantern-square.glb",
 	"res://assets/arenas/models/terrace-overlook.glb",
 	"res://assets/arenas/models/moonlit-stupa.glb",
+	# The pass is dressed from scratch on a plain dais.
+	"res://assets/arenas/models/terrace-overlook.glb",
 ]
 ## Decode the source GLB with the running engine, not another version's
 ## binary import cache. Cache packed scenes for menu/round reuse.
@@ -27,6 +30,7 @@ const PROPS := {
 	1: "res://assets/arenas/props/terai/",
 	2: "res://assets/arenas/props/hill/",
 	3: "res://assets/arenas/props/stupa/",
+	4: "res://assets/arenas/props/himalaya/",
 }
 ## Photo-scanned surfaces from Poly Haven (CC0), in assets/arenas/textures/:
 ## kind -> [texture folder, metres per repeat, tint, normal strength, saturation].
@@ -51,6 +55,7 @@ const AMBIENCE := [
 	["none", Color.WHITE, 0],
 	["none", Color.WHITE, 0],
 	["sky_lanterns", Color(1.0, 0.66, 0.3, 0.95), 16],
+	["snow", Color(1.0, 1.0, 1.0, 0.9), 70],
 ]
 ## Sky and light per round: [sky top, horizon, sun colour, sun energy,
 ## ambient colour, ambient energy, sun pitch, sun yaw, mountain tint].
@@ -65,6 +70,8 @@ const MOODS := [
 	# a low golden sun from the side that rakes across the fighters and
 	# throws long shadows, and a cool dusk fill in the shadows.
 	[Color("3d5591"), Color("e9bfa0"), Color("ffd3a6"), 1.1, Color("8f98b8"), 0.4, -14.0, -65.0, Color(1.0, 0.93, 0.88)],
+	# The pass: a deep high-altitude blue, hard white sun, cold blue fill.
+	[Color("1f4fb0"), Color("c7d8ee"), Color("fffbf4"), 1.15, Color("a8bcdc"), 0.36, -48.0, -30.0, Color(1, 1, 1)],
 ]
 ## Finishing grade per round (arena_grade.gdshader): [shadow tint,
 ## highlight tint, saturation, contrast, vignette, exposure, glow intensity,
@@ -81,6 +88,8 @@ const GRADES := [
 	# Golden hour, not orange: warm highlights, cool shadows, whites kept
 	# white (a strong warm cast turned whitewash and snow to sand).
 	[Color(0.94, 0.97, 1.05), Color(1.04, 1.0, 0.95), 1.06, 1.08, 0.24, 1.0, 0.7, 0.92],
+	# Crisp and cold: blue shadows, clean whites, a little extra contrast.
+	[Color(0.92, 0.97, 1.08), Color(1.0, 1.0, 1.0), 1.1, 1.1, 0.22, 1.0, 0.6, 0.95],
 ]
 ## Night version of any arena (cinematics set force_night): the starlit sky,
 ## lamp glow and teal-and-amber grade Heritage Square used to have.
@@ -378,6 +387,7 @@ func show_round(index: int) -> void:
 		remove_child(content)
 		content.queue_free()
 	flags.clear()
+	yak = null
 	lamp_lights.clear()
 	lanterns.clear()
 	content = Node3D.new()
@@ -394,14 +404,25 @@ func show_round(index: int) -> void:
 		_dress_terai(PROPS[index])
 	elif PROPS.has(index) and ResourceLoader.exists(PROPS[index] + "hill_house.glb"):
 		_dress_hill(PROPS[index])
+	elif PROPS.has(index) and ResourceLoader.exists(PROPS[index] + "sherpa_lodge.glb"):
+		_dress_himalaya(PROPS[index])
 	# The Terai is flat: no ranges behind it, a forest line instead.
 	if index != 1:
 		content.add_child(HIMALAYA.build(_mood()[1], night, index in [2, 3], index == 3))
+		_shape_backdrop(index, content.get_node("HimalayaBackdrop"))
 	_fight_lighting()
 	_arena_inlay()
 	if RAILINGS:
 		_railings()
 	_batch_static()
+	if index == 4:
+		# The model's green terrace hills sit far below the pass; merged into
+		# batches they escape the clear-out, so hide those batches.
+		for node in content.get_children():
+			if node is MeshInstance3D and String(node.name).begins_with("Batched"):
+				var box: AABB = node.get_aabb()
+				if box.end.y < -1.0:
+					node.visible = false
 	_ambience()
 	if changing:
 		_fade_in()
@@ -778,6 +799,7 @@ func _arena_inlay() -> void:
 
 func animate(delta: float) -> void:
 	elapsed += delta
+	_wander_yak(delta)
 	_sync_grade()
 	if punch_level > 0.0 or flash_level > 0.0 or drain_level > 0.0:
 		punch_level = move_toward(punch_level, 0.0, delta * 5.5)
@@ -1221,12 +1243,125 @@ func _dress_hill(folder: String) -> void:
 	_piece(valley, Vector3(0, floor_y - HILL_DROP, -160), _ground_material("aerial_grass_rock", 12.0, Color(0.6, 0.72, 0.45))).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	for row: Array in HILL_LAYOUT:
 		_place_prop(folder + row[0], row[1] + Vector3(0.0, floor_y, 0.0), deg_to_rad(row[2]), row[3])
-	# The terraced foothills rise from the valley floor, not the ridge.
-	var backdrop := content.get_node_or_null("HimalayaBackdrop") as Node3D
-	if backdrop != null:
-		backdrop.position.y = floor_y - HILL_DROP + 2.0
 	# Prayer flags strung between the two houses, still in the morning air.
 	_flag_line(Vector3(-11.0, floor_y + 6.2, -13.0), Vector3(11.5, floor_y + 6.6, -18.5), 0.9, 34, false)
+
+## Himalayan Pass: the final arena, high among the snows. A wind-scoured
+## yard of snow and rock with a Sherpa stone lodge, a long mani wall, a
+## white chorten, a prayer-flag pole and a yak, flag lines streaming in the
+## wind, snow drifting, and the great peaks close behind (Tripo models in
+## props/himalaya/). Rows as BOUDHA_LAYOUT.
+const HIMALAYA_LAYOUT := [
+	["sherpa_lodge.glb", Vector3(-11.0, 0.0, -16.0), 20.0, 2.6],
+	["chorten.glb", Vector3(3.0, 0.0, -32.0), 0.0, 2.6],
+	["mani_wall.glb", Vector3(-2.0, 0.0, -14.0), 0.0, 2.2],
+	["prayer_pole.glb", Vector3(10.5, 0.0, -13.0), 0.0, 2.4],
+	["prayer_pole.glb", Vector3(-6.5, 0.0, -24.0), 0.0, 2.2],
+]
+func _dress_himalaya(folder: String) -> void:
+	var model := content.get_node_or_null("ArenaModel") as Node3D
+	var floor_y := -0.12
+	if model != null:
+		_strip_to_dais(model)
+		# The model's green terrace hills sit below the floor line.
+		_clear_region(model, AABB(Vector3(-300, -80.0, -400), Vector3(600, 79.0, 396)))
+		# Snow everywhere: trodden snow in the yard, deep snow beyond.
+		floor_y = _open_ground(model, "snow_field_aerial", 4.0, Color(0.9, 0.92, 0.96))
+		for node in content.get_children():
+			if node is MeshInstance3D and node.mesh is PlaneMesh and (node.mesh as PlaneMesh).size.x > 100.0:
+				node.material_override = _ground_material("snow_field_aerial", 10.0, Color(1.0, 1.0, 1.0))
+	for row: Array in HIMALAYA_LAYOUT:
+		_place_prop(folder + row[0], row[1] + Vector3(0.0, floor_y, 0.0), deg_to_rad(row[2]), row[3])
+	_add_yak(folder, floor_y)
+	# Flag lines from the chorten's spire, streaming in the wind.
+	var peak := Vector3(3.0, floor_y + 11.2, -32.0)
+	for target in [Vector3(-11.0, floor_y + 5.5, -14.0), Vector3(10.5, floor_y + 9.0, -13.0), Vector3(-6.5, floor_y + 8.0, -24.0), Vector3(16.0, floor_y + 0.5, -26.0)]:
+		_flag_line(peak, target, 0.8, 26)
+	# The dais in cold grey slate.
+	if model != null:
+		var slate := _surface("dais_himalaya", 5, Color("8a8f98"), Color("3c4048"))
+		for node: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+			if node.material_override == floor_material:
+				node.material_override = slate
+		floor_material = slate
+
+## A yak that wanders the snow behind the fight: Tripo's quadruped rig and
+## walk preset, steered in animate() between random points in its pasture.
+var yak: Node3D = null
+var _yak_goal := Vector3.ZERO
+var _yak_rest := 0.0
+var _yak_anim: AnimationPlayer = null
+var _yak_rng := RandomNumberGenerator.new()
+## The yak's pasture: a box of the snow behind and right of the fight.
+const YAK_AREA := AABB(Vector3(5.0, 0.0, -30.0), Vector3(12.0, 0.0, 14.0))
+const YAK_SPEED := 0.9
+func _add_yak(folder: String, floor_y: float) -> void:
+	yak = null
+	var path := folder + "yak_walk.glb"
+	if not ResourceLoader.exists(path):
+		_place_prop(folder + "yak.glb", Vector3(9.0, floor_y, -20.0), deg_to_rad(-60.0), 1.4)
+		return
+	var body := (load(path) as PackedScene).instantiate() as Node3D
+	var low := INF
+	for mesh: MeshInstance3D in body.find_children("*", "MeshInstance3D", true, false):
+		low = minf(low, _local_aabb(body, mesh).position.y)
+	var holder := Node3D.new()
+	holder.name = "Yak"
+	content.add_child(holder)
+	holder.add_child(body)
+	body.scale = Vector3.ONE * 1.4
+	body.position.y = -low * 1.4 if is_finite(low) else 0.0
+	holder.position = Vector3(9.0, floor_y, -20.0)
+	yak = holder
+	_yak_rng.seed = 11
+	_yak_goal = holder.position
+	_yak_rest = 1.0
+	var players := body.find_children("*", "AnimationPlayer", true, false)
+	_yak_anim = players[0] if not players.is_empty() else null
+	if _yak_anim != null:
+		var clip: String = _yak_anim.get_animation_list()[0]
+		_yak_anim.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
+		_yak_anim.play(clip)
+		_yak_anim.pause()
+
+## Walk to a goal, stand and graze a few seconds, pick another goal.
+func _wander_yak(delta: float) -> void:
+	if yak == null or not is_instance_valid(yak):
+		return
+	var to := _yak_goal - yak.position
+	to.y = 0.0
+	if _yak_rest > 0.0:
+		_yak_rest -= delta
+		if _yak_anim != null and _yak_anim.is_playing():
+			_yak_anim.pause()
+		if _yak_rest <= 0.0:
+			_yak_goal = Vector3(_yak_rng.randf_range(YAK_AREA.position.x, YAK_AREA.end.x), yak.position.y, _yak_rng.randf_range(YAK_AREA.position.z, YAK_AREA.end.z))
+		return
+	if to.length() < 0.2:
+		_yak_rest = _yak_rng.randf_range(2.5, 6.0)
+		return
+	if _yak_anim != null and not _yak_anim.is_playing():
+		_yak_anim.play()
+	# Turn toward the goal before and while walking, as a heavy animal does.
+	var want := atan2(to.x, to.z)
+	yak.rotation.y = lerp_angle(yak.rotation.y, want, 1.0 - exp(-2.0 * delta))
+	var ahead := Vector3(sin(yak.rotation.y), 0.0, cos(yak.rotation.y))
+	var facing := ahead.dot(to.normalized())
+	yak.position += ahead * YAK_SPEED * delta * clampf(facing, 0.0, 1.0)
+
+## Per-arena changes to the distant ranges, once they are built.
+func _shape_backdrop(index: int, backdrop: Node3D) -> void:
+	match index:
+		2:
+			# The terraced foothills rise from the valley floor, not the ridge.
+			backdrop.position.y = -0.12 - HILL_DROP + 2.0
+		4:
+			# The range stands close and high; above the tree line there are
+			# no green foothills, and snow lies right down to the valleys.
+			backdrop.scale = Vector3(0.62, 1.15, 0.62)
+			backdrop.get_node("Foothills").visible = false
+			var range_mesh := backdrop.get_node("Himalaya") as MeshInstance3D
+			range_mesh.material_override.set_shader_parameter("snow_line", -30.0)
 
 ## Strips an imported arena model down to its fighting dais: its buildings,
 ## flags, lanterns and lamps go, for an arena dressed from scratch.
@@ -2187,6 +2322,13 @@ func _ambience() -> void:
 			particles.angular_velocity_max = 160
 			particles.angle_max = 360
 			particles.lifetime = 11.0
+		"snow":
+			quad.size = Vector2(0.035, 0.035)
+			particles.position = Vector3(0, 5.0, -2.0)
+			particles.emission_box_extents = Vector3(9, 0.5, 5)
+			particles.gravity = Vector3(0.25, -0.35, 0)
+			particles.lifetime = 12.0
+			particles.preprocess = 12.0
 		"sky_lanterns":
 			quad.size = Vector2(0.14, 0.18)
 			particles.position = Vector3(0, 2.0, -9.0)

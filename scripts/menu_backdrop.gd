@@ -2,7 +2,7 @@ extends Control
 ## Live 3D arena behind the menus. Each mode shows a different mood of the
 ## Nepal arena under a slowly drifting camera; `opening` drives the crimson
 ## slash wipe that carries the player into the next screen.
-const ACCENTS := [Color("ffc53d"), Color("ff4a5a"), Color("6fb4ff"), Color("e59bff")]
+const ACCENTS := [Color("ffc53d"), Color("ff4a5a"), Color("6fb4ff"), Color("e59bff"), Color("bfe3ff")]
 const MODE_ORDER := ["arcade", "local", "ai", "story"]
 ## Arena round shown for each mode, in MODE_ORDER.
 const MODE_ROUND := [0, 1, 2, 3]

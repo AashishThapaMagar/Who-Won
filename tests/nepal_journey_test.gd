@@ -42,7 +42,7 @@ func run() -> void:
 	arena._begin_round(0)
 	arena._begin_round(2)
 	check(arena.nepal_stage.current_round == 0, "Every round of a match stays in the same arena")
-	for index in 4:
+	for index in arena.nepal_stage.ROUNDS.size():
 		setup_journey.journey_stage = index
 		arena._begin_round(index)
 		arena.intro_timer = 0
@@ -62,13 +62,13 @@ func run() -> void:
 		check(stage.batched_pieces > 100, "Each imported arena retains its modelled architecture (merged into batches)")
 		check(stage.content.find_children("Batched", "MeshInstance3D", false, false).size() < 60, "Static scenery is merged into a few draw batches")
 		# The Terai and hill villages are daytime yards, without lamps.
-		check(index in [1, 2] or stage.lamp_lights.size() >= 2, "Imported practical lamps are registered for flicker")
+		check(index in [1, 2, 4] or stage.lamp_lights.size() >= 2, "Imported practical lamps are registered for flicker")
 		check(stage.environment.environment.fog_enabled, "Arena lighting includes atmospheric depth")
 		if index == 0:
 			# The gompa courtyard drops the model's flag strings with its stupa.
 			check(not stage.flags.is_empty(), "Imported prayer flags retain animated pivots")
 		if index == 3:
-			check(stage.ROUNDS[index].name == "GOMPA COURTYARD", "Final round is the monastery arena")
+			check(stage.ROUNDS[index].name == "GOMPA COURTYARD", "Fourth round is the monastery arena")
 		if "--capture" in OS.get_cmdline_user_args():
 			# Let the opening callout clear so the scenery is visible for review.
 			await frames(40)
@@ -97,11 +97,11 @@ func run() -> void:
 	var select: Node = load("res://scenes/CharacterSelect.tscn").instantiate()
 	root.add_child(select)
 	await frames(2)
-	check(select.arena_label != null and select.arena_label.text == "ALL 4 ARENAS", "Versus fighter select offers the arena picker, defaulting to the journey")
+	check(select.arena_label != null and select.arena_label.text == "ALL 5 ARENAS", "Versus fighter select offers the arena picker, defaulting to the journey")
 	select._cycle_stage(-1)
 	check(setup.stage_choice == setup.RANDOM_STAGE and select.arena_label.text == "RANDOM ARENA", "Arena picker wraps to random")
 	select._cycle_stage(-1)
-	check(setup.stage_choice == 3 and select.backdrop.stage.current_round == 3, "Picking an arena shows it live behind the roster")
+	check(setup.stage_choice == 4 and select.backdrop.stage.current_round == 4, "Picking an arena shows it live behind the roster")
 	setup.stage_choice = setup.JOURNEY_STAGE
 	# An unusable scene must never leave only fighters and sky on screen.
 	var fallback: Node3D = load("res://scripts/nepal_stage_3d.gd").new()

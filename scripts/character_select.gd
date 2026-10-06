@@ -45,7 +45,7 @@ var titles: Array[Label] = []
 var arena_label: Label
 var arena_caption: Label
 ## Versus arena options, in cycling order (see MatchSetup.stage_choice).
-const STAGE_OPTIONS := [-1, 0, 1, 2, 3, 4]
+const STAGE_OPTIONS := [-1, 0, 1, 2, 3, 4, 99]
 ## Random pick roulette per player: the portrait spins through the roster,
 ## slowing down until it lands, then locks in.
 var rolling: Array[bool] = [false, false]
@@ -579,8 +579,8 @@ func _show_stage() -> void:
 	var rounds: Array = backdrop.STAGE.ROUNDS
 	match MatchSetup.stage_choice:
 		MatchSetup.JOURNEY_STAGE:
-			arena_label.text = "ALL 4 ARENAS"
-			arena_caption.text = "ONE PER ROUND, ENDING AT THE STUPA"
+			arena_label.text = "ALL %d ARENAS" % rounds.size()
+			arena_caption.text = "ONE PER MATCH, ENDING IN THE HIMALAYA"
 			backdrop.stage.show_round(0)
 		MatchSetup.RANDOM_STAGE:
 			arena_label.text = "RANDOM ARENA"
