@@ -140,6 +140,15 @@ var _push_vel := 0.0
 var _snap := 0.0
 var _snap_vel := 0.0
 var _head_roll: Array = []
+## Eyes on the rival: the head-local axis the face looks along (from the
+## rest pose), and how strongly / how far the neck is turned this frame.
+var _face_axis := Vector3.ZERO
+var _aim_weight := 0.0
+var _aim := 0.0
+## Most the spine, neck and head turn to find the rival (radians), and each
+## one's share of that turn.
+const AIM_LIMIT := 1.2
+const AIM_CHAIN := [["spine2", 0.2], ["neck", 0.35], ["head", 0.45]]
 var _legs: Array = []      # [[upper bone, knee bone, upper sign, knee sign, axis], ...]
 var _spine: Array = []     # [[bone, sign, axis], ...]
 
@@ -1243,6 +1252,10 @@ func _calibrate() -> void:
 	if head >= 0 and top >= 0:
 		var side: Vector3 = skeleton.global_transform.basis.inverse() * root.global_transform.basis.z
 		_head_roll = _best_axis(head, top, side)
+	# Measured from the live stance on the first idle frame (see
+	# _aim_at_rival): some imported rigs have rest poses far from how the
+	# head is actually held.
+	_face_axis = Vector3.ZERO
 
 ## [axis, sign] for rotating `bone` so that `tip` moves along `want`, or
 ## [] when no local axis moves it there. Probes with a test rotation and
@@ -1303,6 +1316,58 @@ func _procedural(fighter: Node, logical: String, delta: float, frozen: bool) -> 
 			_push = 0.0
 			_push_vel = 0.0
 	_apply_layers()
+	_aim_at_rival(fighter, delta, frozen)
+
+## A fighter keeps its eyes on the rival whatever its body does: walk and
+## stance clips turn the head with a bladed chest, which read as looking
+## where it walks. After the clip's pose, the upper spine, neck and head
+## turn about the vertical until the face points at the rival's head.
+## Eased off where the clip owns the head (being hit, thrown, knocked down,
+## the super, cutscene poses) and half way through strikes.
+func _aim_at_rival(fighter: Node, delta: float, frozen: bool) -> void:
+	var rival = fighter.get("opponent")
+	var S: Dictionary = fighter.State
+	var want := 1.0
+	if rival == null or rival.get("body") == null or fighter.get("body") == null or pose_override != "":
+		want = 0.0
+	elif fighter.state in [S.HITSTUN, S.KO, S.THROWN, S.THROWING, S.KNOCKDOWN, S.SUPER, S.STRUCK]:
+		want = 0.0
+	elif fighter.state in [S.PUNCH, S.KICK]:
+		want = 0.5
+	if not frozen:
+		_aim_weight = move_toward(_aim_weight, want, delta * (6.0 if want > _aim_weight else 10.0))
+	if _aim_weight < 0.01:
+		_aim = 0.0
+		return
+	var head := _bone("head")
+	if head < 0:
+		return
+	# Directions only: some rigs carry a 0.01 (centimetre) scale.
+	var basis := skeleton.global_transform.basis.orthonormalized()
+	if _face_axis == Vector3.ZERO:
+		# A fighting stance looks straight ahead along the model's facing.
+		if fighter.state != S.IDLE or current != clip_names.get("idle", ""):
+			return
+		var ahead: Vector3 = basis.inverse() * root.global_transform.basis.x
+		_face_axis = (skeleton.get_bone_global_pose(head).basis.orthonormalized().inverse() * ahead).normalized()
+	var head_pose := skeleton.get_bone_global_pose(head)
+	var face: Vector3 = basis * (head_pose.basis.orthonormalized() * _face_axis)
+	face.y = 0.0
+	var eyes: Vector3 = skeleton.global_transform * head_pose.origin
+	var to_rival: Vector3 = rival.body.global_position + Vector3.UP * 1.5 - eyes
+	to_rival.y = 0.0
+	if face.length_squared() < 0.0001 or to_rival.length_squared() < 0.01:
+		return
+	var need := clampf(face.normalized().signed_angle_to(to_rival.normalized(), Vector3.UP), -AIM_LIMIT, AIM_LIMIT)
+	if not frozen:
+		_aim = lerpf(_aim, need, 1.0 - exp(-45.0 * delta))
+	var up_local: Vector3 = basis.inverse() * Vector3.UP
+	for link in AIM_CHAIN:
+		var bone := _bone(link[0])
+		if bone < 0:
+			continue
+		var axis: Vector3 = (skeleton.get_bone_global_pose(bone).basis.orthonormalized().inverse() * up_local).normalized()
+		skeleton.set_bone_pose_rotation(bone, skeleton.get_bone_pose_rotation(bone) * Quaternion(axis, _aim * _aim_weight * link[1]))
 
 ## Bends the calibrated bones by the current tuck, lean and recoil amounts.
 func _apply_layers() -> void:
