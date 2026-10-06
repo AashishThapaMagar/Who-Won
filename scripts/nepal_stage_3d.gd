@@ -1191,10 +1191,20 @@ func _dress_terai(folder: String) -> void:
 		floor_y = _open_ground(model, "aerial_rocks_02", 6.0, Color(0.62, 0.55, 0.47), Color(0.7, 0.86, 0.5))
 	for row: Array in TERAI_LAYOUT:
 		_place_prop(folder + row[0], row[1] + Vector3(0.0, floor_y, 0.0), deg_to_rad(row[2]), row[3])
-	# Sal forest along the horizon beyond the fields (far copies draw at
-	# their import LODs).
+	# Jungle right behind the huts: saplings at the edge of the yard, then
+	# two thick rows of tall sal trees.
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7
+	for band in [[-24.0, -30.0, 16, 1.4, 2.4], [-30.0, -38.0, 18, 4.4, 6.0], [-39.0, -52.0, 20, 5.5, 7.2]]:
+		for i in band[2]:
+			var across := lerpf(-42.0, 42.0, (i + rng.randf_range(-0.4, 0.4)) / float(band[2] - 1))
+			# Keep the pipal shrine (centre, z -27) clear of saplings.
+			if band[0] > -30.0 and absf(across) < 6.0:
+				continue
+			var depth := rng.randf_range(band[1], band[0])
+			_place_prop(folder + "sal_tree.glb", Vector3(across, floor_y, depth), rng.randf_range(0.0, TAU), rng.randf_range(band[3], band[4]))
+	# Sal forest along the horizon beyond the fields (far copies draw at
+	# their import LODs).
 	for i in 22:
 		var across := lerpf(-70.0, 70.0, (i + rng.randf_range(-0.3, 0.3)) / 21.0)
 		var depth := -62.0 - rng.randf_range(0.0, 22.0) - absf(across) * 0.15
