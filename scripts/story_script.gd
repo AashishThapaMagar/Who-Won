@@ -31,6 +31,9 @@ extends RefCounted
 ##                                      line's "image" turns to that drawn
 ##                                      page (assets/story/<fighter>/<name>.jpg)
 ##   "chapter_images": {id: image}      the page each rival's chapter opens on
+##   "cinematic": true                  film camera: eased arcs, push-ins, lenses
+##   "still": true                      each line freezes like a photograph;
+##                                      only the camera moves
 ##   "ladder": [ids]                    the order of rivals (ending "anant")
 ##   "finale_title"                     the finale's title card
 ## Any line can carry a "banner" that slams a card across the screen before
@@ -337,6 +340,10 @@ const ROUTES := {
 		"title": "THE WIND FROM THE HILLS",
 		"subtitle": "THE STORY OF SUPREME",
 		"finale_title": "THE ANSWER",
+		# Shot like a film: slow eased dolly arcs and push-ins, film lenses.
+		"cinematic": true,
+		# Every line is a frozen moment the camera moves across.
+		"still": true,
 		# "style": "book" would tell it with the drawn pages in
 		# assets/story/sup/ instead of animated scenes (on hold).
 		# Each rival's chapter opens on its page (assets/story/sup/).

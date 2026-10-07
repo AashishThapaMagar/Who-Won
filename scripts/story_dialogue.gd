@@ -338,6 +338,12 @@ func _act(step: Dictionary) -> void:
 
 func _walk(key: String, to: Vector3, speed: float, then_face) -> void:
 	var rig: Node3D = actors[key].rig
+	if _still():
+		# A still picture: they are simply there already.
+		rig.position = Vector3(to.x, rig.position.y, to.z)
+		if then_face != null:
+			_face(key, then_face)
+		return
 	var target := Vector3(to.x, rig.position.y, to.z)
 	_face(key, [target.x - rig.position.x, target.z - rig.position.z])
 	_pose(key, "walk")
@@ -355,6 +361,11 @@ func _kick_ball(spec: Dictionary) -> void:
 	if not is_instance_valid(story_set) or story_set.ball == null:
 		return
 	var ball: MeshInstance3D = story_set.ball
+	if _still():
+		# Frozen mid-flight, most of the way to its target.
+		var start := _spot(spec.get("from", [ball.position.x, ball.position.y, ball.position.z]))
+		ball.position = start.lerp(_spot(spec.to), 0.8) + Vector3(0, sin(0.8 * PI) * float(spec.get("arc", 0.6)), 0)
+		return
 	var from := _spot(spec.get("from", [ball.position.x, ball.position.y, ball.position.z]))
 	var to := _spot(spec.to)
 	var arc := float(spec.get("arc", 0.6))
@@ -536,8 +547,32 @@ func _update_camera(delta: float) -> void:
 			eye = head + (forward * 0.66 + side * 0.74 + Vector3(0, -0.2, 0)).normalized() * distance
 			eye.y = maxf(eye.y, 0.3)
 			target = head + Vector3(0, -0.1, 0)
+	if StoryDirector.route().get("cinematic", false) and shot.kind != "path":
+		var pose := _film_move(eye, target, t)
+		eye = pose[0]
+		camera.fov = pose[1]
 	camera.position = eye + drift
 	camera.look_at(target, Vector3.UP)
+
+## Film camera for "cinematic" storylines: every shot is an eased dolly
+## that arcs slowly around its subject and pushes in, on a lens suited to
+## the shot (long for faces, wide for places). Returns [eye, fov].
+const FILM_ARC := {"close": 0.32, "hero": 0.26, "two": 0.42, "wide": 0.0, "follow": 0.0}
+const FILM_REACH := {"close": 1.9, "hero": 1.3, "two": 1.15}
+const FILM_LENS := {"close": 24.0, "hero": 30.0, "two": 30.0, "wide": 40.0, "follow": 34.0, "path": 34.0}
+func _film_move(eye: Vector3, target: Vector3, t: float) -> Array:
+	var k := smoothstep(0.0, 1.0, t)
+	var arc: float = FILM_ARC.get(shot.kind, 0.0)
+	# Alternate the arc's direction shot to shot so cuts feel deliberate.
+	var sense := 1.0 if line_index % 2 == 0 else -1.0
+	var offset := eye - target
+	offset = offset.rotated(Vector3.UP, lerpf(-arc, arc, k) * 0.5 * sense)
+	# A slow push in; the long lens on faces needs the camera further back
+	# (a head-and-shoulders frame, not just the fists of a fighting stance).
+	offset *= lerpf(1.08, 0.92, k) * FILM_REACH.get(shot.kind, 1.0)
+	if shot.kind == "close":
+		offset.y += 0.18
+	return [target + offset, FILM_LENS.get(shot.kind, 36.0)]
 
 # ── Title card ───────────────────────────────────────────────────────────
 
@@ -804,6 +839,11 @@ func _exit_tree() -> void:
 func _process(delta: float) -> void:
 	elapsed += delta
 	_update_book(delta)
+	if _still():
+		_update_freeze(delta)
+		if _frozen:
+			_update_camera(delta)
+			return
 	if stage != null and stage.is_inside_tree():
 		stage.animate(delta)
 	if is_instance_valid(story_set):
@@ -816,6 +856,42 @@ func _process(delta: float) -> void:
 			if animated != null:
 				animated.replay()
 	_update_camera(delta)
+
+# ── Motion picture (still frames, moving camera) ──────────────────────
+## Storylines with "still": true freeze each line's scene like a photograph
+## once its poses have landed; only the camera keeps moving across it.
+var _frozen := false
+var _freeze_line := -1
+var _freeze_in := 0.0
+
+func _still() -> bool:
+	return StoryDirector.route().get("still", false)
+
+func _update_freeze(delta: float) -> void:
+	if line_index != _freeze_line:
+		_freeze_line = line_index
+		_set_frozen(false)
+		var line: Dictionary = lines[line_index] if line_index < lines.size() else {}
+		var last := 0.0
+		for step: Dictionary in line.get("do", []):
+			last = maxf(last, float(step.get("delay", 0.0)))
+		_freeze_in = last + 0.55
+	elif not _frozen:
+		_freeze_in -= delta
+		if _freeze_in <= 0.0:
+			_set_frozen(true)
+
+func _set_frozen(on: bool) -> void:
+	_frozen = on
+	for key in actors:
+		var visual: Node = actors[key].fighter.get_node("Visual")
+		visual.set_process(not on)
+		var animated = visual.get("animated")
+		if animated != null and animated.player != null:
+			if on:
+				animated.player.pause()
+			else:
+				animated.player.play()
 
 # ── Picture book ───────────────────────────────────────────────────────
 ## Storylines with "style": "book" are told as an illustrated book: the 3D
