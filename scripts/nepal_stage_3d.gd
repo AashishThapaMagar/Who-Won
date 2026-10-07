@@ -1432,9 +1432,15 @@ func _dress_terai(folder: String) -> void:
 	# two thick rows of tall sal trees.
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7
-	for band in [[-24.0, -30.0, 16, 1.4, 2.4], [-30.0, -38.0, 18, 4.4, 6.0], [-39.0, -52.0, 20, 5.5, 7.2]]:
+	# [near z, far z, trees, smallest, largest]: saplings, then rank on
+	# rank of tall sal trees, denser the deeper, so no sky or meadow shows
+	# between the trunks.
+	for band in [[-24.0, -30.0, 16, 1.4, 2.4], [-30.0, -38.0, 22, 4.4, 6.0], [-38.0, -48.0, 26, 5.5, 7.2],
+			[-48.0, -60.0, 30, 6.0, 7.8], [-60.0, -75.0, 34, 6.5, 8.5]]:
 		for i in band[2]:
-			var across := lerpf(-42.0, 42.0, (i + rng.randf_range(-0.4, 0.4)) / float(band[2] - 1))
+			# Deeper ranks spread wider to fill the edges of the view.
+			var reach: float = 42.0 + (-band[0] - 24.0) * 0.7
+			var across := lerpf(-reach, reach, (i + rng.randf_range(-0.4, 0.4)) / float(band[2] - 1))
 			# Keep the pipal shrine (centre, z -27) clear of saplings.
 			if band[0] > -30.0 and absf(across) < 6.0:
 				continue
@@ -1443,9 +1449,9 @@ func _dress_terai(folder: String) -> void:
 	_forest_wall(floor_y)
 	# Sal forest along the horizon beyond the fields (far copies draw at
 	# their import LODs).
-	for i in 22:
-		var across := lerpf(-70.0, 70.0, (i + rng.randf_range(-0.3, 0.3)) / 21.0)
-		var depth := -62.0 - rng.randf_range(0.0, 22.0) - absf(across) * 0.15
+	for i in 30:
+		var across := lerpf(-90.0, 90.0, (i + rng.randf_range(-0.3, 0.3)) / 29.0)
+		var depth := -78.0 - rng.randf_range(0.0, 14.0) - absf(across) * 0.1
 		_place_prop(folder + "sal_tree.glb", Vector3(across, floor_y, depth), rng.randf_range(0.0, TAU), rng.randf_range(5.5, 7.5))
 	# Maato tiles: the dais in sun-baked earthen clay instead of grey stone.
 	if model != null:
@@ -1461,8 +1467,8 @@ func _dress_terai(folder: String) -> void:
 const FOREST_WALL := """
 shader_type spatial;
 render_mode cull_disabled;
-uniform vec3 leaf_dark : source_color = vec3(0.06, 0.11, 0.05);
-uniform vec3 leaf_light : source_color = vec3(0.19, 0.29, 0.12);
+uniform vec3 leaf_dark : source_color = vec3(0.03, 0.06, 0.03);
+uniform vec3 leaf_light : source_color = vec3(0.1, 0.17, 0.07);
 varying vec3 world;
 float hash(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
 float noise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
