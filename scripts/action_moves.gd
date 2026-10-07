@@ -73,8 +73,25 @@ static func for_fighter(id: String) -> Dictionary:
 			m.breaker.pose = "spin"
 			# Signature four-hit combo: three quick punches, then heavy for a
 			# leaping kick.
-			m.combo_finish = BASE._move("Endless Rush", "spin", "kick", "kick", 74, -80, 0.13, 0.09, 0.36, 1.6, 1.7, 26)
+			m.combo_finish = BASE._move("Endless Rush", "strike_flying_knee", "kick", "kick", 74, -80, 0.13, 0.09, 0.36, 1.6, 1.7, 26)
 			m.combo_finish.hitstun = 0.5
+			# The upgraded Bib (his Mixamo fight pack): button 2 is the
+			# jab-to-elbow, 4 a high kick into a roundhouse, 3,3,4 ends on
+			# a side kick, back+3 is a low kick, and the drive is his
+			# running drop kick.
+			m.rp = BASE._move("Relay elbow", "strike_jab_elbow", "punch", "hook", 42, -92, 0.12, 0.07, 0.30, 1.5, 1.2, 18)
+			m.rk = BASE._move("Relay high kick", "strike_high_kick", "kick", "kick", 66, -84, 0.13, 0.08, 0.27, 1.2, 1.1, 10)
+			m.rk.hitstun = 0.32
+			m.roundhouse = BASE._move("Roundhouse", "kick", "kick", "kick", 68, -76, 0.13, 0.08, 0.28, 1.3, 1.3, 10)
+			m.roundhouse.hitstun = 0.4
+			m.side_kick = BASE._move("Relay side kick", "strike_side_kick", "kick", "kick", 72, -66, 0.12, 0.08, 0.28, 1.35, 1.6, 12)
+			m.side_kick.hitstun = 0.4
+			m.back_heavy = BASE._move("Low kick", "strike_low_kick", "kick", "kick", 62, -28, 0.11, 0.07, 0.24, 1.1, 0.8, 8)
+			m.knee = BASE._move("Lead knee", "strike_knee", "kick", "kick", 50, -78, 0.12, 0.07, 0.28, 1.3, 1.1, 14)
+			m.drive = BASE._move("Rush drop kick", "strike_drop_kick", "kick", "kick", 70, -60, 0.2, 0.09, 0.4, 1.7, 1.9, 48)
+			m.rk.next_rk = "roundhouse"            # 4,4
+			m.forward_heavy.next_rk = "side_kick"  # 3,3,4
+			m.rp.next_rk = "knee"                  # 2,4
 		"abhi":
 			m.cross.name = "Thunder straight"
 			m.hook.name = "Mic drop"

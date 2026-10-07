@@ -94,15 +94,10 @@ const MESHY_MOVES := {
 	},
 	# Bib's biped download: named moves plus three id-named ones (a stepping
 	# power punch, a jumping kick and a taunt), measured the same way.
+	# Bib's Mixamo fight pack (STYLES bib.pack) covers his moves now; his
+	# Meshy set adds only the taunt and the leg sweep the pack lacks.
 	"bib": {
-		"jab": ["Punch_Combo", 0.60], "cross": ["01a0ebe2", 1.00], "punch_heavy": "Punch_Combo",
-		"kick": ["High_Kick", 1.05], "kick_front": ["Leg_Sweep", 0.95], "kick_spin": ["01a0ebe3", 1.30],
-		"taunt": ["01a0ebe0", 2.60], "victory": "victory",
-		# His whole set: fight stance (also his guard while moving), back-step,
-		# run, jump, block, hit reaction and a dodge for the back-dash.
-		"idle": "Combat_Stance", "walk_back": "Walk_Fight_Back", "run": "Running",
-		"jump": "Regular_Jump", "block": "Block1", "block_hit": "Block1",
-		"hit": "Hit_Reaction", "backdash": "Stand_Dodge",
+		"taunt": ["01a0ebe0", 2.60], "kick_front": ["Leg_Sweep", 0.95],
 	},
 	# Ananta's Meshy set exports with id names; each is [id, second the blow
 	# lands], measured from the peak reach of the striking hand or foot.
@@ -173,6 +168,46 @@ const STYLES := {
 		"height": 1.7, "width": 0.92, "tint": [Color("223f8a"), Color("9fe0c8")],
 		"clips": {"idle": "idle", "jab": "jab", "run": "fast_run", "backdash": "dodging"},
 		"timing": {"jab": [0.15, 0.57, 1.0]},
+		# The upgraded Bib: his 45-clip Mixamo set (Downloads/BIB_Fighting) in
+		# assets/fighters/bib/fight/ (kept local), "With Skin" on the T-pose
+		# body built in Blender (Downloads/Bib_Mixamo_Ready).
+		"pack": {
+			"folder": "fight/",
+			"reversed": ["walk_back"],
+			"body": "drop_kick",
+			"moves": {
+				"idle": "fighting_idle", "walk": "walking", "walk_back": "walking",
+				"sidestep_left": "left_strafe_walking", "sidestep_right": "right_strafe_walking",
+				"run": "running", "dash": "running", "backdash": "dodging_back",
+				"jump": "jump",
+				"jab": "cross_punch", "cross": "punch_combo", "hook": "hook_punch",
+				"uppercut": "uppercut", "punch_heavy": "punch_combo",
+				"kick": "mma_roundhouse_kick", "kick_spin": "mma_spinning_back_kick",
+				"getup": "get_up_from_back", "finisher": "flying_knee_punch_combo",
+				"block": "standing_block_idle", "block_hit": "standing_block_react_large",
+				"hit": "taking_punch", "hit_heavy": "receiving_a_big_uppercut",
+				"hit_head": "taking_punch", "hit_head_heavy": "receiving_a_big_uppercut",
+				"hit_body": "hit_to_body", "hit_liver": "stunned",
+				"ko": "knockout_fall_back",
+				# Extra strikes, played by moves whose pose names them.
+				"strike_side_kick": "side_kick", "strike_high_kick": "mma_high_kick",
+				"strike_low_kick": "mma_low_kick", "strike_jab_elbow": "jab_to_elbow_punch",
+				"strike_knee": "knee_kick_lead", "strike_drop_kick": "drop_kick",
+				"strike_flying_knee": "flying_knee_punch_combo",
+			},
+			# [start, impact, end]: impact at the furthest reach of the fist,
+			# knee or foot (measured from each clip).
+			"timing": {
+				"jab": [0.78, 1.13, 1.68], "cross": [0.28, 0.63, 1.18], "hook": [0.68, 1.03, 1.58],
+				"uppercut": [0.12, 0.47, 1.02], "punch_heavy": [0.28, 0.63, 1.18],
+				"kick": [0.48, 0.83, 1.38], "kick_spin": [0.55, 0.9, 1.45],
+				"finisher": [0.98, 1.33, 1.88],
+				"strike_side_kick": [0.35, 0.7, 1.25], "strike_high_kick": [0.38, 0.73, 1.28],
+				"strike_low_kick": [0.25, 0.6, 1.15], "strike_jab_elbow": [0.65, 1.0, 1.55],
+				"strike_knee": [0.55, 0.9, 1.45], "strike_drop_kick": [1.05, 1.4, 2.2],
+				"strike_flying_knee": [0.98, 1.33, 1.88],
+			},
+		},
 	},
 	"abhi": {
 		"height": 1.82, "width": 1.1, "tint": [Color("5c2f78"), Color("dbb258")],
