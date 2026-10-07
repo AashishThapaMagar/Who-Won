@@ -78,6 +78,10 @@ var _jump_rate := 1.0
 ## Metres the attacker is stepped toward the rival so the striking fist or
 ## foot actually meets the body (visual only; see _reach_step).
 var _reach := 0.0
+## Horizontal world offset of the knockout clip's hips at its start.
+var _ko_shift := Vector3.ZERO
+var _ko_measure := false
+var _last_hips := Vector3.ZERO
 const REACTIONS := ["hit", "hit_heavy", "block_hit", "hit_head", "hit_head_alt", "hit_head_heavy", "hit_body", "hit_body_alt", "hit_side", "hit_liver"]
 ## Rigs with their own reaction set (see fighter_models.gd) pick one by
 ## where and how hard each blow landed; picked on impact, held for the stun.
@@ -1008,7 +1012,7 @@ func update(delta: float) -> void:
 		var was_reaction: bool = current != "" and REACTIONS.any(func(name): return clip_names.get(name, "") == current)
 		# Footwork changes (stand, walk, run, step) melt into each other.
 		var stepping: bool = logical in LOOPING and current != "" and current in LOOPING.map(func(name): return clip_names.get(name, ""))
-		player.play(clip, 0.05 if logical in REACTIONS or logical == "ko" else (0.22 if was_reaction else (0.24 if stepping else 0.12)))
+		player.play(clip, 0.0 if logical == "ko" else 0.05 if logical in REACTIONS else (0.22 if was_reaction else (0.24 if stepping else 0.12)))
 		if restart:
 			player.seek(0.0, true)
 		# Clips that open with a still beat (the knockout) start where the
@@ -1016,6 +1020,9 @@ func update(delta: float) -> void:
 		var start: float = float(config.get("starts", {}).get(logical, 0.0))
 		if start > 0.0:
 			player.seek(start, true)
+		_ko_measure = logical == "ko"
+		if not _ko_measure:
+			_ko_shift = Vector3.ZERO
 		current = clip
 	player.speed_scale = 0.0 if frozen else _loop_speed(fighter, logical, clip)
 	if logical == "jump" and not frozen and entered:
@@ -1039,6 +1046,22 @@ func update(delta: float) -> void:
 	else:
 		_react_speed = 0.0
 	player.advance(delta)
+	# The knockout travels from where the fighter stood, not from where the
+	# clip's hips happen to be at the moment it starts (that offset snapped
+	# the body ~75 cm sideways in the first frames of the fall): the jump
+	# on the first knockout frame is measured and cancelled from then on.
+	var hips_bone := _bone("hips")
+	if logical == "ko" and root != null and hips_bone >= 0:
+		skeleton.force_update_all_bone_transforms()
+		var hips_at: Vector3 = skeleton.global_transform * skeleton.get_bone_global_pose(hips_bone).origin
+		if _ko_measure:
+			_ko_measure = false
+			_ko_shift = hips_at - _last_hips
+			_ko_shift.y = 0.0
+		var parent := root.get_parent() as Node3D
+		root.position -= parent.global_transform.basis.inverse() * _ko_shift
+	elif hips_bone >= 0 and skeleton != null:
+		_last_hips = skeleton.global_transform * skeleton.get_bone_global_pose(hips_bone).origin
 	if not frozen:
 		guard_time += delta
 		guard_weight = move_toward(guard_weight, 1.0 if logical in GUARDED else 0.0, delta * 8.0)
