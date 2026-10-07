@@ -21,14 +21,13 @@ const RENDER_SCALES := [0.5, 0.75, 1.0]
 ## Every preset renders at full resolution: a lower 3D scale turns the
 ## fighters' faces and outfits into visible pixels. Cheaper presets save
 ## time on shadows and arena textures instead.
-## The fighters get the budget: HIGH smooths their edges with 4x MSAA and
-## pays for it with low-cost arena shadows and textures.
-## MSAA is the single biggest cost on integrated graphics (about a third of
-## the frame), so LOW swaps it for FXAA, which smooths edges almost free.
+## Every preset smooths edges with FXAA, which is almost free: MSAA cost
+## about 6.5 ms of a 27 ms frame on integrated graphics (Intel UHD). It
+## stays available as a custom setting for stronger GPUs.
 const PRESETS := [
 	[2, 0, 0, false],
 	[2, 0, 1, false],
-	[2, 1, 1, false],
+	[2, 0, 1, false],
 ]
 var quality: int = Quality.HIGH
 var render_scale: int = 2

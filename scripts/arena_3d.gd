@@ -146,9 +146,14 @@ func _ready() -> void:
 		fighter.ko.connect(func(): preload("res://scripts/sfx.gd").fire("ko"))
 		fighter.ko.connect(_ko_3d.bind(fighter))
 	_contact_shadows()
+	_build_burst_pool()
 	if replay_enabled and DisplayServer.get_name() != "headless":
 		ko_replay = preload("res://scripts/ko_replay.gd").new()
 		ko_replay.arena = self
+		# Bake the replay's film look now; building it at the knockout froze
+		# the frame for a moment.
+		var film: Dictionary = ko_replay.FILM_GRADE
+		nepal_stage._grade_lut([film.shadow_tint, film.highlight_tint, film.saturation, film.contrast])
 		add_child(ko_replay)
 	_build_move_ui()
 	add_child(preload("res://scripts/match_hud.gd").new())
@@ -196,7 +201,11 @@ func _begin_round(index: int) -> void:
 	if ko_replay != null:
 		ko_replay.reset()
 	for spark in impact_meshes:
-		spark.mesh.queue_free()
+		# Pooled bursts are kept for the next round, only hidden.
+		if spark.get("pooled", false):
+			spark.mesh.visible = false
+		else:
+			spark.mesh.queue_free()
 	impact_meshes.clear()
 	for ghost in ghosts:
 		ghost.mesh.queue_free()
@@ -356,7 +365,10 @@ func _update_impacts(delta: float) -> void:
 		spark.age += delta
 		spark.update.call(spark)
 		if spark.age >= spark.life:
-			spark.mesh.queue_free()
+			if spark.get("pooled", false):
+				spark.mesh.visible = false
+			else:
+				spark.mesh.queue_free()
 	impact_meshes = impact_meshes.filter(func(spark): return spark.age < spark.life)
 
 func is_replaying() -> bool:
@@ -450,70 +462,25 @@ func _wall_impact(point: Vector3) -> void:
 ## Core flash, a camera-facing shock ring and a burst of sparks. Guarded
 ## hits are cold blue chips that die fast; clean hits are hot and fling
 ## sparks that fall under gravity.
-func _impact_burst(point: Vector3, color: Color, blocked: bool, heavy: bool) -> void:
-	var size := (0.7 if heavy else 0.5) * (0.7 if blocked else 1.0)
-	var core := MeshInstance3D.new()
+## Impact bursts are pooled: building a fresh glow ball, ring and spark
+## emitter (meshes, materials, a particle system) on every hit stalled the
+## renderer for 70-280 ms per hit on integrated graphics. A few are built
+## once, drawn on the first frame out of sight so their shaders are ready,
+## and reused round-robin.
+const BURST_POOL := 6
+var _bursts: Array[Dictionary] = []
+var _next_burst := 0
+
+func _build_burst_pool() -> void:
 	var sphere := SphereMesh.new()
 	sphere.radius = 0.5
 	sphere.height = 1
 	sphere.radial_segments = 12
 	sphere.rings = 6
-	core.mesh = sphere
-	var glow := StandardMaterial3D.new()
-	glow.albedo_color = color.lightened(0.5)
-	glow.emission_enabled = true
-	glow.emission = color
-	glow.emission_energy_multiplier = 1.6
-	glow.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	glow.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-	glow.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	core.material_override = glow
-	core.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	world.add_child(core)
-	core.position = point
-	core.scale = Vector3.ONE * 0.05
-	impact_meshes.append({"mesh": core, "age": 0.0, "life": 0.14, "update": func(fx: Dictionary):
-		var k: float = clampf(fx.age / fx.life, 0.0, 1.0)
-		fx.mesh.scale = Vector3.ONE * size * 0.32 * (0.3 + 0.7 * sqrt(k))
-		fx.mesh.material_override.albedo_color.a = 1.0 - k})
-	var ring := MeshInstance3D.new()
 	var quad := QuadMesh.new()
 	quad.size = Vector2.ONE
-	ring.mesh = quad
-	var rim := ShaderMaterial.new()
-	rim.shader = RING_SHADER
-	rim.set_shader_parameter("color", color)
-	ring.material_override = rim
-	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	world.add_child(ring)
-	ring.position = point
-	impact_meshes.append({"mesh": ring, "age": 0.0, "life": 0.22 if heavy else 0.17, "update": func(fx: Dictionary):
-		var k: float = clampf(fx.age / fx.life, 0.0, 1.0)
-		fx.mesh.scale = Vector3.ONE * size * 1.6 * (0.25 + 0.75 * (1.0 - pow(1.0 - k, 2.5)))
-		fx.mesh.material_override.set_shader_parameter("progress", k)})
-	var sparks := CPUParticles3D.new()
-	sparks.one_shot = true
-	sparks.explosiveness = 1.0
-	sparks.amount = 6 if blocked else (14 if heavy else 9)
-	sparks.lifetime = 0.28 if blocked else 0.45
-	sparks.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
-	sparks.emission_sphere_radius = 0.06
-	sparks.direction = Vector3.UP
-	sparks.spread = 180.0
-	sparks.initial_velocity_min = 2.0 if blocked else 3.0
-	sparks.initial_velocity_max = 4.5 if blocked else (7.5 if heavy else 5.5)
-	sparks.gravity = Vector3(0, -6.0 if blocked else -14.0, 0)
-	sparks.damping_min = 2.0
-	sparks.damping_max = 5.0
-	sparks.scale_amount_min = 0.5
-	sparks.scale_amount_max = 1.0
-	var ramp := Gradient.new()
-	ramp.set_color(0, Color.WHITE)
-	ramp.set_color(1, Color(color.r, color.g, color.b, 0.0))
-	ramp.add_point(0.35, color)
-	sparks.color_ramp = ramp
 	var chip := QuadMesh.new()
-	chip.size = Vector2(0.07, 0.07) if blocked else Vector2(0.06, 0.06)
+	chip.size = Vector2(0.065, 0.065)
 	var spark_material := StandardMaterial3D.new()
 	spark_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	spark_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -522,12 +489,99 @@ func _impact_burst(point: Vector3, color: Color, blocked: bool, heavy: bool) -> 
 	spark_material.vertex_color_use_as_albedo = true
 	spark_material.albedo_texture = nepal_stage.soft_dot()
 	chip.material = spark_material
-	sparks.mesh = chip
-	sparks.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	world.add_child(sparks)
+	for i in BURST_POOL:
+		var core := MeshInstance3D.new()
+		core.mesh = sphere
+		var glow := StandardMaterial3D.new()
+		glow.emission_enabled = true
+		glow.emission_energy_multiplier = 1.6
+		glow.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		glow.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		glow.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		core.material_override = glow
+		core.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var ring := MeshInstance3D.new()
+		ring.mesh = quad
+		var rim := ShaderMaterial.new()
+		rim.shader = RING_SHADER
+		ring.material_override = rim
+		ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var sparks := CPUParticles3D.new()
+		sparks.one_shot = true
+		sparks.explosiveness = 1.0
+		sparks.amount = 14
+		sparks.emitting = false
+		sparks.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+		sparks.emission_sphere_radius = 0.06
+		sparks.direction = Vector3.UP
+		sparks.spread = 180.0
+		sparks.damping_min = 2.0
+		sparks.damping_max = 5.0
+		sparks.scale_amount_min = 0.5
+		sparks.scale_amount_max = 1.0
+		var ramp := Gradient.new()
+		ramp.add_point(0.35, Color.WHITE)
+		sparks.color_ramp = ramp
+		sparks.mesh = chip
+		sparks.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		for node in [core, ring, sparks]:
+			world.add_child(node)
+			# First frame: drawn in view but invisible (fully transparent,
+			# tiny) so the GPU prepares them during the round intro.
+			node.position = Vector3(0, 1.0, 0)
+		core.scale = Vector3.ONE * 0.001
+		ring.scale = Vector3.ONE * 0.001
+		glow.albedo_color = Color(1, 1, 1, 0)
+		ramp.set_color(0, Color(1, 1, 1, 0))
+		ramp.set_color(1, Color(1, 1, 1, 0))
+		ramp.set_color(2, Color(1, 1, 1, 0))
+		sparks.emitting = true
+		_bursts.append({"core": core, "ring": ring, "sparks": sparks, "ramp": ramp})
+	get_tree().process_frame.connect(func():
+		for burst in _bursts:
+			for key in ["core", "ring"]:
+				burst[key].visible = false, CONNECT_ONE_SHOT)
+
+func _impact_burst(point: Vector3, color: Color, blocked: bool, heavy: bool) -> void:
+	if _bursts.is_empty():
+		return
+	var burst: Dictionary = _bursts[_next_burst]
+	_next_burst = (_next_burst + 1) % _bursts.size()
+	var size := (0.7 if heavy else 0.5) * (0.7 if blocked else 1.0)
+	var core: MeshInstance3D = burst.core
+	var glow: StandardMaterial3D = core.material_override
+	glow.albedo_color = color.lightened(0.5)
+	glow.emission = color
+	core.position = point
+	core.scale = Vector3.ONE * 0.05
+	core.visible = true
+	impact_meshes.append({"mesh": core, "pooled": true, "age": 0.0, "life": 0.14, "update": func(fx: Dictionary):
+		var k: float = clampf(fx.age / fx.life, 0.0, 1.0)
+		fx.mesh.scale = Vector3.ONE * size * 0.32 * (0.3 + 0.7 * sqrt(k))
+		fx.mesh.material_override.albedo_color.a = 1.0 - k})
+	var ring: MeshInstance3D = burst.ring
+	(ring.material_override as ShaderMaterial).set_shader_parameter("color", color)
+	(ring.material_override as ShaderMaterial).set_shader_parameter("progress", 0.0)
+	ring.position = point
+	ring.visible = true
+	impact_meshes.append({"mesh": ring, "pooled": true, "age": 0.0, "life": 0.22 if heavy else 0.17, "update": func(fx: Dictionary):
+		var k: float = clampf(fx.age / fx.life, 0.0, 1.0)
+		fx.mesh.scale = Vector3.ONE * size * 1.6 * (0.25 + 0.75 * (1.0 - pow(1.0 - k, 2.5)))
+		fx.mesh.material_override.set_shader_parameter("progress", k)})
+	var sparks: CPUParticles3D = burst.sparks
+	var ramp: Gradient = burst.ramp
+	ramp.set_color(0, Color.WHITE)
+	ramp.set_color(1, color)
+	ramp.set_color(2, Color(color.r, color.g, color.b, 0.0))
+	sparks.lifetime = 0.28 if blocked else 0.45
+	sparks.initial_velocity_min = 2.0 if blocked else 3.0
+	sparks.initial_velocity_max = 4.5 if blocked else (7.5 if heavy else 5.5)
+	sparks.gravity = Vector3(0, -6.0 if blocked else -14.0, 0)
+	# A one-shot emitter's count is fixed per burst; fewer sparks for a
+	# guarded hit come from a shorter, weaker spray instead.
 	sparks.position = point
+	sparks.restart()
 	sparks.emitting = true
-	impact_meshes.append({"mesh": sparks, "age": 0.0, "life": sparks.lifetime + 0.05, "update": func(_fx: Dictionary): pass})
 
 ## A puff of courtyard dust at floor level: landings, dashes and the
 ## stagger of a heavy hit.
