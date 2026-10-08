@@ -95,9 +95,9 @@ const MESHY_MOVES := {
 	# Bib's biped download: named moves plus three id-named ones (a stepping
 	# power punch, a jumping kick and a taunt), measured the same way.
 	# Bib's Mixamo fight pack (STYLES bib.pack) covers his moves now; his
-	# Meshy set adds only the taunt and the leg sweep the pack lacks.
+	# Meshy set adds only the leg sweep the pack lacks.
 	"bib": {
-		"taunt": ["01a0ebe0", 2.60], "kick_front": ["Leg_Sweep", 0.95],
+		"kick_front": ["Leg_Sweep", 0.95],
 	},
 	# Ananta's Meshy set exports with id names; each is [id, second the blow
 	# lands], measured from the peak reach of the striking hand or foot.
@@ -168,44 +168,44 @@ const STYLES := {
 		"height": 1.7, "width": 0.92, "tint": [Color("223f8a"), Color("9fe0c8")],
 		"clips": {"idle": "idle", "jab": "jab", "run": "fast_run", "backdash": "dodging"},
 		"timing": {"jab": [0.15, 0.57, 1.0]},
-		# The upgraded Bib: his 45-clip Mixamo set (Downloads/BIB_Fighting) in
-		# assets/fighters/bib/fight/ (kept local), "With Skin" on the T-pose
-		# body built in Blender (Downloads/Bib_Mixamo_Ready).
+		# Bibek: the Tripo-built Bib (Downloads/Bib_Tripo_Mixamo) with his
+		# 39-clip Mixamo set (Downloads/BIBEK_Fighting) in
+		# assets/fighters/bib/fight/ (kept local); boxing_idle carries the skin.
 		"pack": {
 			"folder": "fight/",
 			"reversed": ["walk_back"],
-			"body": "drop_kick",
+			"body": "boxing_idle",
 			"moves": {
-				"idle": "fighting_idle", "walk": "walking", "walk_back": "walking",
-				"sidestep_left": "left_strafe_walking", "sidestep_right": "right_strafe_walking",
-				"run": "running", "dash": "running", "backdash": "dodging_back",
+				"idle": "boxing_idle", "walk": "guard_walk", "walk_back": "guard_walk",
+				"sidestep_left": "guard_walk_left", "sidestep_right": "guard_walk_right",
+				"run": "run_forward", "dash": "run_forward", "backdash": "step_back",
 				"jump": "jump",
-				"jab": "cross_punch", "cross": "punch_combo", "hook": "hook_punch",
-				"uppercut": "uppercut", "punch_heavy": "punch_combo",
-				"kick": "mma_roundhouse_kick", "kick_spin": "mma_spinning_back_kick",
-				"getup": "get_up_from_back", "finisher": "flying_knee_punch_combo",
-				"block": "standing_block_idle", "block_hit": "standing_block_react_large",
-				"hit": "taking_punch", "hit_heavy": "receiving_a_big_uppercut",
-				"hit_head": "taking_punch", "hit_head_heavy": "receiving_a_big_uppercut",
-				"hit_body": "hit_to_body", "hit_liver": "stunned",
-				"ko": "knockout_fall_back",
+				"jab": "jab", "cross": "cross", "hook": "rear_hook",
+				"uppercut": "uppercut", "punch_heavy": "one_two",
+				"kick": "high_roundhouse", "kick_spin": "jumping_spin_kick",
+				"getup": "get_up", "finisher": "jumping_spin_kick",
+				"block": "block", "block_hit": "block_react",
+				"hit": "body_reaction", "hit_heavy": "heavy_reaction",
+				"hit_head": "head_hit", "hit_head_heavy": "heavy_reaction",
+				"hit_body": "body_reaction", "hit_liver": "heavy_reaction",
+				"ko": "knocked_out", "victory": "victory", "taunt": "taunt",
 				# Extra strikes, played by moves whose pose names them.
-				"strike_side_kick": "side_kick", "strike_high_kick": "mma_high_kick",
-				"strike_low_kick": "mma_low_kick", "strike_jab_elbow": "jab_to_elbow_punch",
-				"strike_knee": "knee_kick_lead", "strike_drop_kick": "drop_kick",
-				"strike_flying_knee": "flying_knee_punch_combo",
+				"strike_body_hook": "lead_body_hook", "strike_high_kick": "high_roundhouse",
+				"strike_side_kick": "side_kick", "strike_low_kick": "low_kick",
+				"strike_uppercut": "uppercut", "strike_lunge": "lunge_punch",
+				"strike_spin_kick": "jumping_spin_kick",
 			},
-			# [start, impact, end]: impact at the furthest reach of the fist,
-			# knee or foot (measured from each clip).
+			# [start, impact, end]: impact at the furthest reach of the fist or
+			# foot (measured from each clip).
 			"timing": {
-				"jab": [0.78, 1.13, 1.68], "cross": [0.28, 0.63, 1.18], "hook": [0.68, 1.03, 1.58],
-				"uppercut": [0.12, 0.47, 1.02], "punch_heavy": [0.28, 0.63, 1.18],
-				"kick": [0.48, 0.83, 1.38], "kick_spin": [0.55, 0.9, 1.45],
-				"finisher": [0.98, 1.33, 1.88],
-				"strike_side_kick": [0.35, 0.7, 1.25], "strike_high_kick": [0.38, 0.73, 1.28],
-				"strike_low_kick": [0.25, 0.6, 1.15], "strike_jab_elbow": [0.65, 1.0, 1.55],
-				"strike_knee": [0.55, 0.9, 1.45], "strike_drop_kick": [1.05, 1.4, 2.2],
-				"strike_flying_knee": [0.98, 1.33, 1.88],
+				"jab": [0.12, 0.47, 1.02], "cross": [0.32, 0.67, 1.22], "hook": [0.32, 0.67, 1.22],
+				"uppercut": [0.35, 0.7, 1.25], "punch_heavy": [0.32, 0.67, 1.22],
+				"kick": [0.42, 0.77, 1.32], "kick_spin": [0.35, 0.7, 1.4],
+				"finisher": [0.35, 0.7, 1.4],
+				"strike_body_hook": [0.12, 0.47, 1.02], "strike_high_kick": [0.42, 0.77, 1.32],
+				"strike_side_kick": [0.28, 0.63, 1.18], "strike_low_kick": [0.25, 0.6, 1.15],
+				"strike_uppercut": [0.35, 0.7, 1.25], "strike_lunge": [0.35, 0.7, 1.25],
+				"strike_spin_kick": [0.35, 0.7, 1.4],
 			},
 		},
 	},
