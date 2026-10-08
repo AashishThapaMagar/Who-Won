@@ -38,6 +38,8 @@ var round_wins: Array = [0, 0]    # [player1 wins, player2 wins]
 var time_remaining: float = ROUND_TIME
 var round_active: bool = false
 var intro_timer: float = 0.0
+## Hajurama, the announcer (scripts/announcer.gd), made on the first call.
+var announcer: Node = null
 var match_over: bool = false
 ## Seconds the round winner is shown before the next round starts itself.
 const ROUND_PAUSE := 2.2
@@ -300,6 +302,21 @@ func _end_round(winner: int) -> void:
 		advance_timer = ROUND_PAUSE + (KO_PAUSE if knockout else 0.0)
 
 	result_label.visible = true
+	var victor: Node = player1 if winner == 1 else (player2 if winner == 2 else null)
+	var host := _announcer()
+	if host != null:
+		host.winner_call("" if victor == null else str(victor.character_profile.name), match_over and victor != null)
+
+## Hajurama, centre stage between the fighters (3D arenas only).
+func _announcer() -> Node:
+	var stage: Node3D = get("world")
+	if stage == null or not player1.has_method("get") or player1.get("body") == null:
+		return null
+	if announcer == null:
+		announcer = preload("res://scripts/announcer.gd").new()
+		stage.add_child(announcer)
+	announcer.place(player1.body.global_position, player2.body.global_position, get_viewport().get_camera_3d())
+	return announcer
 
 func _start_new_match() -> void:
 	if MatchSetup.arcade:
@@ -477,12 +494,17 @@ func _show_banner(index: int, fight_style: FightStyle) -> void:
 	entrance.tween_property(banner, "position:x", 130.0, 0.3).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	entrance.tween_property(banner_round, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	preload("res://scripts/sfx.gd").fire("round")
+	var host := _announcer()
+	if host != null:
+		host.round_call(banner_round.text)
 	intro_timer = INTRO_TIME
 
 func _hide_banner() -> void:
 	if banner.visible:
 		_flash_fight()
 	banner.visible = false
+	if announcer != null:
+		announcer.leave()
 	player1.set_physics_process(true)
 	player2.set_physics_process(true)
 	round_active = true
