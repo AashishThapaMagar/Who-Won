@@ -180,7 +180,8 @@ func _refresh_cries() -> void:
 			row[1].text = "● REC  %.1f s" % cries.time_left()
 			row[1].add_theme_color_override("font_color", UI.RED)
 		else:
-			row[1].text = "RE-RECORD CRY" if has else "RECORD CRY"
+			var takes: int = cries.count(player)
+			row[1].text = "RECORD CRY" if takes == 0 else "+ CRY  (%d/%d)" % [takes, cries.MAX_TAKES]
 			row[1].remove_theme_color_override("font_color")
 
 func _process(_delta: float) -> void:
@@ -346,14 +347,16 @@ func _build_player(player: int) -> void:
 	# Battle cry: record your own shout ("AAIYA!") for your big moves.
 	var cries := get_node_or_null("/root/BattleCry")
 	var row: Array[Button] = []
-	for spec in [["PLAY", Vector2(0, 290), 46.0], ["RECORD CRY", Vector2(50, 290), PANEL_W - 100.0], ["CLEAR", Vector2(PANEL_W - 46, 290), 46.0]]:
+	for spec in [["PLAY", Vector2(0, 290), 46.0], ["RECORD CRY", Vector2(50, 290), PANEL_W - 100.0], ["UNDO", Vector2(PANEL_W - 46, 290), 46.0]]:
 		var button := UI.button(self, spec[0], at + spec[1], Vector2(spec[2], 24))
 		button.add_theme_font_override("font", UI.saira(800, 104, true))
 		button.add_theme_font_size_override("font_size", 10)
 		button.focus_mode = Control.FOCUS_NONE
 		button.visible = cries != null and not single and not computer
 		row.append(button)
-	row[1].tooltip_text = "Record a 1.6 s battle cry: it plays on your big moves, supers and round wins"
+	row[0].tooltip_text = "Hear one of your cries"
+	row[1].tooltip_text = "Record a battle cry (1.6 s). Every take is kept, up to 8: one plays at random on your big moves, supers and round wins"
+	row[2].tooltip_text = "Delete your newest cry"
 	if cries != null:
 		row[0].pressed.connect(cries.preview.bind(player))
 		row[1].pressed.connect(func():
