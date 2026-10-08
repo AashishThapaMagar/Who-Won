@@ -169,43 +169,45 @@ const STYLES := {
 		"clips": {"idle": "idle", "jab": "jab", "run": "fast_run", "backdash": "dodging"},
 		"timing": {"jab": [0.15, 0.57, 1.0]},
 		# Bibek: the Tripo-built Bib (Downloads/Bib_Tripo_Mixamo) with his
-		# 39-clip Mixamo set (Downloads/BIBEK_Fighting) in
-		# assets/fighters/bib/fight/ (kept local); boxing_idle carries the skin.
+		# Mixamo set (Fighting_Game_Animations: 39 clips, real Mixamo names) in
+		# assets/fighters/bib/fight/ (kept local); combat_idle carries the skin.
 		"pack": {
 			"folder": "fight/",
 			"reversed": ["walk_back"],
-			"body": "boxing_idle",
+			"body": "combat_idle",
 			"moves": {
-				"idle": "boxing_idle", "walk": "guard_walk", "walk_back": "guard_walk",
-				"sidestep_left": "guard_walk_left", "sidestep_right": "guard_walk_right",
-				"run": "run_forward", "dash": "run_forward", "backdash": "step_back",
-				"jump": "jump",
-				"jab": "jab", "cross": "cross", "hook": "rear_hook",
-				"uppercut": "uppercut", "punch_heavy": "one_two",
-				"kick": "high_roundhouse", "kick_spin": "jumping_spin_kick",
-				"getup": "get_up", "finisher": "jumping_spin_kick",
-				"block": "block", "block_hit": "block_react",
-				"hit": "body_reaction", "hit_heavy": "heavy_reaction",
-				"hit_head": "head_hit", "hit_head_heavy": "heavy_reaction",
-				"hit_body": "body_reaction", "hit_liver": "heavy_reaction",
-				"ko": "knocked_out", "victory": "victory", "taunt": "taunt",
+				"idle": "combat_idle", "walk": "walk_forward_combat", "walk_back": "walk_forward_combat",
+				"sidestep_left": "walk_left_combat", "sidestep_right": "walk_right_combat",
+				"run": "run_forward", "dash": "run_forward", "backdash": "step_backward_combat",
+				"jump": "jump_standing",
+				"jab": "punch_jab", "cross": "punch_cross", "hook": "punch_hook_lead",
+				"uppercut": "punch_uppercut_rear", "punch_heavy": "combo_jabcross",
+				"kick": "kick_roundhouse", "kick_spin": "kick_high",
+				"getup": "getup", "finisher": "kick_high",
+				"block": "block_high", "block_hit": "block_low",
+				# Reactions: head blows alternate left and right, hooks and
+				# roundhouses rock him sideways, straight body shots fold him.
+				"hit": "hit_left", "hit_heavy": "hit_right",
+				"hit_head": "hit_left", "hit_head_alt": "hit_right", "hit_head_heavy": "hit_right",
+				"hit_body": "hit_body", "hit_side": "hit_left", "hit_liver": "hit_body",
+				"ko": "knockout_back", "victory": "victory", "taunt": "taunt",
 				# Extra strikes, played by moves whose pose names them.
-				"strike_body_hook": "lead_body_hook", "strike_high_kick": "high_roundhouse",
-				"strike_side_kick": "side_kick", "strike_low_kick": "low_kick",
-				"strike_uppercut": "uppercut", "strike_lunge": "lunge_punch",
-				"strike_spin_kick": "jumping_spin_kick",
+				"strike_rear_hook": "punch_hook_rear", "strike_lead_uppercut": "punch_uppercut_lead",
+				"strike_rear_uppercut": "punch_uppercut_rear", "strike_one_two": "combo_jabcross",
+				"strike_high_kick": "kick_high", "strike_roundhouse": "kick_roundhouse",
+				"strike_side_kick": "kick_side", "strike_low_kick": "kick_low",
 			},
 			# [start, impact, end]: impact at the furthest reach of the fist or
-			# foot (measured from each clip).
+			# foot (measured from each clip); the tails are trimmed so he is
+			# back in guard quickly.
 			"timing": {
-				"jab": [0.12, 0.47, 1.02], "cross": [0.32, 0.67, 1.22], "hook": [0.32, 0.67, 1.22],
-				"uppercut": [0.35, 0.7, 1.25], "punch_heavy": [0.32, 0.67, 1.22],
-				"kick": [0.42, 0.77, 1.32], "kick_spin": [0.35, 0.7, 1.4],
-				"finisher": [0.35, 0.7, 1.4],
-				"strike_body_hook": [0.12, 0.47, 1.02], "strike_high_kick": [0.42, 0.77, 1.32],
-				"strike_side_kick": [0.28, 0.63, 1.18], "strike_low_kick": [0.25, 0.6, 1.15],
-				"strike_uppercut": [0.35, 0.7, 1.25], "strike_lunge": [0.35, 0.7, 1.25],
-				"strike_spin_kick": [0.35, 0.7, 1.4],
+				"jab": [0.17, 0.47, 0.92], "cross": [0.37, 0.67, 1.12], "hook": [0.17, 0.47, 0.95],
+				"uppercut": [0.4, 0.7, 1.15], "punch_heavy": [0.37, 0.67, 1.15],
+				"kick": [0.42, 0.77, 1.3], "kick_spin": [0.35, 0.7, 1.3], "finisher": [0.35, 0.7, 1.4],
+				"strike_rear_hook": [0.37, 0.67, 1.12], "strike_lead_uppercut": [0.4, 0.7, 1.15],
+				"strike_rear_uppercut": [0.4, 0.7, 1.15], "strike_one_two": [0.37, 0.67, 1.15],
+				"strike_high_kick": [0.35, 0.7, 1.3], "strike_roundhouse": [0.42, 0.77, 1.3],
+				"strike_side_kick": [0.28, 0.63, 1.15], "strike_low_kick": [0.25, 0.6, 1.1],
 			},
 		},
 	},

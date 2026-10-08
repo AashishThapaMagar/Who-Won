@@ -73,25 +73,35 @@ static func for_fighter(id: String) -> Dictionary:
 			m.breaker.pose = "spin"
 			# Signature four-hit combo: three quick punches, then heavy for a
 			# leaping kick.
-			m.combo_finish = BASE._move("Endless Rush", "strike_spin_kick", "kick", "kick", 74, -80, 0.13, 0.09, 0.36, 1.6, 1.7, 26)
-			m.combo_finish.hitstun = 0.5
-			# Bibek's Mixamo set: button 2 is a lead body hook, 4 a high
-			# roundhouse, 4,4 the jumping spin kick, 3,3,4 ends on a side
-			# kick, back+3 is a low kick, 2,4 an uppercut, and the drive is
-			# his lunging punch.
-			m.rp = BASE._move("Relay body hook", "strike_body_hook", "punch", "hook", 40, -70, 0.11, 0.07, 0.28, 1.4, 1.1, 14)
-			m.rk = BASE._move("Relay high kick", "strike_high_kick", "kick", "kick", 66, -84, 0.13, 0.08, 0.27, 1.2, 1.1, 10)
-			m.rk.hitstun = 0.32
-			m.roundhouse = BASE._move("Relay spin kick", "strike_spin_kick", "kick", "kick", 70, -80, 0.14, 0.08, 0.3, 1.4, 1.4, 12)
-			m.roundhouse.hitstun = 0.4
-			m.side_kick = BASE._move("Relay side kick", "strike_side_kick", "kick", "kick", 72, -66, 0.12, 0.08, 0.28, 1.35, 1.6, 12)
-			m.side_kick.hitstun = 0.4
-			m.back_heavy = BASE._move("Low kick", "strike_low_kick", "kick", "kick", 62, -28, 0.11, 0.07, 0.24, 1.1, 0.8, 8)
-			m.knee = BASE._move("Relay uppercut", "strike_uppercut", "punch", "hook", 44, -96, 0.12, 0.07, 0.28, 1.4, 1.2, 14)
-			m.drive = BASE._move("Rush cross", "strike_lunge", "punch", "punch", 66, -72, 0.18, 0.09, 0.38, 1.6, 1.8, 46)
+			m.combo_finish = BASE._move("Endless Rush", "finisher_clip", "kick", "kick", 74, -84, 0.13, 0.09, 0.34, 1.7, 1.8, 26)
+			m.combo_finish.hitstun = 0.55
+			# Bibek, the boxer who kicks. 1,1,1 is jab, cross, lead hook and
+			# 1,1,1,3 ends on his high kick. 2 is the rear hook: 2,2 a lead
+			# uppercut, 1,2,2 a rear uppercut that lifts, 2,4 a roundhouse.
+			# 4 is a high kick, 4,4 the roundhouse; 3,3,4 ends on a side kick;
+			# back+3 is a low kick; the drive is a rushing one-two.
+			m.jab.name = "Needle jab"
+			m.cross.name = "Rapid cross"
+			m.hook.name = "Relay lead hook"
+			m.rp = BASE._move("Relay rear hook", "strike_rear_hook", "punch", "hook", 42, -76, 0.11, 0.07, 0.26, 1.4, 1.2, 14)
+			m.rp.hitstun = 0.32
+			m.knee = BASE._move("Relay uppercut", "strike_lead_uppercut", "punch", "hook", 40, -96, 0.11, 0.07, 0.28, 1.4, 1.2, 14)
+			m.knee.hitstun = 0.36
+			m.rising = BASE._move("Rising uppercut", "strike_rear_uppercut", "punch", "hook", 42, -98, 0.13, 0.08, 0.32, 1.7, 1.5, 18)
+			m.rising.hitstun = 0.5
+			m.rk = BASE._move("Relay high kick", "strike_high_kick", "kick", "kick", 68, -86, 0.13, 0.08, 0.27, 1.3, 1.2, 10)
+			m.rk.hitstun = 0.34
+			m.roundhouse = BASE._move("Relay roundhouse", "strike_roundhouse", "kick", "kick", 70, -78, 0.14, 0.08, 0.28, 1.45, 1.5, 12)
+			m.roundhouse.hitstun = 0.42
+			m.side_kick = BASE._move("Relay side kick", "strike_side_kick", "kick", "kick", 74, -66, 0.12, 0.08, 0.28, 1.4, 1.7, 12)
+			m.side_kick.hitstun = 0.42
+			m.back_heavy = BASE._move("Low kick", "strike_low_kick", "kick", "kick", 62, -28, 0.11, 0.07, 0.22, 1.1, 0.8, 8)
+			m.drive = BASE._move("Rush one-two", "strike_one_two", "punch", "punch", 66, -74, 0.17, 0.09, 0.34, 1.6, 1.7, 46)
+			m.rp.next_rp = "knee"                  # 2,2
+			m.rp.next_rk = "roundhouse"            # 2,4
+			m.cross.next_rp = "rising"             # 1,2,2 / 1,1,2
 			m.rk.next_rk = "roundhouse"            # 4,4
 			m.forward_heavy.next_rk = "side_kick"  # 3,3,4
-			m.rp.next_rk = "knee"                  # 2,4
 		"abhi":
 			m.cross.name = "Thunder straight"
 			m.hook.name = "Mic drop"
