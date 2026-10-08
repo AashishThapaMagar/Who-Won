@@ -166,6 +166,8 @@ const STYLES := {
 	},
 	"bib": {
 		"height": 1.7, "width": 1.0, "tint": [Color("223f8a"), Color("9fe0c8")],
+		# The Tripo body's arms came out thin: fuller sleeves and forearms.
+		"thicken": {"arm": 1.4, "forearm": 1.45, "hand": 1.2},
 		"clips": {"idle": "idle", "jab": "jab", "run": "fast_run", "backdash": "dodging"},
 		"timing": {"jab": [0.15, 0.57, 1.0]},
 		# Bibek: the Tripo-built Bib (Downloads/Bib_Tripo_Mixamo) with his
@@ -435,6 +437,7 @@ static func _mixamo(fighter_id: String) -> Dictionary:
 		"enabled": ResourceLoader.exists(SHARED + "idle.fbx"),
 		"height": style.get("height", 1.8),
 		"width": style.get("width", 1.0),
+		"thicken": style.get("thicken", {}),
 		"tint": [] if own_body or graft != "" else style.get("tint", []),
 		"yaw": PI / 2.0,
 		"files": files,

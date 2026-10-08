@@ -5,6 +5,10 @@ extends RefCounted
 ## reads these through available_moves() instead of move_catalog's
 ## style-generic tables whenever is_action_fight() is true.
 const BASE := preload("res://scripts/move_catalog.gd")
+## Fight pace: strikes wind up and recover like a real exchange instead of
+## flickering. Stun grows with the startups so every combo still links.
+const PACE_STARTUP := 1.5
+const PACE_RECOVERY := 1.25
 
 static func for_fighter(id: String) -> Dictionary:
 	var m := BASE.for_style("action")
@@ -262,5 +266,13 @@ static func for_fighter(id: String) -> Dictionary:
 	for key in m.keys():
 		if m[key].kind == "grapple":
 			m.erase(key)
+	for key in m:
+		m[key].startup = float(m[key].startup) * PACE_STARTUP
+		m[key].recovery = float(m[key].recovery) * PACE_RECOVERY
+		# The blow stays live through the same share of the follow-through.
+		m[key].active = float(m[key].active) * PACE_RECOVERY
+		# Stun grows with the startups so the next blow still lands in it.
+		m[key].hitstun = float(m[key].get("hitstun", 0.25)) * PACE_STARTUP
+		m[key].blockstun = float(m[key].get("blockstun", 0.15)) * PACE_RECOVERY
 	# Chains end in strikes, not unavoidable grabs or utility actions.
 	return m

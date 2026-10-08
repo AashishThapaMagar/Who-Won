@@ -118,6 +118,15 @@ var guard_time := 0.0
 var _blend_from: Dictionary = {}
 var _blend_time := 0.0
 const ATTACK_BLEND := 0.09
+## Fastest a strike clip's wind-up may play (x its own speed): the move's
+## startup is short, so the clip starts that much later in its wind-up
+## instead of racing through all of it.
+const WINDUP_RATE := 1.5
+## Share of every wind-up that always plays.
+const WINDUP_KEEP := 0.6
+## Blend from the end of a strike back into guard (s).
+const STRIKE_SETTLE := 0.26
+var _from_strike := false
 ## Into the thrown clip from a guard, and from lying into the get-up.
 const THROW_BLEND := 0.15
 ## Procedural layers on top of the clips: a knee tuck for rigs with no
@@ -207,6 +216,7 @@ func configure(owner_visual: Node, profile: Dictionary) -> void:
 	_add_clip_files()
 	_resolve_clips()
 	_prepare_guard()
+	_thicken(config.get("thicken", {}))
 	_fit(float(config.get("height", 1.8)))
 	_tint(config.get("tint", []))
 	_polish_materials()
@@ -373,6 +383,80 @@ func _fit(height: float) -> void:
 	var width: float = config.get("width", 1.0)
 	character.scale = Vector3(width, 1.0, width) * (height / model_height) * units
 	character.position.y = -bounds.position.y * (height / model_height) * units - (64.0 if visual.world_root == null else 0.0)
+
+## Fills out thin limbs: {"arm": 1.3} pushes every vertex skinned to the
+## upper arms out from the bone's line by 30%, in the bind pose, so the
+## arm keeps its length and joints and every clip plays on it unchanged.
+## Keys are bone names without the Left/Right side.
+func _thicken(factors: Dictionary) -> void:
+	if factors.is_empty():
+		return
+	for mesh: MeshInstance3D in character.find_children("*", "MeshInstance3D", true, false):
+		var skin: Skin = mesh.skin
+		var source := mesh.mesh as ArrayMesh
+		var skeleton_node := mesh.get_node_or_null(mesh.skeleton) as Skeleton3D
+		if skin == null or source == null or skeleton_node == null:
+			continue
+		# Per bind: [factor, bind pose, the bone's own axis in its space].
+		var binds := {}
+		for i in skin.get_bind_count():
+			var name := String(skin.get_bind_name(i))
+			if name == "" and skin.get_bind_bone(i) >= 0:
+				name = skeleton_node.get_bone_name(skin.get_bind_bone(i))
+			var key := name.to_lower().get_slice(":", name.get_slice_count(":") - 1).trim_prefix("mixamorig_").trim_prefix("left").trim_prefix("right")
+			if not factors.has(key):
+				continue
+			var bone := skeleton_node.find_bone(name)
+			var child := -1
+			for c in skeleton_node.get_bone_children(bone) if bone >= 0 else PackedInt32Array():
+				child = c
+				break
+			var axis := Vector3.UP
+			if child >= 0:
+				# The child's head, carried into this bone's bind space.
+				var child_rest := skeleton_node.get_bone_rest(child).origin
+				if child_rest.length() > 0.0001:
+					axis = child_rest.normalized()
+			binds[i] = [float(factors[key]), skin.get_bind_pose(i), axis]
+		if binds.is_empty():
+			continue
+		var built := ArrayMesh.new()
+		for surface in source.get_surface_count():
+			var arrays := source.surface_get_arrays(surface)
+			var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			var bones: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
+			var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
+			if bones.is_empty() or verts.is_empty():
+				built.add_surface_from_arrays(source.surface_get_primitive_type(surface), arrays)
+				built.surface_set_material(surface, source.surface_get_material(surface))
+				continue
+			var per := bones.size() / verts.size()
+			for v in verts.size():
+				var p := verts[v]
+				var moved := Vector3.ZERO
+				for j in per:
+					var b := bones[v * per + j]
+					var w := weights[v * per + j]
+					if w <= 0.0 or not binds.has(b):
+						continue
+					var data: Array = binds[b]
+					var pose: Transform3D = data[1]
+					var axis: Vector3 = data[2]
+					var local := pose * p
+					var along := axis * local.dot(axis)
+					var out := along + (local - along) * float(data[0])
+					moved += (pose.affine_inverse() * out - p) * w
+				verts[v] = p + moved
+			arrays[Mesh.ARRAY_VERTEX] = verts
+			var flags := source.surface_get_format(surface) & (Mesh.ARRAY_FLAG_USE_8_BONE_WEIGHTS | Mesh.ARRAY_FLAG_USE_DYNAMIC_UPDATE)
+			built.add_surface_from_arrays(source.surface_get_primitive_type(surface), arrays, [], {}, flags)
+			built.surface_set_material(surface, source.surface_get_material(surface))
+		var overrides := []
+		for surface in mesh.get_surface_override_material_count():
+			overrides.append(mesh.get_surface_override_material(surface))
+		mesh.mesh = built
+		for surface in overrides.size():
+			mesh.set_surface_override_material(surface, overrides[surface])
 
 ## Swaps the shared body's meshes for a generated one (body.glb from
 ## tools/build_fighter_body.py). It is skinned to the same Mixamo rig, so its
@@ -1014,7 +1098,16 @@ func update(delta: float) -> void:
 		var was_reaction: bool = current != "" and REACTIONS.any(func(name): return clip_names.get(name, "") == current)
 		# Footwork changes (stand, walk, run, step) melt into each other.
 		var stepping: bool = logical in LOOPING and current != "" and current in LOOPING.map(func(name): return clip_names.get(name, ""))
-		player.play(clip, 0.0 if logical == "ko" else 0.05 if logical in REACTIONS else (0.22 if was_reaction else (0.24 if stepping else 0.12)))
+		var settle := 0.12
+		if was_reaction:
+			settle = 0.22
+		elif stepping:
+			settle = 0.24
+		if _from_strike and not logical in REACTIONS:
+			# Flow out of a punch or kick back into guard, don't snap.
+			settle = maxf(settle, STRIKE_SETTLE)
+		_from_strike = false
+		player.play(clip, 0.0 if logical == "ko" else 0.05 if logical in REACTIONS else settle)
 		if restart:
 			player.seek(0.0, true)
 		# Clips that open with a still beat (the knockout) start where the
@@ -1631,19 +1724,40 @@ func _scrub_attack(fighter: Node, logical: String, clip: String, delta: float, f
 		start = cut[0]
 		impact = cut[1]
 		end = minf(cut[2], animation.length)
-	var startup: float = fighter.attack_startup()
+	var startup: float = maxf(fighter.attack_startup(), 0.001)
 	var total: float = maxf(fighter.attack_duration(), startup + 0.01)
 	var t: float = fighter.attack_timer
-	var position := start + (impact - start) * clampf(t / maxf(startup, 0.001), 0.0, 1.0)
-	if t > startup:
-		position = impact + (end - impact) * clampf((t - startup) / (total - startup), 0.0, 1.0)
-	player.seek(minf(position, animation.length - 0.001), true)
+	_from_strike = true
+	# Skip the early part of a long wind-up so what plays runs near natural
+	# speed (the blend from guard covers the skipped bit), but keep most of
+	# it: a spinning kick needs its whole turn to come round on target.
+	start = maxf(start, impact - maxf(startup * WINDUP_RATE, (impact - start) * WINDUP_KEEP))
+	player.seek(minf(_strike_time(start, impact, end, startup, total, t), animation.length - 0.001), true)
 	if not frozen:
 		_blend_time += delta
 	if _blend_time < ATTACK_BLEND and skeleton != null and not _blend_from.is_empty():
 		var k := smoothstep(0.0, 1.0, _blend_time / ATTACK_BLEND)
 		for bone in _blend_from:
 			skeleton.set_bone_pose_rotation(bone, (_blend_from[bone] as Quaternion).slerp(skeleton.get_bone_pose_rotation(bone), k))
+
+## Clip time for a strike `t` seconds in: the wind-up [start, impact] fills
+## the startup and the follow-through [impact, end] the rest. Each half is a
+## Hermite curve sharing one speed at the impact, so the strike accelerates
+## through the blow and settles after it with no kink in between.
+static func _strike_time(start: float, impact: float, end: float, startup: float, total: float, t: float) -> float:
+	var rise := (impact - start) / startup
+	var fall := (end - impact) / maxf(total - startup, 0.001)
+	var through := minf((rise + fall) * 0.5, minf(rise, fall) * 2.5)
+	if t <= startup:
+		return _hermite(start, impact, startup, rise * 0.8, through, clampf(t / startup, 0.0, 1.0))
+	return _hermite(impact, end, total - startup, through, fall * 0.5, clampf((t - startup) / maxf(total - startup, 0.001), 0.0, 1.0))
+
+## Cubic Hermite from p0 to p1 over `span` seconds with start and end
+## speeds m0 and m1 (clip-seconds per second), at fraction u.
+static func _hermite(p0: float, p1: float, span: float, m0: float, m1: float, u: float) -> float:
+	var u2 := u * u
+	var u3 := u2 * u
+	return (2.0 * u3 - 3.0 * u2 + 1.0) * p0 + (u3 - 2.0 * u2 + u) * span * m0 + (-2.0 * u3 + 3.0 * u2) * p1 + (u3 - u2) * span * m1
 
 func _capture_pose() -> void:
 	_blend_from.clear()

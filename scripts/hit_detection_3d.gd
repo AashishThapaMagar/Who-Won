@@ -43,6 +43,11 @@ const STRIKERS := [
 const FIST := 0.09
 ## Each fighter's strikers on the previous physics frame: [[a, b], ...].
 var _last_strikes: Dictionary = {}
+## The strikers of the last few frames, newest first: when a blow goes live
+## it also counts a limb that brushed the rival on its way to full
+## extension, so a strike played at natural speed isn't lost between frames.
+var _strike_history: Dictionary = {}
+const LEAD_FRAMES := 4
 static var _bone_cache: Dictionary = {}
 
 func _ready() -> void:
@@ -72,6 +77,12 @@ func _physics_process(delta: float) -> void:
 			if not grab:
 				var slack := SUPER_SLACK if fighter.current_move.get("super", false) else (COMBO_SLACK if continued else SLACK)
 				touch = contact(fighter, victim, slack, _last_strikes.get(fighter, []), delta)
+				if touch.is_empty() and fighter.attack_timer <= fighter.attack_startup() + delta * 1.5:
+					# First live frame: sweep back over the swing's last frames.
+					for older in _strike_history.get(fighter, []):
+						touch = contact(fighter, victim, slack, older, delta)
+						if not touch.is_empty():
+							break
 				if touch.is_empty():
 					continue
 			hitbox._already_hit.append(victim)
@@ -85,6 +96,11 @@ func _physics_process(delta: float) -> void:
 		var rig = _rig(fighter)
 		if rig != null:
 			_last_strikes[fighter] = _strikers(rig)
+			var history: Array = _strike_history.get(fighter, [])
+			history.push_front(_last_strikes[fighter])
+			if history.size() > LEAD_FRAMES:
+				history.resize(LEAD_FRAMES)
+			_strike_history[fighter] = history
 
 ## Whether any striking limb of `attacker` is touching `victim`'s body.
 ## True when either fighter has no skinned rig to measure.

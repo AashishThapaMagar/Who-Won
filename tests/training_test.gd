@@ -101,7 +101,8 @@ func run() -> void:
 			p1._buffered_direction = 0
 			p1._buffer_remaining = p1.input_buffer_time
 			await frames(1)
-		await frames(10)
+		# The cross's startup at fight pace (~0.2 s) plus a margin.
+		await frames(24)
 		check(hud.readout.text.contains("COMBO 2 HITS"), "Readout totals the combo (%s)" % hud.readout.text)
 	print("TRAINING_TEST: ", "ALL PASS" if failures.is_empty() else failures)
 	quit(0 if failures.is_empty() else 1)
