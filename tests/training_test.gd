@@ -47,11 +47,6 @@ func run() -> void:
 	check(p2.state == p2.State.HITSTUN, "Standing dummy takes the jab")
 	await frames(60)
 	check(p2.state == p2.State.IDLE, "Dummy recovers from hit-stun (state %d)" % p2.state)
-	await reset(0.7)
-	p1.current_move = p1.available_moves().grapple
-	p1.start_throw(p2, 10)
-	await frames(260)
-	check(p2.state == p2.State.IDLE, "Dummy gets up after a takedown (state %d)" % p2.state)
 	# GUARD ALL.
 	arena.set_dummy_mode(1)
 	await reset()
@@ -70,17 +65,6 @@ func run() -> void:
 	jab()
 	await frames(12)
 	check(p2.state in [p2.State.BLOCK, p2.State.BLOCKSTUN], "Guard-after-hit dummy blocks the follow-up (state %d)" % p2.state)
-	# ESCAPE GRABS.
-	arena.set_dummy_mode(3)
-	await reset(0.7)
-	p1._start_style_move("grapple")
-	var escaped := false
-	for frame in 40:
-		await frames(1)
-		if p2.combat_notice == "THROW ESCAPE":
-			escaped = true
-			break
-	check(escaped, "Escape-grabs dummy breaks a grab")
 	# FIGHT BACK: the computer takes over and lands something.
 	arena.set_dummy_mode(4)
 	await reset(1.2)

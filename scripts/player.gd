@@ -430,7 +430,9 @@ func _consume_action() -> bool:
 	if action == "super":
 		_start_super_strike()
 	elif action == "grapple":
-		_start_style_move("grapple")
+		# Grabs are switched off: the button does nothing.
+		if available_moves().has("grapple"):
+			_start_style_move("grapple")
 	elif action == "jump":
 		state = State.JUMP_START
 		action_timer = JUMP_START_TIME

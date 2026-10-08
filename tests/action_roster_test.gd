@@ -101,18 +101,6 @@ func run() -> void:
 		p1.attack_timer = p1.attack_startup()
 		p1._update_animation()
 		await snap(ROSTER.profile(i).id)
-	reset(2, 0)
-	p1._start_style_move("forward_heavy")
-	p2.state = p2.State.BLOCK
-	p2.block_hold_time = 1
-	check(p2.take_hit(20, 100, 1, p1) and p2.state == p2.State.THROWN and p1.state == p1.State.THROWING, "Sab grab beats held guard")
-	check(p2.health == 100, "Throw damage waits for the slam")
-	p1._slam()
-	check(p2.health == 80, "The slam deals the throw's damage")
-	reset(2, 0)
-	p1._start_style_move("forward_heavy")
-	p2.throw_tech_until = p2.combat_time + 0.16
-	check(not p2.take_hit(20, 100, 1, p1) and p2.health == 100, "Timed escape stops a grab")
 	reset(5, 1)
 	p1._start_style_move("kick")
 	p2.take_hit(12, 0, 1, p1, "kick")

@@ -76,23 +76,5 @@ func run() -> void:
 	check(late[0] > full + 0.3, "Holding guard stays down longer (%.2fs)" % late[0])
 	var rising := await knockdown("", "kick")
 	check(rising[2] in [p1.State.PUNCH, p1.State.KICK], "An attack pressed while rising is thrown the moment the fighter is up (state %d)" % rising[2])
-	# A broken grab: both fighters are shoved apart, the escaper guarding.
-	await reset()
-	p1.body.position = Vector3(-0.35, 0.02, 0)
-	p2.body.position = Vector3(0.35, 0.02, 0)
-	await frames(2)
-	var gap: float = p1.body.position.distance_to(p2.body.position)
-	p2.throw_tech_until = p2.combat_time + 10.0
-	p1._start_style_move("grapple")
-	var broke := false
-	for frame in 40:
-		await frames(1)
-		if p2.combat_notice == "THROW ESCAPE":
-			broke = true
-			check(p2.state == p2.State.BLOCKSTUN and p1.state == p1.State.HITSTUN, "A broken grab staggers the grabber and leaves the escaper guarding")
-			break
-	check(broke, "A timed escape breaks the grab")
-	await frames(15)
-	check(p1.body.position.distance_to(p2.body.position) > gap + 0.2, "A broken grab shoves both fighters apart")
 	print("WAKE_UP_TEST: ", "ALL PASS" if failures.is_empty() else failures)
 	quit(0 if failures.is_empty() else 1)

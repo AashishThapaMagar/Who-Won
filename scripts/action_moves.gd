@@ -59,8 +59,8 @@ static func for_fighter(id: String) -> Dictionary:
 		"sab":
 			m.jab.name = "Iron check"
 			m.hook.name = "Anvil hook"
-			m.forward_heavy = BASE._move("Clinch toss", "grapple", "grapple", "hook", 30, -72, 0.28, 0.06, 0.45, 1.5, 1.4, 8)
-			m.breaker = BASE._move("Iron-grip throw", "grapple", "grapple", "hook", 32, -72, 0.32, 0.08, 0.52, 1.9, 1.7, 10)
+			m.forward_heavy = BASE._move("Iron front kick", "front_kick", "kick", "kick", 66, -60, 0.12, 0.07, 0.26, 1.2, 1.3, 10)
+			m.breaker = BASE._move("Iron uppercut", "uppercut", "punch", "hook", 42, -96, 0.2, 0.08, 0.4, 1.8, 1.6, 16)
 			m.drive.name = "Battering ram"
 			m.drive.pose = "overhand"
 			m.combo_finish = BASE._move("Anvil Drop", "overhand", "punch", "hook", 50, -92, 0.16, 0.09, 0.42, 1.9, 1.9, 18)
@@ -136,7 +136,7 @@ static func for_fighter(id: String) -> Dictionary:
 			m.drive.name = "Final word"
 			m.breaker.name = "Crown wheel"
 			m.breaker.pose = "spin"
-			m.back_heavy = BASE._move("Sovereign throw", "grapple", "grapple", "hook", 30, -72, 0.30, 0.07, 0.48, 1.5, 1.4, 8)
+			m.back_heavy = BASE._move("Crown low kick", "strike_low_kick", "kick", "kick", 62, -28, 0.11, 0.07, 0.24, 1.1, 0.8, 8)
 			# Tekken-style strings. 1,1,2 into the flying knee: jab, cross,
 			# hook, then heavy for The Final Word.
 			m.jab.name = "Snap jab"
@@ -248,5 +248,9 @@ static func for_fighter(id: String) -> Dictionary:
 			m[key].cost = 20.0
 		if key in ["drive", "breaker"]:
 			m[key].hitstun = 0.34
+	# No grabs or throws for now: every fighter fights with strikes only.
+	for key in m.keys():
+		if m[key].kind == "grapple":
+			m.erase(key)
 	# Chains end in strikes, not unavoidable grabs or utility actions.
 	return m
