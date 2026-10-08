@@ -248,6 +248,10 @@ func _end_round(winner: int) -> void:
 	elif winner == 2:
 		round_wins[1] += 1
 	_update_pips()
+	# The winner's own recorded shout, once the knockout has landed.
+	var shouter: Node = player1 if winner == 1 else (player2 if winner == 2 else null)
+	if shouter != null and not shouter.get("ai_controlled"):
+		get_tree().create_timer(0.8).timeout.connect(preload("res://scripts/battle_cry.gd").fire.bind(winner - 1, true))
 	# Ledger: a perfect is a round won without a scratch; recorded before the
 	# result panel so the menus can show it the moment the match ends.
 	var records := get_node_or_null("/root/Records")

@@ -14,6 +14,7 @@ const MOTIONS := preload("res://scripts/motion_input.gd")
 const ACTION_MOVES := preload("res://scripts/action_moves.gd")
 const THROW := preload("res://scripts/throw_data.gd")
 const SUPERS := preload("res://scripts/super_moves.gd")
+const BATTLE_CRY := preload("res://scripts/battle_cry.gd")
 
 enum State { IDLE, WALK, JUMP, PUNCH, KICK, BLOCK, HITSTUN, KO, BLOCKSTUN, DASH, JUMP_START, LAND, THROWING, THROWN, KNOCKDOWN, SUPER, STRUCK }
 
@@ -488,6 +489,8 @@ func _start_style_move(move_id: String, step: int = 0) -> void:
 	_start_attack(State.KICK if data.kind == "kick" else State.PUNCH, data.pose)
 	current_move = data
 	chain_step = step
+	if move_id in BATTLE_CRY.BIG_MOVES and not get("ai_controlled"):
+		BATTLE_CRY.fire(player_id - 1)
 	_update_animation()
 
 func move_name() -> String:
@@ -820,6 +823,8 @@ func start_super(victim: Node) -> void:
 	notice_until = combat_time + 1.6
 	_begin_super()
 	super_started.emit()
+	if not get("ai_controlled"):
+		BATTLE_CRY.fire(player_id - 1, true)
 	_update_animation()
 	victim._update_animation()
 

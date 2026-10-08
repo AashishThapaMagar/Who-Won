@@ -23,6 +23,11 @@ MatchSetup="*res://scripts/match_setup.gd"
 StoryDirector="*res://scripts/story_director.gd"
 Sfx="*res://scripts/sfx.gd"
 Records="*res://scripts/records.gd"
+BattleCry="*res://scripts/battle_cry.gd"
+
+[audio]
+
+driver/enable_input=true
 
 [display]
 

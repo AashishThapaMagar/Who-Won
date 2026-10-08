@@ -17,6 +17,8 @@ var cards: Array[Button] = []
 var markers: Array[Label] = []
 var selectors: Array[OptionButton] = []
 var ready_buttons: Array[Button] = []
+## Each player's battle cry: [play, record, clear] under LOCK IN.
+var cry_rows: Array = []
 var player_tabs: Array[Button] = []
 var portraits: Array[TextureRect] = []
 var names: Array[Label] = []
@@ -152,11 +154,44 @@ func _ready() -> void:
 	_build_centre()
 	_build_strip()
 	_build_footer()
+	var cries := get_node_or_null("/root/BattleCry")
+	if cries != null:
+		cries.changed.connect(func(_player): _refresh_cries())
+	_refresh_cries()
 	if mode_id == "arcade":
 		ready_players.assign([true, true])
 	if MatchSetup.vs_ai:
 		ready_players[1] = true
 	_refresh()
+
+## The battle-cry buttons: what each player has recorded, the live take.
+func _refresh_cries() -> void:
+	var cries := get_node_or_null("/root/BattleCry")
+	if cries == null:
+		return
+	for player in cry_rows.size():
+		var row: Array = cry_rows[player]
+		var has: bool = cries.has_cry(player)
+		var live: bool = cries.recording_player == player
+		row[0].disabled = not has or live
+		row[2].disabled = not has or live
+		row[1].disabled = not cries.available() or (cries.recording_player >= 0 and not live)
+		if live:
+			row[1].text = "● REC  %.1f s" % cries.time_left()
+			row[1].add_theme_color_override("font_color", UI.RED)
+		else:
+			row[1].text = "RE-RECORD CRY" if has else "RECORD CRY"
+			row[1].remove_theme_color_override("font_color")
+
+func _process(_delta: float) -> void:
+	var cries := get_node_or_null("/root/BattleCry")
+	if cries != null and cries.recording_player >= 0:
+		_refresh_cries()
+
+func _exit_tree() -> void:
+	var cries := get_node_or_null("/root/BattleCry")
+	if cries != null and cries.recording_player >= 0:
+		cries.stop()
 
 ## Letter-spaced title between gold hairlines, the mode beneath it, and the
 ## outlined player marks in the top corners.
@@ -308,6 +343,26 @@ func _build_player(player: int) -> void:
 	lock.pressed.connect(_toggle_ready.bind(player))
 	lock.visible = not single and not computer and mode_id != "arcade"
 	ready_buttons.append(lock)
+	# Battle cry: record your own shout ("AAIYA!") for your big moves.
+	var cries := get_node_or_null("/root/BattleCry")
+	var row: Array[Button] = []
+	for spec in [["PLAY", Vector2(0, 290), 46.0], ["RECORD CRY", Vector2(50, 290), PANEL_W - 100.0], ["CLEAR", Vector2(PANEL_W - 46, 290), 46.0]]:
+		var button := UI.button(self, spec[0], at + spec[1], Vector2(spec[2], 24))
+		button.add_theme_font_override("font", UI.saira(800, 104, true))
+		button.add_theme_font_size_override("font_size", 10)
+		button.focus_mode = Control.FOCUS_NONE
+		button.visible = cries != null and not single and not computer
+		row.append(button)
+	row[1].tooltip_text = "Record a 1.6 s battle cry: it plays on your big moves, supers and round wins"
+	if cries != null:
+		row[0].pressed.connect(cries.preview.bind(player))
+		row[1].pressed.connect(func():
+			if cries.recording_player == player:
+				cries.stop()
+			else:
+				cries.start(player))
+		row[2].pressed.connect(cries.clear.bind(player))
+	cry_rows.append(row)
 
 ## VS, the computer's difficulty, the status line, Start and the arena.
 func _build_centre() -> void:
