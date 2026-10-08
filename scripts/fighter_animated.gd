@@ -160,6 +160,8 @@ var _aim := 0.0
 ## Most the spine, neck and head turn to find the rival (radians), and each
 ## one's share of that turn.
 const AIM_LIMIT := 1.2
+## Fastest the head/neck turn toward the rival may change (rad/s).
+const AIM_SPEED := 3.0
 const AIM_CHAIN := [["spine2", 0.2], ["neck", 0.35], ["head", 0.45]]
 var _legs: Array = []      # [[upper bone, knee bone, upper sign, knee sign, axis], ...]
 var _spine: Array = []     # [[bone, sign, axis], ...]
@@ -1375,7 +1377,9 @@ func _aim_at_rival(fighter: Node, delta: float, frozen: bool) -> void:
 	elif fighter.state in [S.HITSTUN, S.KO, S.THROWN, S.THROWING, S.KNOCKDOWN, S.SUPER, S.STRUCK]:
 		want = 0.0
 	elif fighter.state in [S.PUNCH, S.KICK]:
-		want = 0.5
+		# Strike clips already face the rival; turning the head on top of
+		# the clip's own twist whips it around.
+		want = 0.0
 	if not frozen:
 		_aim_weight = move_toward(_aim_weight, want, delta * (6.0 if want > _aim_weight else 10.0))
 	if _aim_weight < 0.01:
@@ -1384,25 +1388,22 @@ func _aim_at_rival(fighter: Node, delta: float, frozen: bool) -> void:
 	var head := _bone("head")
 	if head < 0:
 		return
-	# Directions only: some rigs carry a 0.01 (centimetre) scale.
+	# How far the body is off-line from the rival, read off the fighter's
+	# own facing, never off a bone: the clip's head and chest sway (a
+	# boxer's bob, a walk's twist) then can't feed back into the turn,
+	# which swung the head with every step.
 	var basis := skeleton.global_transform.basis.orthonormalized()
-	if _face_axis == Vector3.ZERO:
-		# A fighting stance looks straight ahead along the model's facing.
-		if fighter.state != S.IDLE or current != clip_names.get("idle", ""):
-			return
-		var ahead: Vector3 = basis.inverse() * root.global_transform.basis.x
-		_face_axis = (skeleton.get_bone_global_pose(head).basis.orthonormalized().inverse() * ahead).normalized()
-	var head_pose := skeleton.get_bone_global_pose(head)
-	var face: Vector3 = basis * (head_pose.basis.orthonormalized() * _face_axis)
+	var face: Vector3 = root.global_transform.basis.x
 	face.y = 0.0
-	var eyes: Vector3 = skeleton.global_transform * head_pose.origin
-	var to_rival: Vector3 = rival.body.global_position + Vector3.UP * 1.5 - eyes
+	var to_rival: Vector3 = rival.body.global_position - fighter.body.global_position
 	to_rival.y = 0.0
 	if face.length_squared() < 0.0001 or to_rival.length_squared() < 0.01:
 		return
 	var need := clampf(face.normalized().signed_angle_to(to_rival.normalized(), Vector3.UP), -AIM_LIMIT, AIM_LIMIT)
 	if not frozen:
-		_aim = lerpf(_aim, need, 1.0 - exp(-45.0 * delta))
+		# Eased and speed-capped: the head turns, it never snaps.
+		var eased := lerpf(_aim, need, 1.0 - exp(-12.0 * delta))
+		_aim = move_toward(_aim, eased, AIM_SPEED * delta)
 	var up_local: Vector3 = basis.inverse() * Vector3.UP
 	for link in AIM_CHAIN:
 		var bone := _bone(link[0])

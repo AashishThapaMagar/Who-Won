@@ -165,7 +165,7 @@ const STYLES := {
 		"timing": {"punch_heavy": [0.2, 0.73, 1.5], "grapple": [0.3, 0.93, 3.3]},
 	},
 	"bib": {
-		"height": 1.7, "width": 0.92, "tint": [Color("223f8a"), Color("9fe0c8")],
+		"height": 1.7, "width": 1.0, "tint": [Color("223f8a"), Color("9fe0c8")],
 		"clips": {"idle": "idle", "jab": "jab", "run": "fast_run", "backdash": "dodging"},
 		"timing": {"jab": [0.15, 0.57, 1.0]},
 		# Bibek: the Tripo-built Bib (Downloads/Bib_Tripo_Mixamo) with his
