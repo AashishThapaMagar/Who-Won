@@ -4,16 +4,20 @@ extends Node3D
 ## walk).
 ##
 ## Like a ring announcer she stands in the middle of the stage, between and
-## just behind the two fighters, facing the camera. She appears on her spot,
-## calls the round (the round's name big over her head, her call beneath),
-## and when the fight starts turns sideways and walks past, across the stage
-## and off to the side. She is back on her spot to clap the round's winner
-## and dance for the match winner.
+## just behind the two fighters, facing the camera. She walks up to her spot
+## toward the camera, calls the round (the round's name big over her head,
+## her call beneath), and when the fight starts carries on walking toward
+## the camera, past the fighters and out of view. She walks in again to clap
+## the round's winner and dance for the match winner.
 const MODEL := "res://assets/announcer/hajurama.glb"
 ## How far behind the fighters' line she stands (metres, away from camera).
 const BACK := 1.1
-## How far she walks past when the fight starts (metres).
+## Her walk in to her spot, and on past the camera when the fight starts
+## (metres).
+const WALK_IN := 1.2
 const WALK_OUT := 5.0
+## Out of view once she is this close to the camera (metres).
+const CAMERA_CLEAR := 1.6
 const WALK_SPEED := 1.25
 ## Gone from view once she has walked this far away.
 const FADE_AFTER := 3.6
@@ -34,6 +38,7 @@ var _walk_to := Vector3.ZERO
 var _arrive_move := ""
 var _leaving := false
 var _skeleton: Skeleton3D
+var _camera: Camera3D
 var _hip := -1
 
 func _ready() -> void:
@@ -120,6 +125,7 @@ func place(a: Vector3, b: Vector3, camera: Camera3D) -> void:
 	to_camera.y = 0.0
 	_to_camera = to_camera.normalized() if to_camera.length() > 0.01 else Vector3.BACK
 	_spot = mid - _to_camera * BACK
+	_camera = camera
 
 ## Her call: she appears on her spot if she isn't there, then plays
 ## `move`. `seconds` <= 0 keeps her there until leave().
@@ -133,11 +139,12 @@ func call_out(title: String, text: String, move: String, seconds: float) -> void
 		_shown = true
 		_leaving = false
 		visible = true
-		_walking = false
-		global_position = _spot
-		scale = Vector3.ONE * 0.6
-		create_tween().tween_property(self, "scale", Vector3.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	_arrive(move)
+		# From further back, walking toward the camera.
+		global_position = _spot - _to_camera * WALK_IN
+		_face(_to_camera)
+		_walk(_spot, move)
+	else:
+		_arrive(move)
 
 func _walk(to: Vector3, then_move: String) -> void:
 	_walking = true
@@ -167,8 +174,7 @@ func winner_call(winner_name: String, match_won: bool) -> void:
 	else:
 		call_out("SHABASH, %s!" % winner_name, "", ["clap", "cheer"][randi() % 2], 3.0)
 
-## Turns sideways and walks past, across the stage behind the fighters
-## and off to the side.
+## Walks on toward the camera, past the fighters and out of view.
 func leave() -> void:
 	if not _shown or _leaving:
 		return
@@ -176,9 +182,8 @@ func leave() -> void:
 	_hide_at = 0.0
 	_title.visible = false
 	_call.visible = false
-	var across := _to_camera.cross(Vector3.UP).normalized()
-	_face(across)
-	_walk(global_position + across * WALK_OUT, "")
+	_face(_to_camera)
+	_walk(global_position + _to_camera * WALK_OUT, "")
 
 func _process(delta: float) -> void:
 	_clock += delta
@@ -203,7 +208,8 @@ func _process(delta: float) -> void:
 			_arrive(_arrive_move)
 		return
 	global_position += step.normalized() * travel
-	if _leaving and global_position.distance_to(_spot) > FADE_AFTER:
+	var near_camera := _camera != null and is_instance_valid(_camera) and global_position.distance_to(_camera.global_position) < CAMERA_CLEAR
+	if _leaving and (near_camera or global_position.distance_to(_spot) > FADE_AFTER):
 		_walking = false
 		_shown = false
 		_leaving = false
