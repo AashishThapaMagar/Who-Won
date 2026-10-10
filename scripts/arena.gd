@@ -29,6 +29,14 @@ const ROSTER := preload("res://scripts/fighter_roster.gd")
 
 const ROUND_TIME := 99.0
 const INTRO_TIME := 2.2
+## With Aamai on stage the intro is a short scene: she walks up and calls
+## the round, then (at HOST_LEAVE of the way through) walks on toward the
+## camera and out of view before FIGHT!. Later rounds are shorter.
+const HOST_INTRO := 4.4
+const HOST_REPEAT := 3.4
+const HOST_LEAVE := 0.6
+## This round's intro length (INTRO_TIME, or Aamai's).
+var intro_length := INTRO_TIME
 
 ## Up to five rounds; the first fighter to win three takes the match.
 var round_styles: Array = [ACTION, ACTION, ACTION, ACTION, ACTION]
@@ -197,6 +205,13 @@ func _process(delta: float) -> void:
 
 	if intro_timer > 0.0:
 		intro_timer -= delta
+		if announcer != null and intro_length != INTRO_TIME:
+			# Any punch or kick skips her scene straight to FIGHT!.
+			for action in ["p1_3d_punch", "p1_3d_kick", "p2_3d_punch", "p2_3d_kick"]:
+				if InputMap.has_action(action) and Input.is_action_just_pressed(action):
+					intro_timer = minf(intro_timer, 0.05)
+			if intro_timer < intro_length * (1.0 - HOST_LEAVE):
+				announcer.leave()
 		if intro_timer <= 0.0:
 			_hide_banner()
 		return
@@ -250,10 +265,10 @@ func _end_round(winner: int) -> void:
 	elif winner == 2:
 		round_wins[1] += 1
 	_update_pips()
-	# The winner's own recorded shout, once the knockout has landed.
-	var shouter: Node = player1 if winner == 1 else (player2 if winner == 2 else null)
-	if shouter != null and not shouter.get("ai_controlled"):
-		get_tree().create_timer(0.8).timeout.connect(preload("res://scripts/battle_cry.gd").fire.bind(winner - 1, true))
+	# Result lines replace move reactions once the knockout has landed.
+	if winner in [1, 2]:
+		get_tree().create_timer(0.8).timeout.connect(_play_result_voice.bind(winner - 1, "victory"))
+		get_tree().create_timer(1.5).timeout.connect(_play_result_voice.bind(2 - winner, "defeat"))
 	# Ledger: a perfect is a round won without a scratch; recorded before the
 	# result panel so the menus can show it the moment the match ends.
 	var records := get_node_or_null("/root/Records")
@@ -305,7 +320,14 @@ func _end_round(winner: int) -> void:
 	var victor: Node = player1 if winner == 1 else (player2 if winner == 2 else null)
 	var host := _announcer()
 	if host != null:
-		host.winner_call("" if victor == null else str(victor.character_profile.name), match_over and victor != null)
+		_host_winner(host, "" if victor == null else str(victor.character_profile.name), match_over and victor != null)
+
+## Aamai's winner call; the 3D arena holds it for the victory moment.
+func _host_winner(host: Node, winner_name: String, match_won: bool) -> void:
+	host.winner_call(winner_name, match_won)
+
+func _play_result_voice(player: int, event: String) -> void:
+	preload("res://scripts/battle_cry.gd").fire(player, true, event)
 
 ## Hajurama, centre stage between the fighters (3D arenas only).
 func _announcer() -> Node:
@@ -495,16 +517,24 @@ func _show_banner(index: int, fight_style: FightStyle) -> void:
 	entrance.tween_property(banner_round, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	preload("res://scripts/sfx.gd").fire("round")
 	var host := _announcer()
+	intro_length = INTRO_TIME
+	for part in [banner_round, banner_name, banner_tagline]:
+		part.visible = true
 	if host != null:
 		host.round_call(banner_round.text)
-	intro_timer = INTRO_TIME
+		# She calls the round herself: the banner keeps out of her way.
+		intro_length = HOST_INTRO if index == 0 else HOST_REPEAT
+		for part in [banner_round, banner_name, banner_tagline]:
+			part.visible = false
+	intro_timer = intro_length
 
 func _hide_banner() -> void:
 	if banner.visible:
 		_flash_fight()
 	banner.visible = false
 	if announcer != null:
-		announcer.leave()
+		# Clear of the fight: gone if she hasn't walked out of view yet.
+		announcer.vanish()
 	player1.set_physics_process(true)
 	player2.set_physics_process(true)
 	round_active = true

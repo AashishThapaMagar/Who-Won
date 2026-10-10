@@ -38,6 +38,10 @@ var _walk_to := Vector3.ZERO
 var _arrive_move := ""
 var _leaving := false
 var _skeleton: Skeleton3D
+## A call held until `_queued_ready` says go (or the wait runs out).
+var _queued_call := Callable()
+var _queued_ready := Callable()
+var _queued_until := 0.0
 var _camera: Camera3D
 var _hip := -1
 
@@ -174,6 +178,31 @@ func winner_call(winner_name: String, match_won: bool) -> void:
 	else:
 		call_out("SHABASH, %s!" % winner_name, "", ["clap", "cheer"][randi() % 2], 3.0)
 
+## Where the camera looks when it frames her: her spot at head height, so
+## her call fits in the shot. Fixed while she walks.
+func focus() -> Vector3:
+	return _spot + Vector3.UP * 1.45
+
+## Gone at once (a quick shrink), for FIGHT! if she is still in view.
+func vanish() -> void:
+	if not _shown:
+		return
+	_shown = false
+	_leaving = false
+	_walking = false
+	_hide_at = 0.0
+	var tween := create_tween()
+	tween.tween_property(self, "scale", Vector3.ONE * 0.01, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	tween.tween_callback(func():
+		visible = _shown
+		scale = Vector3.ONE)
+
+## Holds `call` until `ready` returns true (at most `timeout` seconds).
+func queue(call: Callable, ready: Callable, timeout := 8.0) -> void:
+	_queued_call = call
+	_queued_ready = ready
+	_queued_until = _clock + timeout
+
 ## Walks on toward the camera, past the fighters and out of view.
 func leave() -> void:
 	if not _shown or _leaving:
@@ -187,6 +216,10 @@ func leave() -> void:
 
 func _process(delta: float) -> void:
 	_clock += delta
+	if _queued_call.is_valid() and (_clock > _queued_until or bool(_queued_ready.call())):
+		var call := _queued_call
+		_queued_call = Callable()
+		call.call()
 	if _player != null and visible:
 		_player.advance(delta)
 		_pin_hip()
@@ -196,7 +229,8 @@ func _process(delta: float) -> void:
 		return
 	var step := _walk_to - global_position
 	step.y = 0.0
-	var travel := WALK_SPEED * delta
+	# She strides out a little quicker than she walks in.
+	var travel := WALK_SPEED * (1.5 if _leaving else 1.0) * delta
 	if step.length() <= travel:
 		global_position = _walk_to
 		if _leaving:
