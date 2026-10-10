@@ -10,6 +10,19 @@ extends Node3D
 ## the camera, past the fighters and out of view. She walks in again to clap
 ## the round's winner and dance for the match winner.
 const MODEL := "res://assets/announcer/hajurama.glb"
+## Each arena has its own announcer (stage index as in nepal_stage_3d
+## ROUNDS): model and the greeting that opens their round call. A missing
+## model falls back to Aamai.
+const HOSTS := {
+	0: {"model": "res://assets/announcer/hajurbuwa.glb", "height": 1.64, "greet": ["JWAJALAPA! LADAI SURU!", "LA LA, LADAI SURU!", "TAYAR? SURU GARAU!"], "match": "KHEL JITYO!"},
+	1: {"model": "res://assets/announcer/tharu_didi.glb", "height": 1.58, "greet": ["RAM RAM! LADAI SURU!", "TAYAR? LADAI SURU!", "RAMRO SANGA LADA!"], "match": "KHEL JITYO!"},
+	2: {"model": MODEL, "greet": ["LADAI SURU!", "RAMRO SANGA LADA!", "TAYAR? LADAI SURU!"], "match": "KHEL JITYO!"},
+	3: {"model": "res://assets/announcer/lama.glb", "height": 1.68, "greet": ["TASHI DELEK! LADAI SURU!", "SHANTA MANN, LADAI SURU!", "TAYAR? LADAI SURU!"], "match": "TASHI DELEK!"},
+	4: {"model": "res://assets/announcer/sherpa_dai.glb", "height": 1.72, "greet": ["KI KI SO SO! LADAI SURU!", "TAYAR? LADAI SURU!", "HIMAL JASTAI LADA!"], "match": "LHA GYALO!"},
+}
+## Which arena this match is in (set by the arena before she is added).
+var stage := 2
+var _host: Dictionary = {}
 ## How far behind the fighters' line she stands (metres, away from camera).
 const BACK := 1.1
 ## Her walk in to her spot, and on past the camera when the fight starts
@@ -18,7 +31,13 @@ const WALK_IN := 1.2
 const WALK_OUT := 5.0
 ## Out of view once she is this close to the camera (metres).
 const CAMERA_CLEAR := 1.6
-const WALK_SPEED := 1.25
+## An unhurried grandmother's pace (m/s): in to her spot, a little brisker
+## on the way out. CLIP_SPEED is how far her walk clip carries her per
+## second at 1x, so the steps play at the speed she really moves and her
+## feet don't skate.
+const WALK_SPEED := 0.95
+const LEAVE_SPEED := 1.3
+const CLIP_SPEED := 1.07
 ## Gone from view once she has walked this far away.
 const FADE_AFTER := 3.6
 
@@ -47,10 +66,25 @@ var _hip := -1
 
 func _ready() -> void:
 	visible = false
-	if not ResourceLoader.exists(MODEL):
+	_host = HOSTS.get(stage, HOSTS[2])
+	var path: String = _host.model if ResourceLoader.exists(_host.model) else MODEL
+	if path == MODEL:
+		_host = HOSTS[2]
+	if not ResourceLoader.exists(path):
 		return
-	_model = (load(MODEL) as PackedScene).instantiate()
+	_model = (load(path) as PackedScene).instantiate()
 	add_child(_model)
+	# Each model comes out of Tripo at its own size: stand them at their
+	# real heights.
+	if _host.has("height"):
+		var bounds := AABB()
+		var first := true
+		for mesh: MeshInstance3D in _model.find_children("*", "MeshInstance3D", true, false):
+			var box: AABB = mesh.global_transform * mesh.get_aabb()
+			bounds = box if first else bounds.merge(box)
+			first = false
+		if bounds.size.y > 0.1:
+			_model.scale = Vector3.ONE * float(_host.height) / bounds.size.y
 	var found := _model.find_children("*", "AnimationPlayer", true, false)
 	_player = found.front() if not found.is_empty() else null
 	if _player != null:
@@ -166,7 +200,7 @@ func _arrive(move: String) -> void:
 ## The round call as it starts: the round over her head, her call below;
 ## she stays until the fight is on.
 func round_call(round_text: String) -> void:
-	var lines := ["LADAI SURU!", "RAMRO SANGA LADA!", "TAYAR? LADAI SURU!"]
+	var lines: Array = _host.get("greet", HOSTS[2].greet)
 	call_out(round_text, lines[randi() % lines.size()], "greet", 0.0)
 
 ## The round or match winner ("" for a draw).
@@ -174,7 +208,7 @@ func winner_call(winner_name: String, match_won: bool) -> void:
 	if winner_name == "":
 		call_out("BARABARI!", "", "clap", 3.0)
 	elif match_won:
-		call_out("SHABASH, %s!" % winner_name, "KHEL JITYO!", "victory", 0.0)
+		call_out("SHABASH, %s!" % winner_name, str(_host.get("match", "KHEL JITYO!")), "victory", 0.0)
 	else:
 		call_out("SHABASH, %s!" % winner_name, "", ["clap", "cheer"][randi() % 2], 3.0)
 
@@ -221,7 +255,10 @@ func _process(delta: float) -> void:
 		_queued_call = Callable()
 		call.call()
 	if _player != null and visible:
-		_player.advance(delta)
+		var rate := 1.0
+		if _walking:
+			rate = (LEAVE_SPEED if _leaving else WALK_SPEED) / CLIP_SPEED
+		_player.advance(delta * rate)
 		_pin_hip()
 	if _hide_at > 0.0 and _clock >= _hide_at:
 		leave()
@@ -229,8 +266,7 @@ func _process(delta: float) -> void:
 		return
 	var step := _walk_to - global_position
 	step.y = 0.0
-	# She strides out a little quicker than she walks in.
-	var travel := WALK_SPEED * (1.5 if _leaving else 1.0) * delta
+	var travel := (LEAVE_SPEED if _leaving else WALK_SPEED) * delta
 	if step.length() <= travel:
 		global_position = _walk_to
 		if _leaving:

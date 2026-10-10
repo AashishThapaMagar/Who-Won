@@ -336,6 +336,8 @@ func _announcer() -> Node:
 		return null
 	if announcer == null:
 		announcer = preload("res://scripts/announcer.gd").new()
+		if get("stage_index") != null:
+			announcer.stage = int(get("stage_index"))
 		stage.add_child(announcer)
 	announcer.place(player1.body.global_position, player2.body.global_position, get_viewport().get_camera_3d())
 	return announcer

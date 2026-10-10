@@ -2,6 +2,8 @@ extends "res://scripts/arena.gd"
 ## Canvas HUD and shared round rules around one real 3D world.
 var world: Node3D
 var camera_3d: Camera3D
+## The arena this match is in (nepal_stage_3d ROUNDS index).
+var stage_index := -1
 var camera_target := Vector3(0, CAMERA_HEIGHT, 0)
 var camera_distance := CAMERA_CLOSE
 var camera_zoom_hold := 0.0
@@ -175,6 +177,7 @@ func _resolve_stage() -> int:
 func _begin_round(index: int) -> void:
 	# One arena for the whole match; the journey moves on after a won match.
 	var stage: int = fixed_stage if fixed_stage >= 0 else MatchSetup.journey_stage % nepal_stage.ROUNDS.size()
+	stage_index = stage
 	nepal_stage.show_round(stage)
 	super._begin_round(index)
 	# One short comment under the round call: where the fight is, plus the
