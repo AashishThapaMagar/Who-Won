@@ -176,6 +176,15 @@ func show_fighter(value: int) -> void:
 		fighter.apply_character(value)
 		fighter.apply_style(load("res://resources/styles/action.tres"))
 		fighter._update_animation()
+		if hero:
+			# Showcase frames stand every fighter at one height so the select
+			# screen compares styles, not sizes (fights keep real heights).
+			var visual: Node = fighter.get_node("Visual")
+			var rig := visual.world_root as Node3D
+			var config: Dictionary = preload("res://scripts/fighter_models.gd").entry(str(fighter.character_profile.id))
+			var height := float(config.get("height", 1.8))
+			if rig != null:
+				rig.scale = Vector3.ONE * (1.8 / maxf(height, 0.5))
 		# Redraw with the new fighter straight away; a still settles over a
 		# few steps so the guard is up and the head is framed.
 		_accumulated = 1.0

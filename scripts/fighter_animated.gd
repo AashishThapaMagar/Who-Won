@@ -388,6 +388,8 @@ func _fit(height: float) -> void:
 ## upper arms out from the bone's line by 30%, in the bind pose, so the
 ## arm keeps its length and joints and every clip plays on it unchanged.
 ## Keys are bone names without the Left/Right side.
+static var _thickened := {}
+
 func _thicken(factors: Dictionary) -> void:
 	if factors.is_empty():
 		return
@@ -396,6 +398,11 @@ func _thicken(factors: Dictionary) -> void:
 		var source := mesh.mesh as ArrayMesh
 		var skeleton_node := mesh.get_node_or_null(mesh.skeleton) as Skeleton3D
 		if skin == null or source == null or skeleton_node == null:
+			continue
+		# Built once per mesh and shared by every later copy of the fighter.
+		var cache_key := "%d|%s" % [source.get_instance_id(), str(factors)]
+		if _thickened.has(cache_key):
+			_swap_mesh(mesh, _thickened[cache_key])
 			continue
 		# Per bind: [factor, bind pose, the bone's own axis in its space].
 		var binds := {}
@@ -451,12 +458,16 @@ func _thicken(factors: Dictionary) -> void:
 			var flags := source.surface_get_format(surface) & (Mesh.ARRAY_FLAG_USE_8_BONE_WEIGHTS | Mesh.ARRAY_FLAG_USE_DYNAMIC_UPDATE)
 			built.add_surface_from_arrays(source.surface_get_primitive_type(surface), arrays, [], {}, flags)
 			built.surface_set_material(surface, source.surface_get_material(surface))
-		var overrides := []
-		for surface in mesh.get_surface_override_material_count():
-			overrides.append(mesh.get_surface_override_material(surface))
-		mesh.mesh = built
-		for surface in overrides.size():
-			mesh.set_surface_override_material(surface, overrides[surface])
+		_thickened[cache_key] = built
+		_swap_mesh(mesh, built)
+
+static func _swap_mesh(mesh: MeshInstance3D, built: ArrayMesh) -> void:
+	var overrides := []
+	for surface in mesh.get_surface_override_material_count():
+		overrides.append(mesh.get_surface_override_material(surface))
+	mesh.mesh = built
+	for surface in overrides.size():
+		mesh.set_surface_override_material(surface, overrides[surface])
 
 ## Swaps the shared body's meshes for a generated one (body.glb from
 ## tools/build_fighter_body.py). It is skinned to the same Mixamo rig, so its
@@ -552,6 +563,20 @@ const CLIP_CACHE_VERSION := 1
 const CLIP_CACHE_DIR := "user://clip_cache/"
 static var _clip_cache := {}
 
+## Starts loading every fighter's model and saved clip set on worker
+## threads (the select screen calls this), so picking a fighter later builds
+## from memory instead of stalling on the disk.
+static func warm(fighter_ids: Array) -> void:
+	for id in fighter_ids:
+		var entry: Dictionary = MODELS.entry(str(id))
+		var scene := str(entry.get("scene", ""))
+		if scene != "" and ResourceLoader.exists(scene):
+			ResourceLoader.load_threaded_request(scene)
+	if DirAccess.dir_exists_absolute(CLIP_CACHE_DIR):
+		for file in DirAccess.get_files_at(CLIP_CACHE_DIR):
+			if file.ends_with(".res"):
+				ResourceLoader.load_threaded_request(CLIP_CACHE_DIR + file, "AnimationLibrary")
+
 func _add_clip_files() -> void:
 	var files: Dictionary = config.get("files", {})
 	if files.is_empty():
@@ -565,7 +590,9 @@ func _add_clip_files() -> void:
 	var library: AnimationLibrary = _clip_cache.get(key)
 	if library == null:
 		var saved := CLIP_CACHE_DIR + key + ".res"
-		if ResourceLoader.exists(saved):
+		if ResourceLoader.load_threaded_get_status(saved) in [ResourceLoader.THREAD_LOAD_LOADED, ResourceLoader.THREAD_LOAD_IN_PROGRESS]:
+			library = ResourceLoader.load_threaded_get(saved) as AnimationLibrary
+		elif ResourceLoader.exists(saved):
 			library = ResourceLoader.load(saved, "AnimationLibrary", ResourceLoader.CACHE_MODE_IGNORE) as AnimationLibrary
 	if library == null or not library.has_meta("pace"):
 		var timing_before: Dictionary = config.get("timing", {}).duplicate(true)

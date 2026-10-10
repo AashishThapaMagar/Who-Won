@@ -17,8 +17,9 @@ var cards: Array[Button] = []
 var markers: Array[Label] = []
 var selectors: Array[OptionButton] = []
 var ready_buttons: Array[Button] = []
-## Each player's battle cry: [play, record, clear] under LOCK IN.
+## Each player's Voice Studio entry under LOCK IN.
 var cry_rows: Array = []
+var voice_studio: Control
 var player_tabs: Array[Button] = []
 var portraits: Array[TextureRect] = []
 var names: Array[Label] = []
@@ -46,6 +47,12 @@ var watermarks: Array[Label] = []
 var titles: Array[Label] = []
 var arena_label: Label
 var arena_caption: Label
+var arena_number: Label
+## The chosen arena's photo, faint behind its name in the picker.
+var arena_thumb: TextureRect
+## The start button's wording for this mode.
+var start_text_ready := ""
+var info_modal: Control
 ## Versus arena options, in cycling order (see MatchSetup.stage_choice).
 const STAGE_OPTIONS := [-1, 0, 1, 2, 3, 4, 99]
 ## Random pick roulette per player: the portrait spins through the roster,
@@ -63,6 +70,15 @@ const CARD_GAP := 8.0
 const CARD_SKEW := 16.0
 const STRIP_Y := 418.0
 const PANEL_W := 184.0
+const SUMMARIES := {
+	"anug": ["Dives & saves", "Low stamina"],
+	"ish": ["Fast, heavy punches", "Weak to low strikes"],
+	"sab": ["Heavy punches & kicks", "Low stamina"],
+	"bib": ["Fast, high stamina", "Light punches"],
+	"abhi": ["Stamina & power", "Weak guard"],
+	"sup": ["Spinning kicks", "Sway & retreat feints"],
+	"anant": ["Complete toolkit", "Final boss"]
+}
 ## Dusk grade over the live arena: dark and cool, darkest at the foot and
 ## edges, so the fighters and type carry the light.
 const SELECT_GRADE := """shader_type canvas_item;
@@ -137,7 +153,12 @@ func _ready() -> void:
 		selections[1] = 1 if selections[0] == 0 else 0
 	backdrop = preload("res://scripts/menu_backdrop.gd").new()
 	backdrop.shade_width = 0.0
+	backdrop.picture_mode = true
 	add_child(backdrop)
+	var ids := []
+	for i in ROSTER.PROFILES.size():
+		ids.append(ROSTER.profile(i).id)
+	preload("res://scripts/fighter_animated.gd").warm(ids)
 	backdrop.selected = maxi(0, backdrop.MODE_ORDER.find(mode_id))
 	var grade := ColorRect.new()
 	grade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -164,25 +185,23 @@ func _ready() -> void:
 		ready_players[1] = true
 	_refresh()
 
-## The battle-cry buttons: what each player has recorded, the live take.
+## The Voice Studio entries summarize each player's saved pack.
 func _refresh_cries() -> void:
 	var cries := get_node_or_null("/root/BattleCry")
 	if cries == null:
 		return
 	for player in cry_rows.size():
-		var row: Array = cry_rows[player]
-		var has: bool = cries.has_cry(player)
-		var live: bool = cries.recording_player == player
-		row[0].disabled = not has or live
-		row[2].disabled = not has or live
-		row[1].disabled = not cries.available() or (cries.recording_player >= 0 and not live)
-		if live:
-			row[1].text = "● REC  %.1f s" % cries.time_left()
-			row[1].add_theme_color_override("font_color", UI.RED)
-		else:
-			var takes: int = cries.count(player)
-			row[1].text = "RECORD CRY" if takes == 0 else "+ CRY  (%d/%d)" % [takes, cries.MAX_TAKES]
-			row[1].remove_theme_color_override("font_color")
+		var button: Button = cry_rows[player][0]
+		var takes: int = cries.total(player)
+		button.text = "VOICE STUDIO" if takes == 0 else "VOICE STUDIO  /  %d TAKE%s" % [takes, "" if takes == 1 else "S"]
+
+func _open_voice_studio(player: int) -> void:
+	if transitioning or is_instance_valid(voice_studio):
+		return
+	voice_studio = preload("res://scripts/voice_studio.gd").new()
+	voice_studio.player = player
+	voice_studio.profile = ROSTER.profile(selections[player])
+	add_child(voice_studio)
 
 func _process(_delta: float) -> void:
 	var cries := get_node_or_null("/root/BattleCry")
@@ -192,7 +211,7 @@ func _process(_delta: float) -> void:
 func _exit_tree() -> void:
 	var cries := get_node_or_null("/root/BattleCry")
 	if cries != null and cries.recording_player >= 0:
-		cries.stop()
+		cries.cancel()
 
 ## Letter-spaced title between gold hairlines, the mode beneath it, and the
 ## outlined player marks in the top corners.
@@ -254,13 +273,14 @@ func _build_player(player: int) -> void:
 	portrait.index = selections[player]
 	portrait.facing_left = player == 1
 	portrait.hero = not single
-	portrait.position = Vector2(centre_x - 165, 56)
-	portrait.size = Vector2(330, 360)
+	portrait.position = Vector2(centre_x - 175, 48)
+	portrait.size = Vector2(350, 370)
 	add_child(portrait)
 	portrait.visible = not single
 	if not single:
-		portrait.viewport.size = Vector2i(660, 720)
+		portrait.viewport.size = Vector2i(700, 740)
 		portrait.camera.h_offset = 0.0
+		portrait.camera.size = 124
 	portraits.append(portrait)
 	# The dossier panel on the player's outer side, its inner top corner cut.
 	var at := Vector2(16, 92) if player == 0 else Vector2(960 - 16 - PANEL_W, 92)
@@ -320,9 +340,15 @@ func _build_player(player: int) -> void:
 	text.add_theme_constant_override("line_separation", 3)
 	panel.add_child(text)
 	dossiers.append(text)
-	var detail := UI.label(panel, "", Vector2(14, 222), Vector2(PANEL_W - 24, 18), 10, Color(UI.WHITE, 0.6))
+	# The win record rides the header row, right of the Devanagari name.
+	var detail := UI.label(panel, "", Vector2(14, 64), Vector2(PANEL_W - 28, 18), 10, Color(UI.WHITE, 0.6))
+	detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	detail.add_theme_font_override("font", UI.saira(600, 100))
 	details.append(detail)
+	var info := UI.button(self, "FIGHTER INFO  +", at + Vector2(14, 214), Vector2(PANEL_W - 28, 24))
+	info.add_theme_font_size_override("font_size", 11)
+	info.visible = not single
+	info.pressed.connect(_show_fighter_info.bind(player))
 	# Who is picking, the dice and lock-in, under the panel.
 	var tab := UI.button(self, "", at + Vector2(0, -26), Vector2(PANEL_W, 22))
 	tab.add_theme_font_override("font", UI.saira(700, 104))
@@ -344,28 +370,14 @@ func _build_player(player: int) -> void:
 	lock.pressed.connect(_toggle_ready.bind(player))
 	lock.visible = not single and not computer and mode_id != "arcade"
 	ready_buttons.append(lock)
-	# Battle cry: record your own shout ("AAIYA!") for your big moves.
-	var cries := get_node_or_null("/root/BattleCry")
-	var row: Array[Button] = []
-	for spec in [["PLAY", Vector2(0, 290), 46.0], ["RECORD CRY", Vector2(50, 290), PANEL_W - 100.0], ["UNDO", Vector2(PANEL_W - 46, 290), 46.0]]:
-		var button := UI.button(self, spec[0], at + spec[1], Vector2(spec[2], 24))
-		button.add_theme_font_override("font", UI.saira(800, 104, true))
-		button.add_theme_font_size_override("font_size", 10)
-		button.focus_mode = Control.FOCUS_NONE
-		button.visible = cries != null and not single and not computer
-		row.append(button)
-	row[0].tooltip_text = "Hear one of your cries"
-	row[1].tooltip_text = "Record a battle cry (1.6 s). Every take is kept, up to 8: one plays at random on your big moves, supers and round wins"
-	row[2].tooltip_text = "Delete your newest cry"
-	if cries != null:
-		row[0].pressed.connect(cries.preview.bind(player))
-		row[1].pressed.connect(func():
-			if cries.recording_player == player:
-				cries.stop()
-			else:
-				cries.start(player))
-		row[2].pressed.connect(cries.clear.bind(player))
-	cry_rows.append(row)
+	# Voice packs: moves and match moments, edited in a dedicated studio.
+	var voice := UI.button(self, "VOICE STUDIO", at + Vector2(0, 290), Vector2(PANEL_W, 24))
+	voice.add_theme_font_override("font", UI.saira(700, 104))
+	voice.add_theme_font_size_override("font_size", 11)
+	voice.visible = not single
+	voice.tooltip_text = "Record move lines, hit reactions, victory and defeat"
+	voice.pressed.connect(_open_voice_studio.bind(player))
+	cry_rows.append([voice])
 
 ## VS, the computer's difficulty, the status line, Start and the arena.
 func _build_centre() -> void:
@@ -379,29 +391,40 @@ func _build_centre() -> void:
 		vs.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
 		vs.add_theme_constant_override("shadow_offset_y", 4)
 	if mode_id == "ai":
-		var caption := UI.label(self, "DIFFICULTY", Vector2(400, 222), Vector2(160, 16), 10, UI.GOLD)
+		var caption := UI.label(self, "DIFFICULTY", Vector2(400, 188), Vector2(160, 16), 11, UI.GOLD)
 		caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		caption.add_theme_font_override("font", UI.saira(700, 112))
 		difficulty_picker = OptionButton.new()
 		for difficulty in ["RELAXED", "STANDARD", "CHALLENGING"]:
 			difficulty_picker.add_item(difficulty)
-		difficulty_picker.position = Vector2(400, 240)
+		difficulty_picker.position = Vector2(400, 206)
 		difficulty_picker.size = Vector2(160, 28)
 		difficulty_picker.select(MatchSetup.ai_difficulty)
 		difficulty_picker.item_selected.connect(func(index: int): MatchSetup.ai_difficulty = index)
 		add_child(difficulty_picker)
 		selectors.append(difficulty_picker)
 	var centre_x := 480.0 if versus else (480.0 if mode_id == "arcade" else 480.0)
-	status_label = UI.label(self, "", Vector2(centre_x - 100, 278), Vector2(200, 36), 11, Color(UI.WHITE, 0.85))
+	# The status line sits on a soft dark pill so it reads over the fighters.
+	status_label = UI.label(self, "", Vector2(centre_x - 108, 236), Vector2(216, 28), 10, Color(UI.WHITE, 0.9))
 	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var pill := StyleBoxFlat.new()
+	pill.bg_color = Color(0.02, 0.03, 0.06, 0.72)
+	pill.set_corner_radius_all(14)
+	pill.content_margin_left = 10
+	pill.content_margin_right = 10
+	status_label.add_theme_stylebox_override("normal", pill)
 	status_label.add_theme_font_override("font", UI.saira(600, 104))
 	status_label.visible = mode_id != "arcade"
-	var start_text: String = {"local": "START DUEL", "ai": "CHALLENGE", "arcade": "READY TO FIGHT", "story": "BEGIN CHAPTER", "practice": "START TRAINING"}[mode_id]
-	start_button = UI.button(self, start_text, Vector2(centre_x - 90, 318), Vector2(180, 36), true)
+	start_text_ready = {"local": "START DUEL", "ai": "CHALLENGE", "arcade": "READY TO FIGHT", "story": "BEGIN CHAPTER", "practice": "START TRAINING"}[mode_id]
+	start_button = UI.button(self, start_text_ready, Vector2(centre_x - 104, 270), Vector2(208, 36), true)
 	start_button.add_theme_font_override("font", UI.saira(800, 100, true))
 	start_button.add_theme_font_size_override("font_size", 15)
+	# Locked until both fighters are in: a dark slab with a gold hairline,
+	# the start line readable but clearly waiting.
+	start_button.add_theme_stylebox_override("disabled", UI.box(Color(0.03, 0.04, 0.08, 0.88), Color(UI.GOLD, 0.35), 1, UI.SLANT))
+	start_button.add_theme_color_override("font_disabled_color", Color(UI.WHITE, 0.42))
 	start_button.pressed.connect(_start_match)
 	if not MatchSetup.arcade:
 		_build_stage_picker()
@@ -426,9 +449,21 @@ func _build_strip() -> void:
 		tile.material.set_shader_parameter("slant", slant)
 		add_child(tile)
 		tiles.append(tile)
-		var thumbnail := PORTRAIT.new()
-		thumbnail.index = i
-		thumbnail.bust = true
+		# Baked busts (tools/bake_roster_busts.gd): every fighter in the same
+		# pose and framing, and no live 3D render per card.
+		var bust_path := "res://assets/menu/busts/bust_%s.png" % profile.id
+		var thumbnail: Control
+		if ResourceLoader.exists(bust_path):
+			var picture := TextureRect.new()
+			picture.texture = load(bust_path)
+			picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+			picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			thumbnail = picture
+		else:
+			thumbnail = PORTRAIT.new()
+			thumbnail.index = i
+			thumbnail.bust = true
 		thumbnail.position = Vector2(x, STRIP_Y)
 		thumbnail.size = box
 		thumbnail.material = _shader_material(CARD_MASK)
@@ -461,7 +496,7 @@ func _build_strip() -> void:
 
 ## Diamond-marked prompts along the foot; Back is clickable.
 func _build_footer() -> void:
-	var hints := [["F / K", "LOCK IN"], ["R", "RANDOM"], ["TAB", "ARENA"], ["ENTER", "FIGHT"], ["ESC", "BACK"]]
+	var hints := [["A/D / ←→", "CHOOSE"], ["F / K", "LOCK IN"], ["R", "RANDOM"], ["TAB", "ARENA"], ["ENTER", "FIGHT"], ["ESC", "BACK"]]
 	if mode_id == "practice":
 		hints = [["A / D", "YOUR FIGHTER"], ["ARROWS", "THE DUMMY"], ["F / K", "LOCK IN"], ["ENTER", "TRAIN"], ["ESC", "BACK"]]
 	elif mode_id == "arcade":
@@ -609,20 +644,57 @@ func _build_ladder() -> void:
 
 ## Versus modes choose their arena here; Arcade and Story keep the journey.
 func _build_stage_picker() -> void:
-	var prev := UI.button(self, "◀", Vector2(392, 364), Vector2(28, 26))
-	var next := UI.button(self, "▶", Vector2(540, 364), Vector2(28, 26))
-	for arrow in [prev, next]:
+	# One framed card: header row, the arena's photo faint behind its name,
+	# and flat chevrons that sit inside the frame.
+	var at := Vector2(372, 316)
+	var size := Vector2(216, 96)
+	var card := UI.panel(self, at, size, Color(0.02, 0.03, 0.06, 0.92), Color(UI.GOLD, 0.55))
+	card.clip_contents = true
+	arena_thumb = TextureRect.new()
+	arena_thumb.position = Vector2(1, 1)
+	arena_thumb.size = size - Vector2(2, 2)
+	arena_thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	arena_thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	arena_thumb.modulate = Color(1, 1, 1, 0.32)
+	arena_thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.add_child(arena_thumb)
+	var shade := ColorRect.new()
+	shade.position = Vector2(1, 1)
+	shade.size = Vector2(size.x - 2, 22)
+	shade.color = Color(0, 0, 0, 0.55)
+	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.add_child(shade)
+	UI.label(card, "BATTLEGROUND", Vector2(10, 3), Vector2(130, 18), 10, UI.MUTED).add_theme_font_override("font", UI.saira(700, 110))
+	arena_number = UI.label(card, "", Vector2(size.x - 50, 3), Vector2(40, 18), 10, UI.GOLD)
+	arena_number.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	arena_number.add_theme_font_override("font", UI.saira(700, 100))
+	for spec in [["‹", Vector2(4, 28), -1], ["›", Vector2(size.x - 32, 28), 1]]:
+		var arrow := Button.new()
+		arrow.text = spec[0]
+		arrow.flat = true
 		arrow.focus_mode = Control.FOCUS_NONE
-	prev.pressed.connect(_cycle_stage.bind(-1))
-	next.pressed.connect(_cycle_stage.bind(1))
-	arena_label = UI.label(self, "", Vector2(420, 364), Vector2(120, 26), 13, UI.GOLD)
+		arrow.position = spec[1]
+		arrow.size = Vector2(28, 44)
+		arrow.add_theme_font_size_override("font_size", 30)
+		arrow.add_theme_color_override("font_color", Color(UI.WHITE, 0.8))
+		arrow.add_theme_color_override("font_hover_color", UI.GOLD)
+		arrow.add_theme_color_override("font_pressed_color", UI.GOLD)
+		for state in ["normal", "hover", "pressed", "focus"]:
+			arrow.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+		arrow.pressed.connect(_cycle_stage.bind(spec[2]))
+		card.add_child(arrow)
+	arena_label = UI.label(card, "", Vector2(32, 26), Vector2(size.x - 64, 30), 14, UI.GOLD)
 	arena_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	arena_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	arena_label.add_theme_font_override("font", UI.saira(800, 100, true))
-	arena_label.clip_text = true
-	arena_caption = UI.label(self, "", Vector2(330, 390), Vector2(300, 16), 9, Color(UI.WHITE, 0.6))
+	arena_label.add_theme_constant_override("outline_size", 4)
+	arena_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	arena_caption = UI.label(card, "", Vector2(32, 56), Vector2(size.x - 64, 34), 10, Color(UI.WHITE, 0.82))
 	arena_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	arena_caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	arena_caption.add_theme_font_override("font", UI.saira(600, 100))
+	arena_caption.add_theme_constant_override("outline_size", 3)
+	arena_caption.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
 	_show_stage()
 
 func _cycle_stage(step: int) -> void:
@@ -635,18 +707,60 @@ func _cycle_stage(step: int) -> void:
 ## Name the choice and show that arena live behind the roster.
 func _show_stage() -> void:
 	var rounds: Array = backdrop.STAGE.ROUNDS
+	arena_number.text = "%02d/%02d" % [STAGE_OPTIONS.find(MatchSetup.stage_choice) + 1, STAGE_OPTIONS.size()]
 	match MatchSetup.stage_choice:
 		MatchSetup.JOURNEY_STAGE:
 			arena_label.text = "ALL %d ARENAS" % rounds.size()
-			arena_caption.text = "ONE PER MATCH, ENDING IN THE HIMALAYA"
-			backdrop.stage.show_round(0)
+			arena_caption.text = "The full Nepal journey"
+			backdrop.show_stage(0)
+			_thumb(0)
 		MatchSetup.RANDOM_STAGE:
 			arena_label.text = "RANDOM ARENA"
-			arena_caption.text = "ONE ARENA DRAWN FOR THE WHOLE MATCH"
+			arena_caption.text = "Let fate choose the stage"
+			_thumb(-1)
 		_:
 			arena_label.text = rounds[MatchSetup.stage_choice].name
-			arena_caption.text = rounds[MatchSetup.stage_choice].detail.to_upper()
-			backdrop.stage.show_round(MatchSetup.stage_choice)
+			arena_caption.text = String(rounds[MatchSetup.stage_choice].detail).split(" / ")[0]
+			backdrop.show_stage(MatchSetup.stage_choice)
+			_thumb(MatchSetup.stage_choice)
+
+func _thumb(index: int) -> void:
+	if arena_thumb == null:
+		return
+	var path: String = backdrop.PICTURE % index if index >= 0 else ""
+	arena_thumb.texture = load(path) if path != "" and ResourceLoader.exists(path) else null
+
+func _show_fighter_info(player: int) -> void:
+	if transitioning or is_instance_valid(info_modal):
+		return
+	info_modal = Control.new()
+	info_modal.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(info_modal)
+	var shade := ColorRect.new()
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.color = Color(0, 0, 0, 0.85)
+	info_modal.add_child(shade)
+	var color := P1_COLOR if player == 0 else P2_COLOR
+	UI.panel(info_modal, Vector2(250, 110), Vector2(460, 320), UI.INK, color)
+	var profile := ROSTER.profile(selections[player])
+	UI.heading(info_modal, profile.name, Vector2(278, 128), Vector2(400, 48), 32, color)
+	UI.label(info_modal, profile.title, Vector2(278, 180), Vector2(400, 28), 18)
+	var text := RichTextLabel.new()
+	text.position = Vector2(278, 218)
+	text.size = Vector2(404, 148)
+	text.bbcode_enabled = true
+	text.text = _dossier_text(profile)
+	text.add_theme_font_override("normal_font", UI.body_font())
+	text.add_theme_font_size_override("normal_font_size", 16)
+	info_modal.add_child(text)
+	var close := UI.button(info_modal, "BACK / ESC", Vector2(518, 382), Vector2(164, 30))
+	close.pressed.connect(_close_fighter_info)
+	close.grab_focus()
+
+func _close_fighter_info() -> void:
+	info_modal.queue_free()
+	info_modal = null
+	start_button.grab_focus()
 
 func _back() -> void:
 	if not transitioning:
@@ -705,13 +819,20 @@ func _refresh() -> void:
 			portraits[player].create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT).tween_property(portraits[player], "scale", Vector2.ONE, 0.28)
 			names[player].modulate.a = 0.0
 			names[player].create_tween().tween_property(names[player], "modulate:a", 1.0, 0.2)
-		portraits[player].show_fighter(selections[player])
+		# Rebuild a fighter only when that pick changed (the other side keeps
+		# its model).
+		if portraits[player].index != selections[player] or portraits[player].fighter == null:
+			portraits[player].show_fighter(selections[player])
 		var tint: Color = profile.color
 		rings[player].material.set_shader_parameter("glow", Color(tint.lightened(0.2), 0.9))
 		names[player].text = profile.name
 		titles[player].text = String(profile.title).to_upper()
 		watermarks[player].text = ROSTER.NEPALI_NAMES.get(profile.id, "")
-		dossiers[player].text = _dossier_text(profile)
+		var summary: Array = SUMMARIES[profile.id]
+		dossiers[player].text = "[color=#ffd257]%s[/color]\n[color=#d2d8e8]%s[/color]" % summary
+		var super_data: Dictionary = SUPERS.get_super(str(profile.id))
+		if not super_data.is_empty():
+			dossiers[player].text += "\n\n[color=#8e98b4]SUPER[/color]\n%s" % super_data.name
 		var ledger := "NO RECORD YET"
 		var records := get_node_or_null("/root/Records")
 		if records != null:
@@ -720,15 +841,23 @@ func _refresh() -> void:
 				ledger = "RECORD  %dW / %d" % [record.wins, record.picks]
 		details[player].text = ledger
 		var who := "P%d" % (player + 1)
-		player_tabs[player].text = "%s  ·  %s" % [who, "PICKING" if editing_player == player else "PICK"]
+		var player_color := P1_COLOR if player == 0 else P2_COLOR
+		player_tabs[player].text = "%s  ·  %s" % [who, "LOCKED IN" if ready_players[player] else "SELECTING"]
+		player_tabs[player].add_theme_color_override("font_color", player_color)
+		player_tabs[player].add_theme_stylebox_override("normal", UI.glass(Color(player_color, 0.12), player_color))
+		for state in ["hover", "pressed", "hover_pressed"]:
+			player_tabs[player].add_theme_stylebox_override(state, UI.glass(Color(player_color, 0.25), player_color))
+			ready_buttons[player].add_theme_stylebox_override(state, UI.glass(Color(player_color, 0.3), player_color))
+			ready_buttons[player].add_theme_color_override("font_" + state + "_color", player_color)
 		if MatchSetup.vs_ai and player == 1:
-			player_tabs[player].text = "CPU  ·  CHOOSE YOUR RIVAL"
+			player_tabs[player].text = "CPU  ·  READY"
 		if mode_id == "practice" and player == 1:
-			player_tabs[player].text = "DUMMY  ·  PICK"
-		ready_buttons[player].text = "✓  READY" if ready_players[player] else "LOCK IN"
+			player_tabs[player].text = "DUMMY  ·  " + ("LOCKED IN" if ready_players[player] else "SELECTING")
+		ready_buttons[player].text = "✓  LOCKED IN" if ready_players[player] else "LOCK IN"
+		ready_buttons[player].tooltip_text = "Change your selection" if ready_players[player] else "Confirm this fighter"
 		if ready_players[player]:
-			ready_buttons[player].add_theme_stylebox_override("normal", UI.glass(Color(UI.GOLD, 0.22), UI.GOLD))
-			ready_buttons[player].add_theme_color_override("font_color", UI.GOLD)
+			ready_buttons[player].add_theme_stylebox_override("normal", UI.glass(Color(player_color, 0.22), player_color))
+			ready_buttons[player].add_theme_color_override("font_color", player_color)
 		else:
 			ready_buttons[player].remove_theme_stylebox_override("normal")
 			ready_buttons[player].remove_theme_color_override("font_color")
@@ -741,11 +870,29 @@ func _refresh() -> void:
 		for k in mini(route.size(), ladder_faces.size()):
 			ladder_faces[k].texture = previews[route[k]].texture
 			ladder_names[k].text = ROSTER.profile(route[k]).name
+	var was_locked := start_button.disabled
 	start_button.disabled = not (ready_players[0] and ready_players[1])
-	status_label.text = "READY TO FIGHT" if not start_button.disabled else "CHOOSE YOUR FIGHTER\nTHEN LOCK IN"
+	start_button.text = start_text_ready
+	if was_locked and not start_button.disabled:
+		# Both locked in: the button lands with a pop.
+		start_button.scale = Vector2.ONE * 1.12
+		start_button.create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT).tween_property(start_button, "scale", Vector2.ONE, 0.3)
+	status_label.text = "READY TO FIGHT" if not start_button.disabled else "PICK YOUR FIGHTERS, THEN LOCK IN"
 	status_label.add_theme_color_override("font_color", UI.GOLD if not start_button.disabled else Color(UI.WHITE, 0.85))
 
 func _input(event: InputEvent) -> void:
+	if is_instance_valid(voice_studio):
+		if voice_studio.picker.get_popup().visible or voice_studio.takes.get_popup().visible or voice_studio.mic_picker.get_popup().visible:
+			return
+		if event.is_action_pressed("ui_cancel"):
+			voice_studio.close_studio()
+			get_viewport().set_input_as_handled()
+		return
+	if is_instance_valid(info_modal):
+		if event.is_action_pressed("ui_cancel"):
+			_close_fighter_info()
+			get_viewport().set_input_as_handled()
+		return
 	if transitioning or (event is InputEventKey and event.echo):
 		return
 	for selector in selectors:
