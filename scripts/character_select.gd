@@ -22,7 +22,10 @@ var cry_rows: Array = []
 var voice_studio: Control
 var player_tabs: Array[Button] = []
 var portraits: Array[TextureRect] = []
-var names: Array[Label] = []
+var names: Array[RichTextLabel] = []
+## Which fighter's name each side is showing; a new pick replays the slam.
+var _name_shown := [-1, -1]
+const NAME_SLAM := preload("res://scripts/name_slam_effect.gd")
 var details: Array[Label] = []
 var start_button: Button
 var status_label: Label
@@ -309,10 +312,22 @@ func _build_player(player: int) -> void:
 	stripe.size = Vector2(3, 248)
 	stripe.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(stripe)
-	var label := UI.label(panel, "", Vector2(14, 8), Vector2(PANEL_W - 24, 40), 30, UI.WHITE)
-	label.add_theme_font_override("font", UI.saira(900, 104, true))
+	# The fighter's name lands letter by letter (name_slam_effect.gd).
+	var label := RichTextLabel.new()
+	label.position = Vector2(14, 0)
+	label.size = Vector2(PANEL_W - 24, 50)
+	label.bbcode_enabled = true
+	label.scroll_active = false
+	label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	label.clip_contents = false
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.custom_effects = [NAME_SLAM.new()]
+	label.add_theme_font_override("normal_font", UI.saira(900, 104, true))
+	label.add_theme_font_size_override("normal_font_size", 30)
+	label.add_theme_color_override("default_color", UI.WHITE)
 	label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
 	label.add_theme_constant_override("shadow_offset_y", 2)
+	panel.add_child(label)
 	names.append(label)
 	var title := UI.label(panel, "", Vector2(14, 44), Vector2(PANEL_W - 24, 20), 17, UI.GOLD)
 	title.add_theme_font_override("font", UI.teko(500))
@@ -817,19 +832,19 @@ func _refresh() -> void:
 			portraits[player].pivot_offset = portraits[player].size * 0.5
 			portraits[player].scale = Vector2.ONE * 1.06
 			portraits[player].create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT).tween_property(portraits[player], "scale", Vector2.ONE, 0.28)
-			names[player].modulate.a = 0.0
-			names[player].create_tween().tween_property(names[player], "modulate:a", 1.0, 0.2)
 		# Rebuild a fighter only when that pick changed (the other side keeps
 		# its model).
 		if portraits[player].index != selections[player] or portraits[player].fighter == null:
 			portraits[player].show_fighter(selections[player])
 		var tint: Color = profile.color
 		rings[player].material.set_shader_parameter("glow", Color(tint.lightened(0.2), 0.9))
-		names[player].text = profile.name
-		# Long names (SARVOCHCHA) shrink to stay inside the panel.
-		var font: Font = names[player].get_theme_font("font")
-		var width := font.get_string_size(profile.name, HORIZONTAL_ALIGNMENT_LEFT, -1, 30).x
-		names[player].add_theme_font_size_override("font_size", 30 if width <= names[player].size.x else int(30.0 * names[player].size.x / width))
+		if _name_shown[player] != selections[player]:
+			_name_shown[player] = selections[player]
+			# Long names (SARVOCHCHA) shrink to stay inside the panel.
+			var font: Font = names[player].get_theme_font("normal_font")
+			var width := font.get_string_size(profile.name, HORIZONTAL_ALIGNMENT_LEFT, -1, 30).x
+			names[player].add_theme_font_size_override("normal_font_size", 30 if width <= names[player].size.x else int(30.0 * names[player].size.x / width))
+			names[player].text = "[slam start=%.3f]%s[/slam]" % [Time.get_ticks_msec() / 1000.0, profile.name]
 		titles[player].text = String(profile.title).to_upper()
 		watermarks[player].text = ROSTER.NEPALI_NAMES.get(profile.id, "")
 		var summary: Array = SUMMARIES[profile.id]

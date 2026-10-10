@@ -34,7 +34,7 @@ func run() -> void:
 		check(card.position.x >= 0 and card.position.x + card.size.x <= 960, "Every roster card fits on screen")
 	select._select_for_player(2, 0)
 	select._select_for_player(5, 1)
-	check(select.names[0].text == select.ROSTER.profile(2).name and select.names[1].text == select.ROSTER.profile(5).name, "Large portraits match each selection")
+	check(select.names[0].get_parsed_text() == select.ROSTER.profile(2).name and select.names[1].get_parsed_text() == select.ROSTER.profile(5).name, "Large portraits match each selection")
 	check(select.portraits[0].fighter.character_profile.id == "sab", "Preview renders the actual selected fighter")
 	check(select.start_button.disabled, "Both local players must confirm")
 	select._toggle_ready(0)
