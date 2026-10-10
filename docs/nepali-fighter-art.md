@@ -10,7 +10,7 @@ Individual art briefs:
 - **Ish:** skinny, wiry long limbs and angular adult face; red shirt, black open waistcoat, woven red/cream trim, knee support, red hand wraps. Signature: long-reaching rushing punch.
 - **Sab:** broad stocky heavyweight with beard, thick neck, waist and forearms; navy bhoto-inspired wrap vest, copper patuka, cream loose trousers. Signature: clinch grab and twisting follow-through.
 - **Bib:** small compact adult, slim shoulders, short black hair; blue streetwear hoodie, patterned sash, dark joggers and turquoise shoes. Signature: running side kick.
-- **Abhi:** large heavyset adult, moustache, expressive face; purple waistcoat over cream kurta, red patuka, patterned Dhaka topi. Signature: speaking taunt with cupped hand and gestures.
+- **Kri:** large heavyset adult, moustache, expressive face; purple waistcoat over cream kurta, red patuka, patterned Dhaka topi. Signature: speaking taunt with cupped hand and gestures.
 - **Sup:** lean flexible dancer, tied-back long hair; gold wrap top with maroon edging, teal patuka, loose calf-length trousers and soft shoes. Signature: low sweep and inverted cartwheel.
 - **Anant:** tall, balanced powerful build, composed mature face, short beard; charcoal daura-inspired crossed-front coat with restrained gold trim, burgundy patuka, dark trousers and boots. Signature: committed power straight.
 

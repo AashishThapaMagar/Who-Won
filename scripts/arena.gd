@@ -391,7 +391,7 @@ func _begin_round(index: int) -> void:
 	player1.apply_style(fight_style)
 	player2.apply_style(fight_style)
 	guide_title.text = "ROUND %d / FIGHTER MOVEBOOK" % (index + 1)
-	guide_text.text = "STAMINA: strikes and dashes spend it; moving or resting restores it. Empty guard can break.\nTHROWS: jump, interrupt startup, or tap Light + Heavy together within 0.16s before contact.\nISH: low strikes deal +25% damage to his weak knee.\nABHI: Back + Heavy taunts; finish uninterrupted for +24 stamina (5s cooldown).\nSUP: Back + Heavy retreats; it is not invincible.\n\n"
+	guide_text.text = "STAMINA: strikes and dashes spend it; moving or resting restores it. Empty guard can break.\nTHROWS: jump, interrupt startup, or tap Light + Heavy together within 0.16s before contact.\nISH: low strikes deal +25% damage to his weak knee.\nKRI: Back + Heavy taunts; finish uninterrupted for +24 stamina (5s cooldown).\nSUP: Back + Heavy retreats; it is not invincible.\n\n"
 	for fighter in [player1, player2]:
 		guide_text.text += "%s / %s\n%s\n\n%s\n\n" % [fighter.character_profile.name, fighter.character_profile.title, fighter.character_profile.trait, MOVES.guide("action", fighter.available_moves())]
 		if fighter.has_method("has_super") and fighter.has_super():

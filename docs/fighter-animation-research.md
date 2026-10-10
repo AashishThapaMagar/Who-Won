@@ -52,7 +52,7 @@ The diagnostic uses Godot 4.5.1, 20 warm-up iterations and 180 measured samples 
 | Ish | 1.020 | 2.078 | 0.020 |
 | Sab | 0.885 | 1.872 | 0.018 |
 | Bib | 0.815 | 1.665 | 0.019 |
-| Abhi | 1.463 | 3.055 | 0.037 |
+| Kri | 1.463 | 3.055 | 0.037 |
 | Sup | 1.240 | 2.490 | 0.031 |
 | Anant | 1.072 | 2.220 | 0.035 |
 

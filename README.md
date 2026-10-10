@@ -198,7 +198,7 @@ The controller lives in `scripts/player.gd`. The live sprite renderer in `script
 | Ish | Fast footwork and powerful punches | Low strikes hit his weak knee for 25% extra damage; weaker kicks |
 | Ballas | Heavy fists and short-range clinch throws that beat guard | 65 stamina; expensive grabs and committed recovery |
 | Bib | Fastest movement, 135 stamina, running kicks | Weak punches |
-| Abhi | Heavy punches, 125 stamina, a talking taunt | More guard chip and stamina drain while blocking |
+| Kri | Heavy punches, 125 stamina, a talking taunt | More guard chip and stamina drain while blocking |
 | Supreme | Sway stance, low spiral, cartwheel strike, spinning kick and retreat feint | Evasion requires spacing; no invulnerability |
 | Ananta | Strong all-round final boss with punches, kicks and a throw | No specialist weakness; normal 100 HP, stamina costs and punishable recovery |
 
@@ -206,7 +206,7 @@ Light strikes cost 5 stamina, regular heavies 11, command enders 18, grabs 20, a
 
 **Throw counterplay:** jump, interrupt the windup, stay beyond grabbing range, or tap Light + Heavy together within 0.16 seconds before contact. Throws cannot grab airborne opponents or chain into hitstun/blockstun.
 
-**Abhi:** Back + Heavy performs Big Talk. Completing its 0.9-second vulnerable animation restores 24 stamina; interruption grants nothing. Five-second cooldown. The taunt uses on-screen text, not recorded voice.
+**Kri:** Back + Heavy performs Big Talk. Completing its 0.9-second vulnerable animation restores 24 stamina; interruption grants nothing. Five-second cooldown. The taunt uses on-screen text, not recorded voice.
 
 **Supreme:** Back + Heavy retreats with Slip Away. It deals no damage and grants no invulnerability.
 
@@ -279,7 +279,7 @@ The home screen now exposes Story, Arcade, Versus AI and Local Versus as selecta
 
 Normal movement walks at 65% of movement speed. Hold Shift (P1), Ctrl (P2), or touch RUN while moving forward to run. Backward movement stays opponent-facing at 72% of walking speed; holding back guards grounded strikes, but throws beat guard. Complete arcade sprites replace the old guard-image deformation. Six walk drawings and six run drawings play from actual distance traveled, with intermediate poses bridging the cycle. Input changes select movement, guard, or idle immediately; rendering does not run a second animation clock. Run tests/locomotion_test.gd for roster playback, clock consistency, retreat guard and held run.
 
-The playable fighters use seven KOF XIII-inspired arcade PNG atlases in `assets/sprites/fighter/arcade/`, rendered by `scripts/fighter_sprite_visual.gd`. Sab and Abhi are large, Ish is skinny, Bib is small, and Anug, Sup and Anant retain distinct original Nepali-inspired outfits. Each fighter has 24 full-body poses for walking, running, guard, jump, attacks, signature action, hit reaction and KO. Advanced moves still share animation families.
+The playable fighters use seven KOF XIII-inspired arcade PNG atlases in `assets/sprites/fighter/arcade/`, rendered by `scripts/fighter_sprite_visual.gd`. Sab and Kri are large, Ish is skinny, Bib is small, and Anug, Sup and Anant retain distinct original Nepali-inspired outfits. Each fighter has 24 full-body poses for walking, running, guard, jump, attacks, signature action, hit reaction and KO. Advanced moves still share animation families.
 
 The original PNG pixels are preserved. Silhouette-derived frame regions and shader exclusions isolate extended limbs from neighboring poses, and grounded frames align to the fighting floor. Attack frames follow the combat clock and hit-stop. Character display height varies; collision and gameplay traits remain controlled by the combat system. The previous mesh renderer remains available on disk.
 

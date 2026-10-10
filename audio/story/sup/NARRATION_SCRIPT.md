@@ -88,21 +88,21 @@ Lines by the other fighters are optional (leave them silent, or get friends to r
 
 | File | Speaker | Line |
 |---|---|---|
-| `abhi_intro_01.ogg` | Abhi | The hill boy! Did you bring a goat to cheer for you? |
+| `abhi_intro_01.ogg` | Kri | The hill boy! Did you bring a goat to cheer for you? |
 | `abhi_intro_02.ogg` | SUPREME | Just my sisters' school fees. |
-| `abhi_intro_03.ogg` | Abhi | ...Respect. But I'm still not losing. |
+| `abhi_intro_03.ogg` | Kri | ...Respect. But I'm still not losing. |
 
 ## abhi_victory
 
 | File | Speaker | Line |
 |---|---|---|
-| `abhi_victory_01.ogg` | Abhi | The Loud Thunder... gone quiet. Go on, brother. |
+| `abhi_victory_01.ogg` | Kri | The Loud Thunder... gone quiet. Go on, brother. |
 
 ## abhi_defeat
 
 | File | Speaker | Line |
 |---|---|---|
-| `abhi_defeat_01.ogg` | Abhi | Louder next time, hill boy! |
+| `abhi_defeat_01.ogg` | Kri | Louder next time, hill boy! |
 
 ## sab_intro
 

@@ -96,7 +96,7 @@ fighter's style clips and their measured impact timing:
 | Ish | Bouncing Fight Idle | Hook Punch, Uppercut |
 | Ballas | Wrestling Idle | Headbutt, Grab and Slam (throws) |
 | Bib | quick fighting idle | Jab, Fast Run, Dodging (backdash) |
-| Abhi | relaxed showman idle | Haymaker, Taunt, Victory |
+| Kri | relaxed showman idle | Haymaker, Taunt, Victory |
 | Supreme | Capoeira Ginga | Roundhouse Kick, Flip Kick |
 | Ananta | Kung Fu stance | Martial Arts Kick, Fireball (victory) |
 

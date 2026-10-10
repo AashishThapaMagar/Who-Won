@@ -20,7 +20,7 @@ Release directional inputs during a chain. Tap each attack as the previous hit c
 | Ish | Flash rising fist (uppercut) | Flash body shot | Flash shoulder toss | Fast punch pressure |
 | Ballas | Anvil elbow | Iron body hook | Iron hip toss | Slower, hard-hitting clinch fighter |
 | Bib | Relay side kick | Relay backfist | Relay ankle reap | Fast, long-reaching kicks |
-| Abhi | Thunder overhand | Thunder body shot | Thunder clinch | Committed power strikes |
+| Kri | Thunder overhand | Thunder body shot | Thunder clinch | Committed power strikes |
 | Supreme | Spiral heel (spinning kick) | Spiral palm | Spiral reap | Low and turning attacks |
 | Ananta | Crown knee | Crown backfist | Crown shoulder toss | Balanced boss toolkit |
 

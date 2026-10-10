@@ -1,6 +1,6 @@
 # Playable roster likeness v2
 
-The reference is `assets/concepts/fighters/roster-photo-likeness-v2.png`. Its left-to-right lineup maps to Bib, Abhi, Ish, Anug, Ananta (id `anant`), Ballas (id `sab`), and Supreme (id `sup`). The display names follow the concept sheet; internal ids, moves, collision volumes, and balance are unchanged.
+The reference is `assets/concepts/fighters/roster-photo-likeness-v2.png`. Its left-to-right lineup maps to Bib, Kri, Ish, Anug, Ananta (id `anant`), Ballas (id `sab`), and Supreme (id `sup`). The display names follow the concept sheet; internal ids, moves, collision volumes, and balance are unchanged.
 
 This is a stylized procedural 3D interpretation, not a photoreal reconstruction. Bodies use broad arcade-fighter proportions (pecs, traps, heavy arms, baggy martial trousers, chunky footwear and combat gloves). Vests are shells over the back two-thirds of the torso, so the 3/4 fight camera sees the bare chest or undershirt between the vest's front edges. Blue and mint streetwear, an open purple vest, red tactical gear and shades, a green goalkeeper costume and cap, a purple split coat and glasses, a broad navy grappler with glasses, and a gold/teal martial outfit distinguish the roster. Mesh embroidery, separate hair locks, facial hair, gloves, fuller trousers and arms, and boot accents give the models more readable game silhouettes.
 

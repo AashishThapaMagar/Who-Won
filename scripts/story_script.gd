@@ -136,7 +136,7 @@ const CHAPTERS := {
 	},
 	"abhi": {
 		"intro": [
-			{"speaker": "", "text": "Abhi fights loud. The crowd loves it. His rivals hate it."},
+			{"speaker": "", "text": "Kri fights loud. The crowd loves it. His rivals hate it."},
 			{"speaker": "abhi", "text": "Let me tell you exactly how this ends."},
 			{"speaker": "player", "text": "Less talking."},
 		],
