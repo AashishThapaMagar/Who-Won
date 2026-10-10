@@ -134,7 +134,7 @@ const THROW_BLEND := 0.15
 ## their bend direction is calibrated once, so any humanoid rig works.
 var _tuck := 0.0
 var _lean := 0.0
-## Extra lean back of the trunk set by the throw each frame (Ish's spear).
+## Extra lean back of the trunk set by the throw each frame (Agasthya's spear).
 var _posture := 0.0
 ## Hit recoil on a damped spring: x leans the trunk back (+) or folds it
 ## forward (-), y twists the body, z buckles the knees. A blow snaps it to
@@ -1223,7 +1223,7 @@ func _play_throw(fighter: Node, logical: String, delta: float, frozen: bool) -> 
 		"throw":
 			var time := THROW.clip_time(fighter.throw_time)
 			if not paired:
-				# A rig with its own grab (Sab's slam) plays it from its
+				# A rig with its own grab (Mahabali's slam) plays it from its
 				# impact frame to its end over the throw.
 				var cut: Array = config.get("timing", {}).get("grapple", [])
 				var animation := player.get_animation(clip_names.get("grapple", ""))

@@ -1,5 +1,5 @@
 extends Node
-## A 40-second fight film introducing Ish, against Ananta, shot the way Kung
+## A 40-second fight film introducing Agasthya, against Ananta, shot the way Kung
 ## Fu Hustle is (letterboxed, low wide lenses, crash zooms and whip pans,
 ## speed ramps on the big blows, freeze frames that stamp the name on
 ## screen) in bright Himalayan colour: blue sky, white peaks, prayer flags.
@@ -117,14 +117,14 @@ func _build_beats() -> void:
 		_fade(0.0, 1.2)
 		_shot_crane(Vector3(0, 7.5, 12), Vector3(0, 1.4, 5.8), Vector3(0, 1.6, -4), Vector3(0, 1.0, 0), 50.0, 3.2))
 	_at(0.8, func(): _caption("HERITAGE SQUARE  ·  KATHMANDU"))
-	# Ish walks in from the ground up; crash zoom on his face; freeze; his name.
+	# Agasthya walks in from the ground up; crash zoom on his face; freeze; his name.
 	_at(3.2, func():
 		_clear_text()
 		_hold("p1_3d_right", 1.6)
 		_shot_low_hero(ish, 1.0))
 	_at(4.8, func(): _shot_crash_zoom(ish, 0.3))
 	_at(5.2, func(): _freeze_card(ish, 2.4))
-	# His rival steps in, seen past Ish's shoulder: no name, just a threat.
+	# His rival steps in, seen past Agasthya's shoulder: no name, just a threat.
 	_at(7.6, func():
 		_hold("p2_3d_left", 1.1)
 		_shot_over_shoulder(ish, ananta))
@@ -135,7 +135,7 @@ func _build_beats() -> void:
 		_shot_standoff()
 		_dust())
 	_at(10.6, func(): _dust())
-	# Exchange one: Ish's string into a guard, Ananta's counter kick.
+	# Exchange one: Agasthya's string into a guard, Ananta's counter kick.
 	_at(11.6, func():
 		_whip()
 		_shot_side_track(7.0)
@@ -144,7 +144,7 @@ func _build_beats() -> void:
 	_at(11.95, func(): _tap("p1_3d_punch"))
 	_at(12.2, func(): _tap("p1_3d_punch"))
 	_at(12.75, func(): _tap("p2_3d_kick"))
-	# Exchange two: over Ananta's shoulder, Ish's forward kick lands.
+	# Exchange two: over Ananta's shoulder, Agasthya's forward kick lands.
 	_at(14.2, func():
 		_place_gap(0.85)
 		_shot_over_shoulder(ananta, ish))
@@ -159,7 +159,7 @@ func _build_beats() -> void:
 	_at(15.7, func(): _tap("p2_3d_punch"))
 	_at(15.95, func(): _tap("p2_3d_punch"))
 	_at(16.2, func(): _tap("p2_3d_punch"))
-	# Ish shoots the takedown, then rains down punches from the mount.
+	# Agasthya shoots the takedown, then rains down punches from the mount.
 	_at(17.4, func():
 		_place_gap(0.6)
 		_shot_low_front()
@@ -180,7 +180,7 @@ func _build_beats() -> void:
 	_at(22.8, func(): _hold("p2_3d_block", 0.6))
 	_at(23.0, func(): _tap("p1_3d_punch"))
 	_at(23.6, func(): _hold("p2_3d_right", 0.2); _tap("p2_3d_rpunch"))
-	# The super: a crash zoom into Ish's eyes, then FLASH HAMMER.
+	# The super: a crash zoom into Agasthya's eyes, then FLASH HAMMER.
 	_at(24.6, func():
 		_release_all()
 		ananta.health = 62
@@ -196,13 +196,13 @@ func _build_beats() -> void:
 	_at(28.9, func():
 		director = true
 		_shot_low_side())
-	# The finish: Ananta charges, Ish's kick ends it; the knockout camera.
+	# The finish: Ananta charges, Agasthya's kick ends it; the knockout camera.
 	_at(30.0, func():
 		ananta.health = 6
 		ananta.health_changed.emit(ananta.health, ananta.max_health)
 		_place_gap(1.6)
 		_shot_behind(ananta))
-	# Ananta closes in; Ish's kick meets him as he arrives.
+	# Ananta closes in; Agasthya's kick meets him as he arrives.
 	_at(30.05, func(): _hold("p2_3d_left", 0.6))
 	_at(30.5, func(): _tap("p1_3d_kick"))
 	_at(30.5, func(): director = false)
@@ -464,7 +464,7 @@ func _winner_card() -> void:
 	slash.pivot_offset = slash.size * 0.5
 	slash.scale = Vector2(0.0, 1.0)
 	box.add_child(slash)
-	var name_label := UI.heading(box, "ISH", Vector2(0, 196), Vector2(SIZE.x, 90), 86, UI.GOLD, Color("b8241c"))
+	var name_label := UI.heading(box, "AGASTHYA", Vector2(0, 196), Vector2(SIZE.x, 90), 86, UI.GOLD, Color("b8241c"))
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var wins := UI.eyebrow(box, "T H E   F L A S H   H A M M E R", Vector2(0, 290), Vector2(SIZE.x, 22), UI.WHITE)
 	wins.add_theme_font_size_override("font_size", 16)

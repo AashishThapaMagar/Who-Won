@@ -83,7 +83,7 @@ func _lower_arms(portrait: Node) -> void:
 		var elbow := sk.get_bone_global_pose(fore).origin
 		var now := (elbow - g.origin).normalized()
 		# "Down" in the world, carried into this skeleton's own space (some
-		# rigs, Bib's, are turned and scaled under their parent).
+		# rigs, Vajraveer's, are turned and scaled under their parent).
 		var to_local := sk.global_transform.basis.orthonormalized().inverse()
 		var side_out: Vector3 = to_local * Vector3(0, 0, 1)
 		var want := (to_local * Vector3.DOWN + side_out * 0.0).normalized()

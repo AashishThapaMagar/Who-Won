@@ -258,7 +258,7 @@ func _build_limbs(data: Dictionary) -> void:
 		if id in ["ish", "anug", "sab"]:
 			# Black short-sleeve tee under the vest.
 			on_limb(side + "_bicep", Vector3(0, 0.45, 0), Vector3(1.08, 0.55, 1.08), "under")
-		# Boot collar and laces; Bib wears white trainers instead.
+		# Boot collar and laces; Vajraveer wears white trainers instead.
 		on_limb(side + "_boot", Vector3(-0.25, 0.75, 0), Vector3(0.75, 0.55, 0.9), "shoe")
 		for i in 3:
 			on_limb(side + "_boot", Vector3(0.35 + i * 0.12, 0.62 - i * 0.14, 0), Vector3(0.07, 0.07, 0.62), "accent" if id != "bib" else "stripe", false)

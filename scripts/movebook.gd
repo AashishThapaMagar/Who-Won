@@ -28,7 +28,7 @@ const SPECIALS := [
 ]
 ## Fighter-specific tips that frame data doesn't show.
 const NOTES := {
-	"ish": "Low strikes against Ish deal +25% damage (weak knee).",
+	"ish": "Low strikes against Agasthya deal +25% damage (weak knee).",
 	"abhi": "← H taunts: finish it uninterrupted for +24 stamina.",
 	"sup": "← H slips away. It is not invincible.",
 }

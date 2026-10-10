@@ -49,11 +49,11 @@ The diagnostic uses Godot 4.5.1, 20 warm-up iterations and 180 measured samples 
 | Fighter | One mesh sample, mean ms | Physics sync + render update, mean ms | One atlas frame selection, mean ms |
 |---|---:|---:|---:|
 | Anug | 0.743 | 1.501 | 0.017 |
-| Ish | 1.020 | 2.078 | 0.020 |
-| Sab | 0.885 | 1.872 | 0.018 |
-| Bib | 0.815 | 1.665 | 0.019 |
+| Agasthya | 1.020 | 2.078 | 0.020 |
+| Mahabali | 0.885 | 1.872 | 0.018 |
+| Vajraveer | 0.815 | 1.665 | 0.019 |
 | Kri | 1.463 | 3.055 | 0.037 |
-| Sup | 1.240 | 2.490 | 0.031 |
+| Sarvochcha | 1.240 | 2.490 | 0.031 |
 | Anant | 1.072 | 2.220 | 0.035 |
 
 The simulated combined update's per-fighter 95th percentiles were 2.904–5.734 ms. For context, an entire 60 FPS frame has 16.67 ms available. The comparison demonstrates that dynamic deformation is materially more expensive than selecting existing frames on this machine. It does not prove the full game misses 60 FPS: GPU work, presentation, OS scheduling, other scene work, and real input hardware remain unmeasured. These three benchmark columns are separate measurements and must not be added together.

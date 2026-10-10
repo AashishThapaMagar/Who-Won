@@ -474,7 +474,7 @@ func _next_chain_move(action: String) -> String:
 
 func _start_style_move(move_id: String, step: int = 0) -> void:
 	var data: Dictionary = available_moves()[move_id]
-	# "utility" moves (Abhi's taunt, Sup's feint) deal no damage and never
+	# "utility" moves (Abhi's taunt, Sarvochcha's feint) deal no damage and never
 	# open a hitbox (see _process_attack) — they're on their own cooldown gate.
 	if data.get("utility", "") == "taunt" and combat_time < taunt_ready_at:
 		combat_notice = "LET THE FISTS TALK"
@@ -721,7 +721,7 @@ func take_hit(damage: int, knockback: float, attacker_facing: int, attacker: Nod
 	if attacker != null and attacker.has_signal("strike_connected"):
 		attacker.strike_connected.emit(blocked, force)
 	var dealt := damage
-	# Ish's weak knee: unblocked low strikes (height close to the ground,
+	# Agasthya's weak knee: unblocked low strikes (height close to the ground,
 	# i.e. not a punch/kick aimed at the torso or head) deal 25% extra.
 	if is_action_fight() and character_profile.id == "ish" and not blocked and float(move.get("height", -88.0)) >= -65.0:
 		damage = roundi(damage * 1.25)

@@ -97,7 +97,7 @@ const CHAPTERS := {
 	},
 	"ish": {
 		"intro": [
-			{"speaker": "", "text": "Ish hits first and asks questions never."},
+			{"speaker": "", "text": "Agasthya hits first and asks questions never."},
 			{"speaker": "ish", "text": "Blink and it's over."},
 			{"speaker": "player", "text": "Then I won't blink."},
 		],
@@ -110,7 +110,7 @@ const CHAPTERS := {
 	},
 	"sab": {
 		"intro": [
-			{"speaker": "", "text": "They call Ballas the Iron Grip. Nobody has ever pulled free."},
+			{"speaker": "", "text": "They call Mahabali the Iron Grip. Nobody has ever pulled free."},
 			{"speaker": "sab", "text": "Once I've got you, you're not leaving."},
 			{"speaker": "player", "text": "You have to catch me first."},
 		],
@@ -123,7 +123,7 @@ const CHAPTERS := {
 	},
 	"bib": {
 		"intro": [
-			{"speaker": "", "text": "Bib never runs out of breath. His rivals always do."},
+			{"speaker": "", "text": "Vajraveer never runs out of breath. His rivals always do."},
 			{"speaker": "bib", "text": "Catch me if you can!"},
 			{"speaker": "player", "text": "I don't need to catch you. Just once."},
 		],
@@ -149,7 +149,7 @@ const CHAPTERS := {
 	},
 	"sup": {
 		"intro": [
-			{"speaker": "", "text": "Supreme moves like the wind through prayer flags. Never where you aim."},
+			{"speaker": "", "text": "Sarvochcha moves like the wind through prayer flags. Never where you aim."},
 			{"speaker": "sup", "text": "Catch the wind if you can."},
 			{"speaker": "player", "text": "Wind stops eventually."},
 		],
@@ -243,7 +243,7 @@ const ROUTES := {
 		"chapters": {
 			"ish": {
 				"intro": [
-					{"speaker": "", "text": "First rival: Ish. The fastest hands in the valley."},
+					{"speaker": "", "text": "First rival: Agasthya. The fastest hands in the valley."},
 					{"speaker": "ish", "text": "A goalkeeper? Go back to your pitch, keeper."},
 					{"speaker": "anug", "text": "There's no pitch to go back to. That's why I'm here."},
 				],
@@ -333,12 +333,12 @@ const ROUTES := {
 			{"speaker": "", "text": "THE END.", "shot": "wide"},
 		],
 	},
-	# Supreme: a hill boy who meant to leave Nepal to feed his family, until
+	# Sarvochcha: a hill boy who meant to leave Nepal to feed his family, until
 	# the wind brought him a newspaper. Told as a hand-drawn picture, in two
 	# places of his own: his village road and his old guru's hilltop.
 	"sup": {
 		"title": "THE WIND FROM THE HILLS",
-		"subtitle": "THE STORY OF SUPREME",
+		"subtitle": "THE STORY OF SARVOCHCHA",
 		"finale_title": "THE ANSWER",
 		# Shot like a film: slow eased dolly arcs and push-ins, film lenses.
 		"cinematic": true,
@@ -348,13 +348,13 @@ const ROUTES := {
 		# assets/story/sup/ instead of animated scenes (on hold).
 		# Each rival's chapter opens on its page (assets/story/sup/).
 		"chapter_images": {"anug": "p07_anug", "ish": "p08_ish", "bib": "p09_bib", "abhi": "p10_abhi", "sab": "p12_ballas", "anant": "p13_hilltop"},
-		# Old friends first; his brother Ballas fifth; then Ananta.
+		# Old friends first; his brother Mahabali fifth; then Ananta.
 		"ladder": ["anug", "ish", "bib", "abhi", "sab", "anant"],
 		"prologue": [
 			{"speaker": "", "image": "p01_home", "text": "High on a ridge in the hills of Nepal, the morning comes early.",
 				"set": "hill_road", "cast": {"player": {"at": "home", "face": "camera"}},
 				"shot": "wide"},
-			{"speaker": "", "text": "Supreme lives here with his mother and his two little sisters. The fields don't feed four mouths anymore.",
+			{"speaker": "", "text": "Sarvochcha lives here with his mother and his two little sisters. The fields don't feed four mouths anymore.",
 				"shot": {"eye": [-2.4, 1.7, 1.8], "look": [-5.6, 1.6, -6.0], "eye_to": [-3.2, 1.8, 1.0], "look_to": [-5.8, 1.7, -6.5], "time": 6}},
 			{"speaker": "sup", "image": "p02_worry", "text": "Ama's medicine. Bahini's school fees. The roof again before the monsoon...", "shot": "hero"},
 			{"speaker": "", "image": "p03_road", "text": "So like thousands of young men from these hills, he has made up his mind. Go abroad. Work. Send money home.",
@@ -370,7 +370,7 @@ const ROUTES := {
 				"shot": "close_player"},
 			{"speaker": "sup", "image": "p05_paper", "text": "The Road to Ananta... five crore to whoever beats him?"},
 			{"speaker": "sup", "text": "Five crore. No visa. No leaving home. No leaving them.", "shot": "hero"},
-			{"speaker": "", "text": "Ananta. A name Supreme had never heard. And yet something in it felt like a voice from long ago."},
+			{"speaker": "", "text": "Ananta. A name Sarvochcha had never heard. And yet something in it felt like a voice from long ago."},
 			{"speaker": "", "image": "p06_leave", "text": "He packed his fighting clothes that same night, and took the first bus down the hill.",
 				"do": [{"who": "player", "walk": "shelter", "speed": 1.3, "delay": 0.6}],
 				"shot": {"eye": [-2.0, 2.0, 6.5], "look": [3.0, 1.2, -1.0], "eye_to": [4.0, 2.0, 6.0], "look_to": [10.0, 1.2, -1.4], "time": 7}},
@@ -379,7 +379,7 @@ const ROUTES := {
 		"chapters": {
 			"anug": {
 				"intro": [
-					{"speaker": "anug", "text": "Supreme? You came all the way down from the hills for this?"},
+					{"speaker": "anug", "text": "Sarvochcha? You came all the way down from the hills for this?"},
 					{"speaker": "sup", "text": "Same reason as you, Anug. Bills don't wait."},
 					{"speaker": "anug", "text": "Then no holding back, friend."},
 				],
@@ -393,8 +393,8 @@ const ROUTES := {
 			},
 			"ish": {
 				"intro": [
-					{"speaker": "ish", "text": "Supreme! Last time we fought, it was over the last plate of momo."},
-					{"speaker": "sup", "text": "This time it's for my family, Ish."},
+					{"speaker": "ish", "text": "Sarvochcha! Last time we fought, it was over the last plate of momo."},
+					{"speaker": "sup", "text": "This time it's for my family, Agasthya."},
 					{"speaker": "ish", "text": "Then I'll hit you twice as fast."},
 				],
 				"victory": [
@@ -407,7 +407,7 @@ const ROUTES := {
 			"bib": {
 				"intro": [
 					{"speaker": "bib", "text": "Race you to Ananta?"},
-					{"speaker": "sup", "text": "It's not a race, Bib. It's a climb. And I grew up climbing."},
+					{"speaker": "sup", "text": "It's not a race, Vajraveer. It's a climb. And I grew up climbing."},
 				],
 				"victory": [
 					{"speaker": "bib", "text": "Okay, okay. Go. Don't look back."},
@@ -431,10 +431,10 @@ const ROUTES := {
 			},
 			"sab": {
 				"intro": [
-					{"speaker": "", "text": "The fifth name on the board stops Supreme cold.",
-						"banner": {"eyebrow": "CHAPTER FIVE", "title": "BALLAS", "subtitle": "THE UNFINISHED MATCH"}},
+					{"speaker": "", "text": "The fifth name on the board stops Sarvochcha cold.",
+						"banner": {"eyebrow": "CHAPTER FIVE", "title": "MAHABALI", "subtitle": "THE UNFINISHED MATCH"}},
 					{"speaker": "sab", "text": "Brother."},
-					{"speaker": "sup", "text": "Ballas... of everyone on this road, it had to be you."},
+					{"speaker": "sup", "text": "Mahabali... of everyone on this road, it had to be you."},
 					{"speaker": "sab", "image": "p11_fair", "text": "The Dashain fair, five years ago. Our match never finished. The storm came and they rang the bell."},
 					{"speaker": "sup", "text": "I remember. I was winning."},
 					{"speaker": "sab", "image": "p12_ballas", "text": "You were losing. Let's finish it."},
@@ -450,7 +450,7 @@ const ROUTES := {
 			},
 			"anant": {
 				"intro": [
-					{"speaker": "", "text": "The last match isn't in any arena. A hilltop at dusk, far from the crowds. And Supreme knows this place.",
+					{"speaker": "", "text": "The last match isn't in any arena. A hilltop at dusk, far from the crowds. And Sarvochcha knows this place.",
 						"set": "ananta_ground", "cast": {"player": {"at": "edge", "face": "dummy"}, "rival": {"at": "dummy", "face": "player"}},
 						"shot": "wide"},
 					{"speaker": "sup", "text": "This is where Guruji trained me. Every morning, before school..."},

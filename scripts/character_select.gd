@@ -826,6 +826,10 @@ func _refresh() -> void:
 		var tint: Color = profile.color
 		rings[player].material.set_shader_parameter("glow", Color(tint.lightened(0.2), 0.9))
 		names[player].text = profile.name
+		# Long names (SARVOCHCHA) shrink to stay inside the panel.
+		var font: Font = names[player].get_theme_font("font")
+		var width := font.get_string_size(profile.name, HORIZONTAL_ALIGNMENT_LEFT, -1, 30).x
+		names[player].add_theme_font_size_override("font_size", 30 if width <= names[player].size.x else int(30.0 * names[player].size.x / width))
 		titles[player].text = String(profile.title).to_upper()
 		watermarks[player].text = ROSTER.NEPALI_NAMES.get(profile.id, "")
 		var summary: Array = SUMMARIES[profile.id]

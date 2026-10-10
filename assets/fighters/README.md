@@ -93,11 +93,11 @@ fighter's style clips and their measured impact timing:
 | Fighter | Stance | Signature clips |
 |---|---|---|
 | Anug | keeper crouch | Goalkeeper Catch (blocked hits), Dodging (backdash) |
-| Ish | Bouncing Fight Idle | Hook Punch, Uppercut |
-| Ballas | Wrestling Idle | Headbutt, Grab and Slam (throws) |
-| Bib | quick fighting idle | Jab, Fast Run, Dodging (backdash) |
+| Agasthya | Bouncing Fight Idle | Hook Punch, Uppercut |
+| Mahabali | Wrestling Idle | Headbutt, Grab and Slam (throws) |
+| Vajraveer | quick fighting idle | Jab, Fast Run, Dodging (backdash) |
 | Kri | relaxed showman idle | Haymaker, Taunt, Victory |
-| Supreme | Capoeira Ginga | Roundhouse Kick, Flip Kick |
+| Sarvochcha | Capoeira Ginga | Roundhouse Kick, Flip Kick |
 | Ananta | Kung Fu stance | Martial Arts Kick, Fireball (victory) |
 
 Winners play their victory clip over a knocked-out rival. Kicks land as

@@ -92,9 +92,9 @@ const MESHY_MOVES := {
 		"uppercut": "Right_Uppercut_from_Guard", "punch_heavy": "Punch_Combo",
 		"kick": "Roundhouse_Kick", "kick_front": "High_Kick", "kick_spin": "Sweep_Kick",
 	},
-	# Bib's biped download: named moves plus three id-named ones (a stepping
+	# Vajraveer's biped download: named moves plus three id-named ones (a stepping
 	# power punch, a jumping kick and a taunt), measured the same way.
-	# Bib's Mixamo fight pack (STYLES bib.pack) covers his moves now; his
+	# Vajraveer's Mixamo fight pack (STYLES bib.pack) covers his moves now; his
 	# Meshy set adds only the leg sweep the pack lacks.
 	"bib": {
 		"kick_front": ["Leg_Sweep", 0.95],
@@ -170,7 +170,7 @@ const STYLES := {
 		"thicken": {"arm": 1.4, "forearm": 1.45, "hand": 1.2},
 		"clips": {"idle": "idle", "jab": "jab", "run": "fast_run", "backdash": "dodging"},
 		"timing": {"jab": [0.15, 0.57, 1.0]},
-		# Bibek: the Tripo-built Bib (Downloads/Bib_Tripo_Mixamo) with his
+		# Bibek: the Tripo-built Vajraveer (Downloads/Bib_Tripo_Mixamo) with his
 		# Mixamo set (Fighting_Game_Animations: 39 clips, real Mixamo names) in
 		# assets/fighters/bib/fight/ (kept local); combat_idle carries the skin.
 		"pack": {

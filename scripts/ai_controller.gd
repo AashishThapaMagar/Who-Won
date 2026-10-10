@@ -170,7 +170,7 @@ func _physics_process(delta: float) -> void:
 			return
 		if fighter.state in [fighter.State.IDLE, fighter.State.WALK] and randf() < 0.6:
 			var move_id := "jab"
-			# Sab's forward_heavy is his grab, so he reaches for it in close
+			# Mahabali's forward_heavy is his grab, so he reaches for it in close
 			# range; Kri's back_heavy is his taunt, used to bank stamina
 			# only when he's not already flush against the opponent.
 			var grab_chance: float = 0.5 if fighter.character_profile.id == "sab" else 0.22

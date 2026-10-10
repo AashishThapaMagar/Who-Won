@@ -8,7 +8,7 @@ extends Node3D
 ##   street   a city street at night; a temple wall with the tournament poster
 ##   pitch    a dusty neighbourhood pitch at dusk, one goal
 ##   academy  the same pitch rebuilt: grass, floodlights, academy banner
-##   hill_road      Supreme's hill village road on a bright morning: his home,
+##   hill_road      Sarvochcha's hill village road on a bright morning: his home,
 ##                  the teahouse, a bus shelter, a stone water spout; the
 ##                  set's ball is a newspaper the wind carries to him
 ##   ananta_ground  a hilltop at dusk: Ananta's old training dummy and a log
@@ -250,7 +250,7 @@ func _pitch(academy: bool) -> void:
 
 # ── Building blocks ─────────────────────────────────────────────────────
 
-## Supreme's village: a dirt road along a ridge on a clear morning.
+## Sarvochcha's village: a dirt road along a ridge on a clear morning.
 func _hill_road() -> void:
 	_environment(Color("c9dcef"), Color("b7c6d8"), 0.55, 0.004, Color("3f7bd2"))
 	_sun(Vector3(-38, -50, 0), Color("fff1dc"), 1.15)

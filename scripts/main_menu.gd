@@ -702,7 +702,7 @@ F1 in a fight: every move and combo.", Vector2(28, 282), Vector2(290, 34), 11, U
 	# Right: the big moves.
 	UI.eyebrow(modal_content, "BIG MOVES", Vector2(322, 98), Vector2(270, 16), UI.GOLD)
 	var moves := [
-		["2 + 4", "SUPER", "When the gold meter is full (Ish, Ananta)"],
+		["2 + 4", "SUPER", "When the gold meter is full (Agasthya, Ananta)"],
 		["GRAB", "TAKEDOWN", "Beats guard. Then tap 1 to punch from on top"],
 		["GRAB", "ESCAPE", "Tap grab just as theirs lands"],
 		["BACK", "ROLL AWAY", "While knocked down: roll clear"],

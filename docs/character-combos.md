@@ -17,11 +17,11 @@ Release directional inputs during a chain. Tap each attack as the previous hit c
 | Fighter | P > P > K finisher | K > P follow-up | Grapple | Identity |
 |---|---|---|---|---|
 | Anug | Goal-line clearance (front kick) | Keeper palm | Keeper catch | Space-making keeper |
-| Ish | Flash rising fist (uppercut) | Flash body shot | Flash shoulder toss | Fast punch pressure |
-| Ballas | Anvil elbow | Iron body hook | Iron hip toss | Slower, hard-hitting clinch fighter |
-| Bib | Relay side kick | Relay backfist | Relay ankle reap | Fast, long-reaching kicks |
+| Agasthya | Flash rising fist (uppercut) | Flash body shot | Flash shoulder toss | Fast punch pressure |
+| Mahabali | Anvil elbow | Iron body hook | Iron hip toss | Slower, hard-hitting clinch fighter |
+| Vajraveer | Relay side kick | Relay backfist | Relay ankle reap | Fast, long-reaching kicks |
 | Kri | Thunder overhand | Thunder body shot | Thunder clinch | Committed power strikes |
-| Supreme | Spiral heel (spinning kick) | Spiral palm | Spiral reap | Low and turning attacks |
+| Sarvochcha | Spiral heel (spinning kick) | Spiral palm | Spiral reap | Low and turning attacks |
 | Ananta | Crown knee | Crown backfist | Crown shoulder toss | Balanced boss toolkit |
 
 F1 displays the selected fighters' names, actual move timing, and both sample routes. H/J is a shortcut for live 3D matches; the legacy scene also supports punch + kick. Touch controls include GRAB. AI uses the same stamina and hit-confirm rules and can choose close-range grapples.

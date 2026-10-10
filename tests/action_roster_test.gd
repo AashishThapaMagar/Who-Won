@@ -104,7 +104,7 @@ func run() -> void:
 	reset(5, 1)
 	p1._start_style_move("kick")
 	p2.take_hit(12, 0, 1, p1, "kick")
-	check(p2.health == 85, "Ish takes 25 percent extra low-strike damage")
+	check(p2.health == 85, "Agasthya takes 25 percent extra low-strike damage")
 	reset(0, 4)
 	p1._start_style_move("jab")
 	p2.state = p2.State.BLOCK
