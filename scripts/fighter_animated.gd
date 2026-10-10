@@ -474,7 +474,11 @@ static func _swap_mesh(mesh: MeshInstance3D, built: ArrayMesh) -> void:
 ## binds are re-expressed against this skeleton's rest pose and every clip
 ## plays on it unchanged.
 func _graft_body(path: String) -> void:
-	var packed: PackedScene = load(path) if ResourceLoader.exists(path) else null
+	var packed: PackedScene = null
+	if ResourceLoader.load_threaded_get_status(path) in [ResourceLoader.THREAD_LOAD_LOADED, ResourceLoader.THREAD_LOAD_IN_PROGRESS]:
+		packed = ResourceLoader.load_threaded_get(path)
+	elif ResourceLoader.exists(path):
+		packed = load(path)
 	var targets := character.find_children("*", "Skeleton3D", true, false)
 	if packed == null or targets.is_empty():
 		return
@@ -569,9 +573,10 @@ static var _clip_cache := {}
 static func warm(fighter_ids: Array) -> void:
 	for id in fighter_ids:
 		var entry: Dictionary = MODELS.entry(str(id))
-		var scene := str(entry.get("scene", ""))
-		if scene != "" and ResourceLoader.exists(scene):
-			ResourceLoader.load_threaded_request(scene)
+		# The model, and the separate body some fighters wear over it.
+		for path in [str(entry.get("scene", "")), str(entry.get("body", ""))]:
+			if path != "" and ResourceLoader.exists(path):
+				ResourceLoader.load_threaded_request(path)
 	if DirAccess.dir_exists_absolute(CLIP_CACHE_DIR):
 		for file in DirAccess.get_files_at(CLIP_CACHE_DIR):
 			if file.ends_with(".res"):
