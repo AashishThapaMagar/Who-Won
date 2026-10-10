@@ -317,10 +317,7 @@ func _end_round(winner: int) -> void:
 		advance_timer = ROUND_PAUSE + (KO_PAUSE if knockout else 0.0)
 
 	result_label.visible = true
-	var victor: Node = player1 if winner == 1 else (player2 if winner == 2 else null)
-	var host := _announcer()
-	if host != null:
-		_host_winner(host, "" if victor == null else str(victor.character_profile.name), match_over and victor != null)
+	# The announcer only opens rounds; the win belongs to the fighters.
 
 ## Aamai's winner call; the 3D arena holds it for the victory moment.
 func _host_winner(host: Node, winner_name: String, match_won: bool) -> void:
