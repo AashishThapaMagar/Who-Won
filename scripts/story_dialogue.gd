@@ -639,7 +639,7 @@ func _card(eyebrow: String, title: String, subtitle: String, accent: Color, bars
 		# The chapter's opening picture, once the scene is set.
 		get_tree().create_timer(0.6).timeout.connect(func():
 			if storybook != null and is_inside_tree():
-				storybook.draw_picture(viewport))
+				storybook.draw_picture(viewport, _plate_path()))
 
 func _end_card() -> void:
 	if not carding:
@@ -705,6 +705,7 @@ func _show_line() -> void:
 	text_label.text = line.get("text", "")
 	if storybook != null:
 		storybook.line(name_label.text, text_label.text, tint)
+		storybook.show_plate(_plate_path())
 	text_label.visible_ratio = 0.0
 	if typing != null and typing.is_valid():
 		typing.kill()
@@ -717,6 +718,15 @@ func _show_line() -> void:
 ## audio/story/<chosen fighter>/<beat>_<line number>.ogg (or .wav / .mp3),
 ## e.g. audio/story/anug/prologue_03.ogg or audio/story/anug/ish_intro_01.ogg.
 func _voice_path() -> String:
+	var base := "res://audio/story/%s/%s" % [ROSTER.profile(MatchSetup.selected_fighters[0]).id, _line_key()]
+	for extension in [".ogg", ".wav", ".mp3"]:
+		if ResourceLoader.exists(base + extension) or FileAccess.file_exists(base + extension):
+			return base + extension
+	return ""
+
+## The current line's name, shared by its narration and its picture:
+## <beat>_<line number>, e.g. prologue_03 or ish_intro_01.
+func _line_key() -> String:
 	var beat := "prologue"
 	match StoryDirector.phase:
 		StoryDirector.Phase.FINALE:
@@ -727,11 +737,11 @@ func _voice_path() -> String:
 			beat = StoryDirector.opponent_id + "_victory"
 		StoryDirector.Phase.DEFEAT:
 			beat = StoryDirector.opponent_id + "_defeat"
-	var base := "res://audio/story/%s/%s_%02d" % [ROSTER.profile(MatchSetup.selected_fighters[0]).id, beat, line_index + 1]
-	for extension in [".ogg", ".wav", ".mp3"]:
-		if ResourceLoader.exists(base + extension) or FileAccess.file_exists(base + extension):
-			return base + extension
-	return ""
+	return "%s_%02d" % [beat, line_index + 1]
+
+## The current line's baked storybook picture, if one has been made.
+func _plate_path() -> String:
+	return "res://assets/story/%s/plates/%s.png" % [ROSTER.profile(MatchSetup.selected_fighters[0]).id, _line_key()]
 
 ## Plays this line's narration if there is a recording for it; silently
 ## does nothing otherwise (text is never blocked on a clip existing). A
@@ -914,7 +924,7 @@ func _set_frozen(on: bool) -> void:
 	_frozen = on
 	# The pose has landed: draw this moment's picture for the page.
 	if on and storybook != null:
-		storybook.draw_picture(viewport)
+		storybook.draw_picture(viewport, _plate_path())
 	for key in actors:
 		var visual: Node = actors[key].fighter.get_node("Visual")
 		visual.set_process(not on)

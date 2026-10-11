@@ -70,6 +70,8 @@ void fragment() {
 ## showing through, and edges that soften into the mat like a painting.
 const PRINT_SHADER := """shader_type canvas_item;
 uniform vec3 paper : source_color = vec3(0.94, 0.88, 0.75);
+// 0 for a finished plate, which is already painted on paper.
+uniform float strength = 1.0;
 float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 void fragment() {
 	vec3 c = texture(TEXTURE, UV).rgb;
@@ -80,7 +82,7 @@ void fragment() {
 	c *= 0.96 + 0.06 * hash(floor(UV * vec2(800.0, 450.0)));
 	vec2 e = min(UV, 1.0 - UV) * vec2(4.0 / 3.0, 1.0);
 	c = mix(paper * 0.8, c, smoothstep(0.0, 0.025, min(e.x, e.y)));
-	COLOR = vec4(c, 1.0);
+	COLOR = vec4(mix(texture(TEXTURE, UV).rgb, c, strength), 1.0);
 }
 """
 
@@ -104,16 +106,32 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_build()
 
-## Draws the scene as it stands now and lays the drawing on the page. The
-## models are repainted in ink and washes first (once each), then one frame
-## is rendered and kept.
-func draw_picture(viewport: SubViewport) -> void:
-	if _drawing or not is_inside_tree():
+## Shows the line's baked plate straight away, if it has one.
+func show_plate(path: String) -> bool:
+	var baked := _load_plate(path)
+	if baked == null:
+		return false
+	_lay(baked, true)
+	return true
+
+## Lays this moment's picture on the page: its baked plate when there is
+## one (assets/story/<fighter>/plates/, see tools/bake_story_plates.gd),
+## otherwise the scene as it stands now, drawn on the spot: the models are
+## repainted in ink and washes first (once each), then one frame is
+## rendered and kept.
+func draw_picture(viewport: SubViewport, plate := "") -> void:
+	if not is_inside_tree():
+		return
+	var baked := _load_plate(plate)
+	if baked != null:
+		_lay(baked, true)
+		return
+	if _drawing:
 		return
 	_drawing = true
-	var plate := Vector2i(PICTURE.size * 2.0)
-	if viewport.size != plate:
-		viewport.size = plate
+	var plate_size := Vector2i(PICTURE.size * 2.0)
+	if viewport.size != plate_size:
+		viewport.size = plate_size
 	LOOK.apply(viewport)
 	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	await RenderingServer.frame_post_draw
@@ -126,10 +144,17 @@ func draw_picture(viewport: SubViewport) -> void:
 		return
 	# Nothing on the page moves until the next drawing.
 	viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
-	var drawing := ImageTexture.create_from_image(image)
+	_lay(ImageTexture.create_from_image(image), false)
+
+## Fades a new picture in over the last one.
+func _lay(drawing: Texture2D, finished: bool) -> void:
+	if drawing == picture.texture:
+		return
 	picture_back.texture = picture.texture
+	(picture_back.material as ShaderMaterial).set_shader_parameter("strength", (picture.material as ShaderMaterial).get_shader_parameter("strength"))
 	picture_back.modulate.a = 1.0
 	picture.texture = drawing
+	(picture.material as ShaderMaterial).set_shader_parameter("strength", 0.0 if finished else 1.0)
 	picture.modulate.a = 0.0
 	var fade := create_tween()
 	fade.tween_property(picture, "modulate:a", 1.0, 0.6).set_trans(Tween.TRANS_SINE)
@@ -187,10 +212,11 @@ func _build() -> void:
 	inner.add_theme_stylebox_override("panel", inner_style)
 	inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(inner)
-	var print_look := ShaderMaterial.new()
-	print_look.shader = Shader.new()
-	print_look.shader.code = PRINT_SHADER
+	var print_shader := Shader.new()
+	print_shader.code = PRINT_SHADER
 	for i in 2:
+		var print_look := ShaderMaterial.new()
+		print_look.shader = print_shader
 		var rect := TextureRect.new()
 		rect.position = PICTURE.position
 		rect.size = PICTURE.size
@@ -241,6 +267,22 @@ func _build() -> void:
 	leaf.visible = false
 	leaf.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(leaf)
+
+static var _plates := {}
+## A baked plate, imported or dropped in as a plain image (a hand-painted
+## version replaces the file and shows as it is).
+static func _load_plate(path: String) -> Texture2D:
+	if path == "":
+		return null
+	if _plates.has(path):
+		return _plates[path]
+	var texture: Texture2D = null
+	if ResourceLoader.exists(path):
+		texture = load(path)
+	elif FileAccess.file_exists(path):
+		texture = ImageTexture.create_from_image(Image.load_from_file(path))
+	_plates[path] = texture
+	return texture
 
 func _label(text: String, pos: Vector2, dimensions: Vector2, font_size: int, colour: Color, italic := false) -> Label:
 	var label := Label.new()
