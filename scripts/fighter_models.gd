@@ -85,6 +85,21 @@ const TRIPO_MOVES := {
 		# chambered at hip height (0.7 s); the foot peaks head high at 0.8 s.
 		"kick_spin": ["spin_kick.glb", "front_kick_02", [0.3, 0.8, 1.35]],
 	},
+	"sup": {
+		# His win and taunt, and the story's gestures: cutscene lines play
+		# these by name ("pose": "bow").
+		"victory": ["victory_celebration.glb", "victory_celebration"],
+		"taunt": ["dance_03.glb", "dance_03"],
+		"bow": ["bow.glb", "bow"],
+		"hug": ["hug.glb", "hug"],
+		"sob": ["sob.glb", "sob"],
+		"angry": ["angry_01.glb", "angry_01"],
+		"agree": ["agree.glb", "agree"],
+		"laugh": ["laugh_01.glb", "laugh_01"],
+		"swagger": ["swagger.glb", "swagger"],
+		"warm_up": ["warm_up.glb", "warm_up"],
+		"dance": ["dance_01.glb", "dance_01"],
+	},
 }
 const MESHY_MOVES := {
 	"anug": {

@@ -17,6 +17,7 @@ const UI := preload("res://scripts/ui_kit.gd")
 const ROSTER := preload("res://scripts/fighter_roster.gd")
 const STAGE := preload("res://scripts/nepal_stage_3d.gd")
 const SETS := preload("res://scripts/story_sets.gd")
+const STORYBOOK := preload("res://scripts/story_book.gd")
 ## Default walking pace for directed walks, metres per second.
 const WALK_SPEED := 1.3
 ## Pause after a narrated line's audio ends before moving on by itself.
@@ -77,6 +78,9 @@ var repeats: Dictionary = {}
 var voice_line := -1
 ## Line whose cast and actions already ran ahead of its banner card.
 var directed_line := -1
+## The open storybook every story is told in (story_book.gd): the scene on
+## the left page, the words on the right. Null for "style": "book" routes.
+var storybook: Control
 
 func _ready() -> void:
 	theme = UI.theme()
@@ -123,6 +127,10 @@ func _build_world() -> void:
 	# school-book illustration per line, turning page to page.
 	if StoryDirector.route().get("style", "") == "book":
 		_build_book(view)
+	else:
+		storybook = STORYBOOK.new()
+		add_child(storybook)
+		view.visible = false
 
 func _build_overlay() -> void:
 	var vignette := ColorRect.new()
@@ -135,6 +143,10 @@ func _build_overlay() -> void:
 	add_child(vignette)
 	top_bar = _bar(0.0)
 	bottom_bar = _bar(SIZE.y)
+	# The storybook frames the scene itself: no vignette or letterbox.
+	vignette.visible = storybook == null
+	top_bar.visible = storybook == null
+	bottom_bar.visible = storybook == null
 	name_label = UI.label(self, "", Vector2(0, SIZE.y - BAR + 6), Vector2(SIZE.x, 18), 13, UI.GOLD)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.add_theme_font_override("font", UI.strong_font())
@@ -143,6 +155,9 @@ func _build_overlay() -> void:
 	text_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	text_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
 	text_label.add_theme_constant_override("outline_size", 4)
+	# In the storybook the words are written on the page instead.
+	name_label.visible = storybook == null
+	text_label.visible = storybook == null
 	var hint := UI.label(self, "ENTER  NEXT     ESC  SKIP", Vector2(0, 24), Vector2(SIZE.x - 28, 16), 10, UI.MUTED)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	hint.add_theme_font_override("font", UI.strong_font())
@@ -618,6 +633,13 @@ func _card(eyebrow: String, title: String, subtitle: String, accent: Color, bars
 	card_tween.tween_property(card, "modulate:a", 0.0, 0.4)
 	card_tween.parallel().tween_property(card, "position:x", 80.0, 0.4).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 	card_tween.tween_callback(_end_card)
+	if storybook != null:
+		card.visible = false
+		storybook.chapter(eyebrow, title, subtitle, accent)
+		# The chapter's opening picture, once the scene is set.
+		get_tree().create_timer(0.6).timeout.connect(func():
+			if storybook != null and is_inside_tree():
+				storybook.draw_picture(viewport))
 
 func _end_card() -> void:
 	if not carding:
@@ -681,6 +703,8 @@ func _show_line() -> void:
 	# Narration reads in italics-free muted white; speech in full white.
 	text_label.add_theme_color_override("font_color", UI.WHITE if not speaker_id.is_empty() else Color("d9dcea"))
 	text_label.text = line.get("text", "")
+	if storybook != null:
+		storybook.line(name_label.text, text_label.text, tint)
 	text_label.visible_ratio = 0.0
 	if typing != null and typing.is_valid():
 		typing.kill()
@@ -839,6 +863,8 @@ func _exit_tree() -> void:
 func _process(delta: float) -> void:
 	elapsed += delta
 	_update_book(delta)
+	if storybook != null:
+		storybook.reveal(text_label.visible_ratio)
 	if _still():
 		_update_freeze(delta)
 		if _frozen:
@@ -865,7 +891,8 @@ var _freeze_line := -1
 var _freeze_in := 0.0
 
 func _still() -> bool:
-	return StoryDirector.route().get("still", false)
+	# The storybook shows still pictures, so every story is staged as stills.
+	return storybook != null or StoryDirector.route().get("still", false)
 
 func _update_freeze(delta: float) -> void:
 	if line_index != _freeze_line:
@@ -874,7 +901,9 @@ func _update_freeze(delta: float) -> void:
 		var line: Dictionary = lines[line_index] if line_index < lines.size() else {}
 		var last := 0.0
 		for step: Dictionary in line.get("do", []):
-			last = maxf(last, float(step.get("delay", 0.0)))
+			# "settle": seconds a gesture plays before the picture is taken
+			# (a bow is photographed at its lowest, not on the way down).
+			last = maxf(last, float(step.get("delay", 0.0)) + float(step.get("settle", 0.0)))
 		_freeze_in = last + 0.55
 	elif not _frozen:
 		_freeze_in -= delta
@@ -883,6 +912,9 @@ func _update_freeze(delta: float) -> void:
 
 func _set_frozen(on: bool) -> void:
 	_frozen = on
+	# The pose has landed: draw this moment's picture for the page.
+	if on and storybook != null:
+		storybook.draw_picture(viewport)
 	for key in actors:
 		var visual: Node = actors[key].fighter.get_node("Visual")
 		visual.set_process(not on)

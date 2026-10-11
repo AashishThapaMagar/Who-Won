@@ -563,7 +563,7 @@ func _tint(colors: Array) -> void:
 ## launch. Building one means opening and converting every clip file (about
 ## fifty for a full move pack, ~10 s); a cached set loads in a fraction of
 ## that. Bump CLIP_CACHE_VERSION whenever the conversion below changes.
-const CLIP_CACHE_VERSION := 1
+const CLIP_CACHE_VERSION := 6
 const CLIP_CACHE_DIR := "user://clip_cache/"
 static var _clip_cache := {}
 
@@ -712,6 +712,12 @@ func _add_meshy_clips(library: AnimationLibrary, path: String, wanted: Dictionar
 		var key := _bone_key(source.get_bone_name(bone))
 		if tripo:
 			key = TRIPO_BONES.get(key, "")
+			# Tripo's foot keys don't share its rest pose's frame (a standing
+			# foot reads ~150 degrees off rest), so retargeted feet point
+			# down like a dancer's. Its feet stay unmapped and flat on the
+			# ground (see flat_feet below).
+			if key.ends_with("foot") or key.contains("toe"):
+				key = ""
 		elif native:
 			key = MESHY_BONES.get(key, key)
 		elif key in ["headfront", "lefthandmiddle4", "righthandmiddle4"]:
@@ -738,8 +744,21 @@ func _add_meshy_clips(library: AnimationLibrary, path: String, wanted: Dictionar
 		var target_bone: int = pairs[bone]
 		var s_dir := _rest_direction(source, s_node, bone, pairs.keys())
 		var t_dir := _rest_direction(target, t_node, target_bone, inverse_pairs.keys())
-		s_frame[bone] = (s_node * source.get_bone_global_rest(bone).basis.get_rotation_quaternion()).inverse() * _frame(s_dir)
-		t_frame[target_bone] = (t_node * target.get_bone_global_rest(target_bone).basis.get_rotation_quaternion()).inverse() * _frame(t_dir)
+		# Both sides of a pair twist from the same reference: a foot that
+		# rests flat on one rig (Tripo's) and angled on the other (Mixamo's)
+		# would otherwise pick different ones and roll the foot ~90 degrees.
+		var upright := _points_forward(s_dir) or _points_forward(t_dir)
+		s_frame[bone] = (s_node * source.get_bone_global_rest(bone).basis.get_rotation_quaternion()).inverse() * _frame(s_dir, upright)
+		t_frame[target_bone] = (t_node * target.get_bone_global_rest(target_bone).basis.get_rotation_quaternion()).inverse() * _frame(t_dir, upright)
+	# Target feet kept at their standing angle to the ground (Tripo clips;
+	# strikes let them follow the shin instead, so a kick's foot rises with
+	# the leg).
+	var flat_feet := {}
+	if tripo:
+		for bone in target.get_bone_count():
+			var key := _bone_key(target.get_bone_name(bone))
+			if key.ends_with("foot") or key.contains("toe"):
+				flat_feet[bone] = t_node * target.get_bone_global_rest(bone).basis.get_rotation_quaternion()
 	var s_height := source.get_bone_global_rest(source_hips).origin.length()
 	var t_height := target.get_bone_global_rest(target_hips).origin.length()
 	var scale := t_height / maxf(s_height, 0.0001)
@@ -765,7 +784,8 @@ func _add_meshy_clips(library: AnimationLibrary, path: String, wanted: Dictionar
 		var out := Animation.new()
 		out.length = clip.length
 		var out_tracks := {}
-		for bone in pairs.values():
+		var flat: Dictionary = {} if _is_strike(logical) else flat_feet
+		for bone in pairs.values() + flat.keys():
 			var track := out.add_track(Animation.TYPE_ROTATION_3D)
 			out.track_set_path(track, NodePath(str(to_skeleton) + ":" + target.get_bone_name(bone)))
 			out_tracks[bone] = track
@@ -800,6 +820,9 @@ func _add_meshy_clips(library: AnimationLibrary, path: String, wanted: Dictionar
 				var source_bone = pairs.find_key(bone)
 				if source_bone != null:
 					t_world[bone] = (s_world[source_bone] as Quaternion) * (s_frame[source_bone] as Quaternion) * (t_frame[bone] as Quaternion).inverse()
+					out.rotation_track_insert_key(out_tracks[bone], at, (parent_world.inverse() * t_world[bone]).normalized())
+				elif flat.has(bone):
+					t_world[bone] = flat[bone]
 					out.rotation_track_insert_key(out_tracks[bone], at, (parent_world.inverse() * t_world[bone]).normalized())
 				else:
 					t_world[bone] = parent_world * target.get_bone_rest(bone).basis.get_rotation_quaternion()
@@ -868,14 +891,15 @@ static func _rest_direction(skeleton: Skeleton3D, node: Quaternion, bone: int, m
 	return (node * direction).normalized()
 
 ## A rotation whose Y axis runs along direction, twist fixed by the
-## character's forward (+Z), or up when the bone points forward.
-static func _frame(direction: Vector3) -> Quaternion:
-	var reference := Vector3.BACK
-	if absf(direction.dot(reference)) > 0.9:
-		reference = Vector3.UP
+## character's forward (+Z), or by up for a bone that points forward.
+static func _frame(direction: Vector3, upright := false) -> Quaternion:
+	var reference := Vector3.UP if upright else Vector3.BACK
 	var x := direction.cross(reference).normalized()
 	var z := x.cross(direction).normalized()
 	return Basis(x, direction, z).get_rotation_quaternion()
+
+static func _points_forward(direction: Vector3) -> bool:
+	return absf(direction.dot(Vector3.BACK)) > 0.9
 
 ## Plays a whole jump clip (take-off, tuck, landing) across the time the
 ## fighter will actually spend in the air.

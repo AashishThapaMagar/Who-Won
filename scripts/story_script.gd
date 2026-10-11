@@ -52,6 +52,10 @@ extends RefCounted
 ##          {"ball": {"from": [8, 0.11, 0], "to": [12.5, 1, -1], "time": 0.7}, "delay": 1.4}]
 ##       poses are animation names: idle, walk, run, jab, punch_heavy, kick,
 ##       kick_spin, block, block_hit, hit, ko, taunt, victory ("" = back to idle).
+##       Fighters with story gestures (fighter_models.gd TRIPO_MOVES; Sarvochcha
+##       so far) also have bow, hug, sob, angry, agree, laugh, swagger,
+##       warm_up and dance. In a "still" storyline, "settle" is how long the
+##       gesture plays before the picture freezes (a bow at its lowest).
 ##   "shot": {"eye": [x,y,z], "look": [x,y,z], "eye_to": ..., "look_to": ..., "time": 6}
 ##           {"follow": "player", "offset": [x, y, z]}     {"close": "s1"}
 ##
@@ -369,23 +373,27 @@ const ROUTES := {
 				"banner": {"eyebrow": "OPEN TOURNAMENT", "title": "THE ROAD TO ANANTA", "subtitle": "BEAT ANANTA  /  WIN RS 5 CRORE", "red": true},
 				"shot": "close_player"},
 			{"speaker": "sup", "image": "p05_paper", "text": "The Road to Ananta... five crore to whoever beats him?"},
-			{"speaker": "sup", "text": "Five crore. No visa. No leaving home. No leaving them.", "shot": "hero"},
+			{"speaker": "sup", "text": "Five crore. No visa. No leaving home. No leaving them.", "shot": "hero",
+					"do": [{"who": "player", "pose": "agree", "settle": 2.6, "hold": 4.1}]},
 			{"speaker": "", "text": "Ananta. A name Sarvochcha had never heard. And yet something in it felt like a voice from long ago."},
 			{"speaker": "", "image": "p06_leave", "text": "He packed his fighting clothes that same night, and took the first bus down the hill.",
 				"do": [{"who": "player", "walk": "shelter", "speed": 1.3, "delay": 0.6}],
 				"shot": {"eye": [-2.0, 2.0, 6.5], "look": [3.0, 1.2, -1.0], "eye_to": [4.0, 2.0, 6.0], "look_to": [10.0, 1.2, -1.4], "time": 7}},
-			{"speaker": "sup", "text": "Ama. I'll be back. With enough for all of us."},
+			{"speaker": "sup", "text": "Ama. I'll be back. With enough for all of us.",
+					"do": [{"who": "player", "pose": "bow", "settle": 2.9, "hold": 4.4}]},
 		],
 		"chapters": {
 			"anug": {
 				"intro": [
 					{"speaker": "anug", "text": "Sarvochcha? You came all the way down from the hills for this?"},
-					{"speaker": "sup", "text": "Same reason as you, Anug. Bills don't wait."},
+					{"speaker": "sup", "text": "Same reason as you, Anug. Bills don't wait.",
+					"do": [{"who": "player", "pose": "agree", "settle": 2.6, "hold": 4.1}]},
 					{"speaker": "anug", "text": "Then no holding back, friend."},
 				],
 				"victory": [
 					{"speaker": "anug", "text": "Go on. Win it for both of us."},
-					{"speaker": "sup", "text": "If I do, you're getting a real pitch."},
+					{"speaker": "sup", "text": "If I do, you're getting a real pitch.",
+					"do": [{"who": "player", "pose": "laugh", "settle": 1.3, "hold": 2.8}]},
 				],
 				"defeat": [
 					{"speaker": "anug", "text": "Nothing gets past me, hill boy. Try again."},
@@ -394,7 +402,8 @@ const ROUTES := {
 			"ish": {
 				"intro": [
 					{"speaker": "ish", "text": "Sarvochcha! Last time we fought, it was over the last plate of momo."},
-					{"speaker": "sup", "text": "This time it's for my family, Agasthya."},
+					{"speaker": "sup", "text": "This time it's for my family, Agasthya.",
+					"do": [{"who": "player", "pose": "angry", "settle": 0.9, "hold": 2.4}]},
 					{"speaker": "ish", "text": "Then I'll hit you twice as fast."},
 				],
 				"victory": [
@@ -436,12 +445,14 @@ const ROUTES := {
 					{"speaker": "sab", "text": "Brother."},
 					{"speaker": "sup", "text": "Mahabali... of everyone on this road, it had to be you."},
 					{"speaker": "sab", "image": "p11_fair", "text": "The Dashain fair, five years ago. Our match never finished. The storm came and they rang the bell."},
-					{"speaker": "sup", "text": "I remember. I was winning."},
+					{"speaker": "sup", "text": "I remember. I was winning.",
+					"do": [{"who": "player", "pose": "laugh", "settle": 1.3, "hold": 2.8}]},
 					{"speaker": "sab", "image": "p12_ballas", "text": "You were losing. Let's finish it."},
 				],
 				"victory": [
 					{"speaker": "sab", "text": "...Fine. You were winning."},
-					{"speaker": "sup", "text": "Let's call it a draw, brother."},
+					{"speaker": "sup", "text": "Let's call it a draw, brother.",
+					"do": [{"who": "player", "pose": "hug", "settle": 1.6, "hold": 3.1}]},
 					{"speaker": "sab", "text": "No. It's yours. Now go and bring it home."},
 				],
 				"defeat": [
@@ -453,11 +464,14 @@ const ROUTES := {
 					{"speaker": "", "text": "The last match isn't in any arena. A hilltop at dusk, far from the crowds. And Sarvochcha knows this place.",
 						"set": "ananta_ground", "cast": {"player": {"at": "edge", "face": "dummy"}, "rival": {"at": "dummy", "face": "player"}},
 						"shot": "wide"},
-					{"speaker": "sup", "text": "This is where Guruji trained me. Every morning, before school..."},
+					{"speaker": "sup", "text": "This is where Guruji trained me. Every morning, before school...",
+					"do": [{"who": "player", "pose": "bow", "settle": 2.9, "hold": 4.4}]},
 					{"speaker": "anant", "text": "And you still drop your left hand when you're tired.", "shot": "close_rival"},
-					{"speaker": "sup", "image": "p14_shock", "text": "...Guruji? No. No, you're dead. Everyone said you were dead!", "shot": "close_player"},
+					{"speaker": "sup", "image": "p14_shock", "text": "...Guruji? No. No, you're dead. Everyone said you were dead!", "shot": "close_player",
+					"do": [{"who": "player", "pose": "angry", "settle": 0.9, "hold": 2.4}]},
 					{"speaker": "anant", "text": "Ananta is only a name. Your Guruji was a man who ran away."},
-					{"speaker": "sup", "text": "Why? Why did you leave us?"},
+					{"speaker": "sup", "text": "Why? Why did you leave us?",
+					"do": [{"who": "player", "pose": "sob", "settle": 2.6, "hold": 4.1}]},
 					{"speaker": "anant", "image": "p15_challenge", "text": "Beat me. Then you will have your answer.", "shot": "two"},
 				],
 				"victory": [
@@ -474,7 +488,8 @@ const ROUTES := {
 				"cast": {"player": {"at": "log_left", "face": "log_right"}, "anant": {"fighter": "anant", "at": "log_right", "face": "player"}},
 				"shot": "wide"},
 			{"speaker": "anant", "text": "Do you remember? You hit this dummy so hard the whole village complained."},
-			{"speaker": "sup", "text": "And you made me apologise to every house. Twice."},
+			{"speaker": "sup", "text": "And you made me apologise to every house. Twice.",
+					"do": [{"who": "player", "pose": "laugh", "settle": 1.3, "hold": 2.8}]},
 			{"speaker": "", "text": "Then, quietly, Ananta told him the truth.", "shot": "two"},
 			{"speaker": "anant", "image": "p17_final", "text": "Years ago, I fought for Nepal. An international final."},
 			{"speaker": "anant", "text": "One mistake... one silly mistake. I dropped my guard to celebrate before the bell."},
@@ -484,12 +499,15 @@ const ROUTES := {
 			{"speaker": "anant", "text": "I had to know if that mistake mattered."},
 			{"speaker": "anant", "text": "So tonight I left you the same opening. The very same one I left that night."},
 			{"speaker": "anant", "text": "You saw it. You punished it. And I lost again."},
-			{"speaker": "sup", "text": "Guruji..."},
+			{"speaker": "sup", "text": "Guruji...",
+					"do": [{"who": "player", "pose": "sob", "settle": 2.6, "hold": 4.1}]},
 			{"speaker": "anant", "text": "And I am glad. Even if I had won that final, someone like you would have beaten me one day."},
 			{"speaker": "anant", "text": "Losing was never the end of me. Hiding was."},
 			{"speaker": "anant", "image": "p19_together", "text": "Tomorrow I walk down to the city. As myself."},
-			{"speaker": "sup", "text": "Then I'm walking with you."},
-			{"speaker": "sup", "image": "p20_hall", "text": "And the prize... we build a training hall. Here, in the hills. So nobody has to leave home to make a living.", "shot": "hero"},
+			{"speaker": "sup", "text": "Then I'm walking with you.",
+					"do": [{"who": "player", "pose": "hug", "settle": 1.6, "hold": 3.1}]},
+			{"speaker": "sup", "image": "p20_hall", "text": "And the prize... we build a training hall. Here, in the hills. So nobody has to leave home to make a living.", "shot": "two",
+					"do": [{"who": "player", "pose": "victory", "settle": 1.8, "hold": 3.3}]},
 			{"speaker": "", "text": "THE END.", "shot": "wide"},
 		],
 	},
