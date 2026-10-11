@@ -15,6 +15,12 @@ extends SceneTree
 
 const LOOK := preload("res://scripts/storybook_look.gd")
 const PLATE_SHADER := preload("res://shaders/storybook_plate.gdshader")
+const MITHILA_SHADER := preload("res://shaders/storybook_mithila.gdshader")
+## The finish: "watercolour", "mithila" (the whole picture repainted in
+## Mithila colours and patterns) or "mithila_frame" (the watercolour inside
+## a Mithila border on lokta paper) (PLATE_STYLE in the environment
+## overrides it for a run; PLATE_OUT bakes into another folder instead).
+const STYLE := "mithila_frame"
 const SIZE := Vector2i(1600, 1200)
 
 const DAWN := Color(1.0, 0.86, 0.66)
@@ -31,10 +37,9 @@ const DUSK := Color(1.0, 0.78, 0.72)
 const PLATES := [
 	{"key": "prologue_01", "fighter": "sup", "phase": "prologue", "line": 0,
 		# Dawn on the ridge: he steps out by his house and stretches up toward
-		# the sun rising over the Himalaya, seen from behind his shoulder.
+		# the morning light over the Himalaya, seen from behind his shoulder.
 		"eye": [1.3, 1.25, 3.0], "look": [-2.4, 2.1, -9.0], "fov": 44,
 		"sun": [-8, 180, Color("ffb066"), 1.5], "ambient": [Color("9aa8c8"), 0.6], "mood": DAWN,
-		"sun_disc": [-2.6, 4.2, -30.0, 2.2],
 		"place": {"player": [-0.2, 0.6, -0.15, -1.0]},
 		"poses": {"player": ["victory", 2.0]}},
 	{"key": "prologue_06", "fighter": "sup", "phase": "prologue", "line": 5,
@@ -46,10 +51,9 @@ const PLATES := [
 		"poses": {"player": ["hug", 1.3]}},
 	{"key": "anant_intro_03", "fighter": "sup", "phase": "anant_intro", "line": 2,
 		# Guruji revealed: over Sarvochcha's shoulder, the old man standing by
-		# his dummy with the sunset blazing behind him.
+		# his dummy in the last red light of the day.
 		"eye": [0.05, 1.62, 2.75], "look": [-2.0, 1.45, -1.4], "fov": 30,
-		"sun": [-5, 180, Color("ff9558"), 1.35], "ambient": [Color("8a7fa6"), 0.6], "mood": DUSK,
-		"sun_disc": [-5.2, 3.0, -16.0, 1.5]},
+		"sun": [-5, 180, Color("ff9558"), 1.35], "ambient": [Color("8a7fa6"), 0.6], "mood": DUSK},
 ]
 
 const S_OUT := "res://assets/story/%s/plates/"
@@ -109,15 +113,24 @@ func _bake(plate: Dictionary) -> void:
 	await create_timer(0.5).timeout
 	d.set_process(false)
 	var viewport: SubViewport = d.viewport
+	var style: String = OS.get_environment("PLATE_STYLE") if OS.has_environment("PLATE_STYLE") else plate.get("style", STYLE)
 	_compose(d, plate)
 	viewport.size = SIZE
-	LOOK.apply(viewport)
+	LOOK.apply(viewport, "mithila" if style == "mithila" else "wash")
+	if style == "mithila":
+		# Mithila paintings sit on bare paper: no sky, fog or film curve.
+		for world: WorldEnvironment in viewport.find_children("*", "WorldEnvironment", true, false):
+			var env := world.environment
+			env.background_mode = Environment.BG_COLOR
+			env.background_color = Color(0.93, 0.86, 0.72)
+			env.fog_enabled = false
+			env.tonemap_mode = Environment.TONE_MAPPER_LINEAR
 	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	for i in 4:
 		await RenderingServer.frame_post_draw
 	var render := viewport.get_texture().get_image()
-	var finished := await _finish(render, plate)
-	var folder: String = S_OUT % plate.fighter
+	var finished := await _finish(render, plate, style)
+	var folder: String = OS.get_environment("PLATE_OUT") if OS.has_environment("PLATE_OUT") else S_OUT % plate.fighter
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(folder))
 	finished.save_png(folder + plate.key + ".png")
 	print("PLATE ", plate.key)
@@ -165,7 +178,7 @@ func _compose(d: Node, plate: Dictionary) -> void:
 		glow.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		glow.albedo_color = Color("ffc074")
 		disc.material_override = glow
-		disc.set_meta("storybook", true)
+		disc.set_meta("storybook", "keep")
 		disc.position = Vector3(spec[0], spec[1], spec[2])
 		d.viewport.add_child(disc)
 	for key in plate.get("place", {}):
@@ -238,7 +251,7 @@ func _print_newspaper(paper: MeshInstance3D) -> void:
 	paper.add_child(road)
 
 ## The watercolour finish, rendered through a canvas of its own.
-func _finish(render: Image, plate: Dictionary) -> Image:
+func _finish(render: Image, plate: Dictionary, style: String) -> Image:
 	var canvas := SubViewport.new()
 	canvas.size = SIZE
 	canvas.transparent_bg = false
@@ -248,7 +261,7 @@ func _finish(render: Image, plate: Dictionary) -> Image:
 	rect.texture = ImageTexture.create_from_image(render)
 	rect.size = Vector2(SIZE)
 	var material := ShaderMaterial.new()
-	material.shader = PLATE_SHADER
+	material.shader = MITHILA_SHADER if style == "mithila" else PLATE_SHADER
 	material.set_shader_parameter("mood", plate.get("mood", MORNING))
 	material.set_shader_parameter("seed", float(hash(plate.key) % 1000) / 100.0)
 	rect.material = material
@@ -257,4 +270,23 @@ func _finish(render: Image, plate: Dictionary) -> Image:
 		await RenderingServer.frame_post_draw
 	var image := canvas.get_texture().get_image()
 	canvas.queue_free()
+	if style == "mithila_frame":
+		# Second pass: the Mithila border around the finished watercolour.
+		var frame := SubViewport.new()
+		frame.size = SIZE
+		frame.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+		root.add_child(frame)
+		var framed := TextureRect.new()
+		framed.texture = ImageTexture.create_from_image(image)
+		framed.size = Vector2(SIZE)
+		var border := ShaderMaterial.new()
+		border.shader = MITHILA_SHADER
+		border.set_shader_parameter("frame_only", true)
+		border.set_shader_parameter("seed", float(hash(plate.key) % 1000) / 100.0)
+		framed.material = border
+		frame.add_child(framed)
+		for i in 3:
+			await RenderingServer.frame_post_draw
+		image = frame.get_texture().get_image()
+		frame.queue_free()
 	return image
