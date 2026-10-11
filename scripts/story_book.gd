@@ -90,6 +90,9 @@ var picture: TextureRect
 ## The previous drawing, fading out under the new one.
 var picture_back: TextureRect
 var _drawing := false
+## A baked plate is on the page: lines without their own keep it (the
+## letter stays up while its words are read) until the chapter changes.
+var _plate_shown := false
 var caption: Label
 var heading_np: Label
 var heading_en: Label
@@ -126,7 +129,7 @@ func draw_picture(viewport: SubViewport, plate := "") -> void:
 	if baked != null:
 		_lay(baked, true)
 		return
-	if _drawing:
+	if _drawing or _plate_shown:
 		return
 	_drawing = true
 	var plate_size := Vector2i(PICTURE.size * 2.0)
@@ -148,6 +151,7 @@ func draw_picture(viewport: SubViewport, plate := "") -> void:
 
 ## Fades a new picture in over the last one.
 func _lay(drawing: Texture2D, finished: bool) -> void:
+	_plate_shown = finished
 	if drawing == picture.texture:
 		return
 	picture_back.texture = picture.texture
@@ -314,6 +318,7 @@ func chapter(eyebrow: String, title: String, subtitle: String, accent: Color) ->
 	heading_np.text = _in_nepali(eyebrow)
 	heading_en.text = "  ".join((eyebrow + "  ·  " + title).split(" "))
 	caption.text = subtitle.capitalize() if subtitle != "" else title.capitalize()
+	_plate_shown = false
 	_turn_page()
 
 ## A new line written on the right page: speech as a quotation signed by

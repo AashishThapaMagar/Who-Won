@@ -34,26 +34,118 @@ const DUSK := Color(1.0, 0.78, 0.72)
 ## [x, y, z, radius] paints the sun into the sky, "place" moves actors for
 ## the picture ({actor: [x, z, face_x, face_z]}), and "poses" sets actors
 ## to a gesture held at a moment: {actor: [clip, seconds into it]}.
+## "chapter" is the tournament round (so the arena matches the game's),
+## "stage" stages the picture in another set, "hide" leaves actors out,
+## "letter" lays the sealed letter prop, and "page": "letter" draws the
+## letter itself instead of a scene.
+const COLD := Color(0.84, 0.88, 1.0)
+
+## Sarvochcha's story: "THE MISSING MASTER".
 const PLATES := [
+	# ── Act I: the missing master ──
 	{"key": "prologue_01", "fighter": "sup", "phase": "prologue", "line": 0,
-		# Dawn on the ridge: he steps out by his house and stretches up toward
-		# the morning light over the Himalaya, seen from behind his shoulder.
+		# Years ago: the boy kicks, the master guards, on the hilltop at morning.
+		"eye": [-3.2, 1.1, 3.2], "look": [-0.8, 1.2, 0.0], "fov": 40,
+		"sun": [-18, -37, Color("ffd9a0"), 1.4], "ambient": [Color("b8a8c0"), 0.6], "mood": MORNING,
+		"place": {"player": [0.0, 0.6, -1.6, -1.2], "anant": [-1.6, -0.6, 1.6, 1.2]},
+		"poses": {"player": ["kick", 1.0], "anant": ["block", 0.3]}},
+	{"key": "prologue_02", "fighter": "sup", "phase": "prologue", "line": 1,
+		# The master gone: the student alone by the empty dummy at dusk.
+		"eye": [-3.6, 1.4, 2.6], "look": [-1.0, 1.0, -1.6], "fov": 46,
+		"sun": [-6, 210, Color("ff9558"), 1.3], "ambient": [Color("8a7fa6"), 0.6], "mood": DUSK,
+		"hide": ["anant"], "place": {"player": [-0.6, 0.4, -2.0, -2.8]},
+		"poses": {"player": ["sob", 2.6]}},
+	{"key": "prologue_03", "fighter": "sup", "phase": "prologue", "line": 2,
+		# Years later: a man at his village door, looking out at the mountains.
 		"eye": [1.3, 1.25, 3.0], "look": [-2.4, 2.1, -9.0], "fov": 44,
 		"sun": [-8, 180, Color("ffb066"), 1.5], "ambient": [Color("9aa8c8"), 0.6], "mood": DAWN,
 		"place": {"player": [-0.2, 0.6, -0.15, -1.0]},
-		"poses": {"player": ["victory", 2.0]}},
-	{"key": "prologue_06", "fighter": "sup", "phase": "prologue", "line": 5,
-		# The wind brings the newspaper: it tumbles in big in the foreground,
-		# he turns toward it on the road, prayer flags behind.
-		"eye": [-3.2, 1.35, 2.6], "look": [0.2, 1.45, 0.4], "fov": 36,
+		"poses": {"player": ["bow", 0.2]}},
+	{"key": "prologue_05", "fighter": "sup", "phase": "prologue", "line": 4,
+		# Making ready to leave: walking the road toward the bus shelter.
+		"eye": [-1.6, 1.25, 2.8], "look": [5.5, 1.2, -0.6], "fov": 40,
 		"sun": [-30, -40, Color("fff0d8"), 1.25], "ambient": [Color("b7c6d8"), 0.6], "mood": MORNING,
-		"paper": {"at": [0.05, 1.6, 1.45], "turn": [35, 25, -30]},
-		"poses": {"player": ["hug", 1.3]}},
-	{"key": "anant_intro_03", "fighter": "sup", "phase": "anant_intro", "line": 2,
-		# Guruji revealed: over Sarvochcha's shoulder, the old man standing by
-		# his dummy in the last red light of the day.
-		"eye": [0.05, 1.62, 2.75], "look": [-2.0, 1.45, -1.4], "fov": 30,
-		"sun": [-5, 180, Color("ff9558"), 1.35], "ambient": [Color("8a7fa6"), 0.6], "mood": DUSK},
+		"place": {"player": [2.0, 0.4, 1.0, -0.2]},
+		"poses": {"player": ["walk", 0.5]}},
+	{"key": "prologue_06", "fighter": "sup", "phase": "prologue", "line": 5,
+		# A letter on the doorstep, seen from the ground; he looks down at it.
+		"eye": [-3.8, 0.55, -2.0], "look": [-4.9, 0.35, -4.4], "fov": 52,
+		"sun": [-25, -30, Color("fff0d8"), 1.25], "ambient": [Color("b7c6d8"), 0.6], "mood": MORNING,
+		"place": {"player": [-5.0, -4.6, 0.3, 1.0]},
+		"poses": {"player": ["bow", 2.4]},
+		"letter": {"at": [-4.45, 0.03, -3.3], "turn": [0, 25, 0]}},
+	{"key": "prologue_07", "fighter": "sup", "page": "letter"},
+	{"key": "prologue_11", "fighter": "sup", "phase": "prologue", "line": 10,
+		# He accepts: on the road, the Himalaya behind him, nodding to himself.
+		"eye": [-2.4, 1.0, 2.2], "look": [0.0, 1.45, 0.3], "fov": 38,
+		"sun": [-20, -60, Color("fff0d8"), 1.3], "ambient": [Color("b7c6d8"), 0.6], "mood": MORNING,
+		"place": {"player": [0.0, 0.4, -1.0, 0.0]},
+		"poses": {"player": ["agree", 2.6]}},
+	{"key": "prologue_12", "fighter": "sup", "phase": "prologue", "line": 11,
+		# Bowing to his home and his mother before he goes.
+		"eye": [0.2, 1.3, 0.4], "look": [-4.8, 1.2, -5.4], "fov": 42,
+		"sun": [-10, 30, Color("ffb066"), 1.4], "ambient": [Color("9aa8c8"), 0.6], "mood": DAWN,
+		"place": {"player": [-3.6, -2.0, -2.4, -6.0]},
+		"poses": {"player": ["bow", 2.9]}},
+	# ── Act II: the fight between friends ──
+	{"key": "sab_intro_01", "fighter": "sup", "phase": "sab_intro", "line": 0, "chapter": 4,
+		# Two friends face each other across the arena.
+		"eye": [0.0, 0.9, 4.4], "look": [0.0, 1.25, 0.0], "fov": 44, "mood": MORNING},
+	{"key": "sab_intro_03", "fighter": "sup", "phase": "sab_intro", "line": 2, "chapter": 4,
+		# Over Mahabali's shoulder: "do you think our master is still alive?"
+		"eye": [2.3, 1.65, 1.2], "look": [-1.15, 1.5, 0.0], "fov": 30, "mood": MORNING,
+		"poses": {"player": ["agree", 2.6]}},
+	{"key": "sab_intro_06", "fighter": "sup", "phase": "sab_intro", "line": 5, "chapter": 4,
+		# Neither can afford to lose: low between their raised guards.
+		"eye": [0.0, 0.8, 2.7], "look": [0.0, 1.45, 0.0], "fov": 48, "mood": MORNING},
+	{"key": "sab_victory_01", "fighter": "sup", "phase": "sab_victory", "line": 0, "chapter": 4,
+		# Mahabali struggles to rise; Sarvochcha stands over him.
+		"eye": [2.6, 0.6, 1.8], "look": [0.0, 0.8, 0.0], "fov": 40, "mood": MORNING,
+		"poses": {"rival": ["injured", 0.5], "player": ["bow", 0.2]}},
+	{"key": "sab_victory_03", "fighter": "sup", "phase": "sab_victory", "line": 2, "chapter": 4,
+		# He walks on; his friend lies behind him.
+		"eye": [2.8, 0.9, 1.6], "look": [-2.4, 1.0, -0.9], "fov": 40, "mood": MORNING,
+		"place": {"player": [-2.6, -0.9, -1.0, -0.4]},
+		"poses": {"rival": ["ko", 1.6], "player": ["walk", 0.5]}},
+	# ── Act III: the final revelation ──
+	{"key": "anant_intro_01", "fighter": "sup", "phase": "anant_intro", "line": 0, "chapter": 5,
+		# The final opponent walks in; Sarvochcha's back in the foreground.
+		"eye": [-2.8, 1.5, 1.3], "look": [1.8, 1.4, -0.5], "fov": 34, "mood": DUSK,
+		"place": {"rival": [2.6, -0.6, -1.0, 0.2]},
+		"poses": {"rival": ["walk", 0.4]}},
+	{"key": "anant_intro_03", "fighter": "sup", "phase": "anant_intro", "line": 2, "chapter": 5,
+		# "MASTER?!"
+		"eye": [0.35, 1.6, 0.95], "look": [-1.15, 1.58, 0.0], "fov": 30, "mood": DUSK,
+		"poses": {"player": ["angry", 0.9]}},
+	{"key": "anant_intro_04", "fighter": "sup", "phase": "anant_intro", "line": 3, "chapter": 5,
+		# Ananta says nothing and raises his guard: low, looking up at him.
+		"eye": [-0.1, 0.85, 1.15], "look": [1.15, 1.62, 0.0], "fov": 34, "mood": DUSK},
+	{"key": "finale_01", "fighter": "sup", "phase": "finale", "line": 0,
+		# The master sits defeated; his student stands over him.
+		"eye": [-2.2, 1.4, 2.4], "look": [0.6, 0.7, 0.0], "fov": 40, "mood": DUSK,
+		"place": {"player": [-0.6, 0.2, 1.0, 0.0], "anant": [0.9, -0.1, -1.0, 0.0]},
+		"poses": {"anant": ["getup", 1.2], "player": ["bow", 0.2]}},
+	{"key": "finale_03", "fighter": "sup", "phase": "finale", "line": 2,
+		# Memory: the master beaten in an international final, alone on the canvas.
+		"eye": [2.2, 2.6, 2.6], "look": [0.0, 0.3, 0.0], "fov": 40, "mood": COLD,
+		"hide": ["player"], "place": {"anant": [0.0, 0.0, 1.0, 0.3]},
+		"poses": {"anant": ["ko", 2.5]}},
+	{"key": "finale_05", "fighter": "sup", "phase": "finale", "line": 4, "stage": "ananta_ground",
+		# Memory: hiding in a remote village, sitting alone on a hilltop.
+		"eye": [3.4, 1.2, 3.4], "look": [-0.7, 1.0, -2.0], "fov": 42,
+		"sun": [-6, 210, Color("ff9558"), 1.3], "ambient": [Color("8a7fa6"), 0.6], "mood": DUSK,
+		"hide": ["player", "rival"], "place": {"anant": [1.4, -0.9, -1.0, -0.6]},
+		"poses": {"anant": ["getup", 1.2]}},
+	{"key": "finale_10", "fighter": "sup", "phase": "finale", "line": 9,
+		# "Everything you taught me has stayed with me": the student bows.
+		"eye": [0.1, 1.3, 2.6], "look": [0.0, 1.1, 0.0], "fov": 40, "mood": DUSK,
+		"place": {"player": [-0.7, 0.2, 1.0, 0.0], "anant": [0.8, 0.0, -1.0, 0.0]},
+		"poses": {"player": ["bow", 2.9], "anant": ["taunt", 1.0]}},
+	{"key": "finale_15", "fighter": "sup", "phase": "finale", "line": 14,
+		# Teacher and disciple, side by side, looking out together.
+		"eye": [0.0, 1.15, 3.6], "look": [0.0, 1.7, -8.0], "fov": 44, "mood": DUSK,
+		"place": {"player": [-0.45, 0.4, 0.0, -1.0], "anant": [0.45, 0.4, 0.0, -1.0]},
+		"poses": {"player": ["bow", 0.2], "anant": ["taunt", 1.0]}},
 ]
 
 const S_OUT := "res://assets/story/%s/plates/"
@@ -79,6 +171,15 @@ func _bake(plate: Dictionary) -> void:
 			index = i
 	setup.story = true
 	setup.selected_fighters.assign([index, 0])
+	if plate.get("page", "") == "letter":
+		var page := await _letter_page()
+		var drawn := await _finish(page, plate, "frame_only")
+		var out: String = OS.get_environment("PLATE_OUT") if OS.has_environment("PLATE_OUT") else S_OUT % plate.fighter
+		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(out))
+		drawn.save_png(out + plate.key + ".png")
+		print("PLATE ", plate.key)
+		return
+	setup.arcade_index = int(plate.get("chapter", 0))
 	director.start_run()
 	var phase: String = plate.phase
 	if phase.ends_with("_intro"):
@@ -113,6 +214,10 @@ func _bake(plate: Dictionary) -> void:
 	await create_timer(0.5).timeout
 	d.set_process(false)
 	var viewport: SubViewport = d.viewport
+	if plate.has("stage"):
+		d._use_set(plate.stage, 0)
+		await process_frame
+		await process_frame
 	var style: String = OS.get_environment("PLATE_STYLE") if OS.has_environment("PLATE_STYLE") else plate.get("style", STYLE)
 	_compose(d, plate)
 	viewport.size = SIZE
@@ -181,6 +286,11 @@ func _compose(d: Node, plate: Dictionary) -> void:
 		disc.set_meta("storybook", "keep")
 		disc.position = Vector3(spec[0], spec[1], spec[2])
 		d.viewport.add_child(disc)
+	for key in plate.get("hide", []):
+		if d.actors.has(key):
+			d.actors[key].rig.visible = false
+	if plate.has("letter"):
+		_lay_letter(d, plate.letter)
 	for key in plate.get("place", {}):
 		if d.actors.has(key):
 			var spot: Array = plate.place[key]
@@ -206,6 +316,91 @@ func _compose(d: Node, plate: Dictionary) -> void:
 			visual._process(minf(left, 0.1))
 			left -= 0.1
 		animated.player.pause()
+
+## The sealed letter on the doorstep: a cream envelope with a red seal.
+func _lay_letter(d: Node, spec: Dictionary) -> void:
+	var page := Image.create(260, 180, false, Image.FORMAT_RGB8)
+	page.fill(Color("efe6cf"))
+	var ink := Color("7a5a3a")
+	for i in 3:
+		page.fill_rect(Rect2i(8 + i, 8 + i, 244 - i * 2, 1), ink)
+		page.fill_rect(Rect2i(8 + i, 171 - i, 244 - i * 2, 1), ink)
+		page.fill_rect(Rect2i(8 + i, 8 + i, 1, 164 - i * 2), ink)
+		page.fill_rect(Rect2i(251 - i, 8 + i, 1, 164 - i * 2), ink)
+	for y in 180:
+		for x in 260:
+			if Vector2(x - 130, y - 90).length() < 26.0:
+				page.set_pixel(x, y, Color("a3271c"))
+	var sheet := StandardMaterial3D.new()
+	sheet.albedo_texture = ImageTexture.create_from_image(page)
+	var letter := MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = Vector3(0.26, 0.006, 0.18)
+	letter.mesh = box
+	letter.material_override = sheet
+	var at: Array = spec.at
+	var turn: Array = spec.turn
+	letter.position = Vector3(at[0], at[1], at[2])
+	letter.rotation_degrees = Vector3(turn[0], turn[1], turn[2])
+	d.viewport.add_child(letter)
+
+## The letter itself, drawn flat: the word ANANTA at the top, the
+## invitation, and the six names, on lokta paper with a red seal.
+func _letter_page() -> Image:
+	const UI := preload("res://scripts/ui_kit.gd")
+	var canvas := SubViewport.new()
+	canvas.size = SIZE
+	canvas.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	root.add_child(canvas)
+	var desk := ColorRect.new()
+	desk.color = Color("e9dcbc")
+	desk.size = Vector2(SIZE)
+	canvas.add_child(desk)
+	var sheet := ColorRect.new()
+	sheet.color = Color("f3ead2")
+	sheet.position = Vector2(300, 150)
+	sheet.size = Vector2(1000, 900)
+	sheet.rotation_degrees = -2.0
+	canvas.add_child(sheet)
+	var book_font: Font = load("res://assets/fonts/TiroDevanagariHindi-Regular.ttf")
+	var italic: Font = load("res://assets/fonts/TiroDevanagariHindi-Italic.ttf")
+	var lines := [
+		["अनन्त", UI.devanagari_font(), 120, Color("a3271c"), 40],
+		["A N A N T A", UI.strong_font(), 34, Color("2e2118"), 190],
+		["You are summoned to a tournament of masters.", book_font, 36, Color("2e2118"), 290],
+		["The strongest shall claim a reward of NPR 5 crore.", book_font, 36, Color("2e2118"), 345],
+		["But money is not the only prize.", italic, 36, Color("5a4636"), 400],
+		["The final victor shall discover", italic, 40, Color("2e2118"), 470],
+		["the whereabouts of the missing Master.", italic, 40, Color("2e2118"), 520],
+		["AGASTHYA   ·   MAHABALI   ·   KRI", UI.strong_font(), 34, Color("5a4636"), 640],
+		["VAJRAVEER   ·   ANUG   ·   SARVOCHCHA", UI.strong_font(), 34, Color("5a4636"), 695],
+	]
+	for spec in lines:
+		var label := Label.new()
+		label.text = spec[0]
+		label.add_theme_font_override("font", spec[1])
+		label.add_theme_font_size_override("font_size", spec[2])
+		label.add_theme_color_override("font_color", spec[3])
+		label.position = Vector2(0, spec[4])
+		label.size = Vector2(1000, spec[2] + 30)
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		sheet.add_child(label)
+	var rule := ColorRect.new()
+	rule.color = Color("b07a2a")
+	rule.position = Vector2(300, 600)
+	rule.size = Vector2(400, 3)
+	sheet.add_child(rule)
+	var seal := Label.new()
+	seal.text = "●"
+	seal.add_theme_font_size_override("font_size", 150)
+	seal.add_theme_color_override("font_color", Color("a3271c"))
+	seal.position = Vector2(780, 700)
+	sheet.add_child(seal)
+	for i in 3:
+		await RenderingServer.frame_post_draw
+	var image := canvas.get_texture().get_image()
+	canvas.queue_free()
+	return image
 
 ## The newspaper as a printed sheet: a headline in Devanagari and English
 ## over columns of type, so it reads as a newspaper and not a blank board.
@@ -252,6 +447,8 @@ func _print_newspaper(paper: MeshInstance3D) -> void:
 
 ## The watercolour finish, rendered through a canvas of its own.
 func _finish(render: Image, plate: Dictionary, style: String) -> Image:
+	if style == "frame_only":
+		return await _frame(render, plate)
 	var canvas := SubViewport.new()
 	canvas.size = SIZE
 	canvas.transparent_bg = false
@@ -271,22 +468,26 @@ func _finish(render: Image, plate: Dictionary, style: String) -> Image:
 	var image := canvas.get_texture().get_image()
 	canvas.queue_free()
 	if style == "mithila_frame":
-		# Second pass: the Mithila border around the finished watercolour.
-		var frame := SubViewport.new()
-		frame.size = SIZE
-		frame.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-		root.add_child(frame)
-		var framed := TextureRect.new()
-		framed.texture = ImageTexture.create_from_image(image)
-		framed.size = Vector2(SIZE)
-		var border := ShaderMaterial.new()
-		border.shader = MITHILA_SHADER
-		border.set_shader_parameter("frame_only", true)
-		border.set_shader_parameter("seed", float(hash(plate.key) % 1000) / 100.0)
-		framed.material = border
-		frame.add_child(framed)
-		for i in 3:
-			await RenderingServer.frame_post_draw
-		image = frame.get_texture().get_image()
-		frame.queue_free()
+		image = await _frame(image, plate)
+	return image
+
+## The Mithila border on lokta paper around a finished picture.
+func _frame(image: Image, plate: Dictionary) -> Image:
+	var frame := SubViewport.new()
+	frame.size = SIZE
+	frame.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	root.add_child(frame)
+	var framed := TextureRect.new()
+	framed.texture = ImageTexture.create_from_image(image)
+	framed.size = Vector2(SIZE)
+	var border := ShaderMaterial.new()
+	border.shader = MITHILA_SHADER
+	border.set_shader_parameter("frame_only", true)
+	border.set_shader_parameter("seed", float(hash(plate.key) % 1000) / 100.0)
+	framed.material = border
+	frame.add_child(framed)
+	for i in 3:
+		await RenderingServer.frame_post_draw
+	image = frame.get_texture().get_image()
+	frame.queue_free()
 	return image
