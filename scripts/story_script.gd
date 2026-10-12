@@ -189,7 +189,8 @@ const FINALE := [
 
 ## ── Fighter storylines ─────────────────────────────────────────────────
 const ROUTES := {
-	# Anug: a goalkeeper in a country with no football to pay him.
+	# Anug: a goalkeeper in a country with no football to pay him, and one of
+	# the six students of the master who vanished (see Sarvochcha's story).
 	"anug": {
 		"title": "NO PITCH, NO PAY",
 		"subtitle": "THE STORY OF ANUG",
@@ -212,7 +213,7 @@ const ROUTES := {
 				"set": "street", "cast": {"player": {"at": "far", "face": [1, 0]}},
 				"do": [{"who": "player", "walk": [-2.4, 0.4], "speed": 1.0, "delay": 0.4}],
 				"shot": {"eye": [-4.8, 1.5, 4.6], "look": [-6.2, 1.2, 0.0], "eye_to": [-2.6, 1.5, 4.0], "look_to": [-2.2, 1.2, -0.6], "time": 6}},
-			{"speaker": "anug", "text": "Football is all I know. Football... and how to fight."},
+			{"speaker": "anug", "text": "Football is all I know. Football... and how to fight. Guruji taught me that much, before he disappeared."},
 			# The rented hall.
 			{"speaker": "", "text": "So he teaches MMA in a rented hall. Three students a week. Just enough to survive.",
 				"set": "gym", "cast": {
@@ -227,16 +228,16 @@ const ROUTES := {
 				"shot": "wide"},
 			{"speaker": "anug", "text": "Hands up. Chin down. Again.",
 				"shot": {"eye": [-1.2, 1.35, 2.7], "look": [0, 1.4, -1.2], "eye_to": [-0.7, 1.4, 2.2], "look_to": [0, 1.45, -1.2], "time": 5}},
-			# Walking home: the poster.
-			{"speaker": "", "text": "Then one night, walking home...",
+			# Walking home: the letter, the same one Sarvochcha finds.
+			{"speaker": "", "text": "Then one night, walking home, a stranger presses a sealed letter into his hand and is gone.",
 				"set": "street", "cast": {"player": {"at": [-5.0, 0.3], "face": [1, 0]}},
 				"do": [{"who": "player", "walk": [1.3, -1.6], "speed": 1.1, "then_face": [0, -1]}],
 				"shot": {"follow": "player", "offset": [1.9, 0.05, 2.4]}},
-			{"speaker": "", "text": "...a poster on a temple wall.",
-				"banner": {"eyebrow": "OPEN TOURNAMENT", "title": "THE ROAD TO ANANTA", "subtitle": "BEAT ANANTA  /  WIN RS 5 CRORE", "red": true},
+			{"speaker": "", "text": "At the top of it, a single word.",
+				"banner": {"eyebrow": "AN INVITATION", "title": "ANANTA", "subtitle": "A TOURNAMENT OF MASTERS", "red": true},
 				"cast": {"player": {"at": [1.3, -1.6], "face": [0, -1]}},
 				"shot": {"eye": [-0.8, 1.9, 1.6], "look": [0.4, 1.85, -3.3], "eye_to": [-0.1, 1.87, 0.4], "look_to": [0.4, 1.85, -3.3], "time": 5}},
-			{"speaker": "anug", "text": "Five crore...",
+			{"speaker": "anug", "text": "Five crore... and the whereabouts of the missing Master? Guruji... is this about you?",
 				"shot": {"eye": [2.1, 1.75, -0.3], "look": [0.5, 1.8, -3.3], "eye_to": [1.9, 1.78, -0.6], "look_to": [0.45, 1.82, -3.3], "time": 5}},
 			{"speaker": "anug", "text": "That's not a prize. That's a pitch. A team. A future for every kid like me.",
 				"do": [{"who": "player", "face": [0.4, 1]}], "shot": "hero"},
@@ -297,11 +298,11 @@ const ROUTES := {
 			},
 			"anant": {
 				"intro": [
-					{"speaker": "", "text": "Night at the stupa. Five crore rests on one fight.", "shot": "wide"},
-					{"speaker": "anant", "text": "A footballer. You're a long way from your pitch."},
-					{"speaker": "anug", "text": "I never had one. That's what I'm fighting for."},
-					{"speaker": "anant", "text": "Everyone who reached me was fighting for something."},
-					{"speaker": "anug", "text": "Then you've never faced a keeper."},
+					{"speaker": "", "text": "The final opponent steps out of the dark, and Anug knows that walk.", "shot": "wide"},
+					{"speaker": "anug", "text": "...Guruji?"},
+					{"speaker": "anant", "text": "Hands up. Chin down. You still remember."},
+					{"speaker": "anug", "text": "I teach it every week. Three students. Just like you taught six of us."},
+					{"speaker": "anant", "text": "Then show me what the keeper learned."},
 				],
 				"victory": [
 					{"speaker": "anant", "text": "...Nothing gets past you. The final word is yours."},
@@ -312,8 +313,9 @@ const ROUTES := {
 			},
 		},
 		"finale": [
-			{"speaker": "", "text": "Five crore. The Road to Ananta has its champion, and he wears goalkeeper gloves.", "shot": "hero"},
-			{"speaker": "anug", "text": "No kid here should have to choose between football and food."},
+			{"speaker": "", "text": "Afterwards, the master told him everything: the international final he lost, the shame, the years in hiding, the five crore he could never spend.", "shot": "hero"},
+			{"speaker": "anant", "text": "I wanted it to go to one of you. To the one who would use it best."},
+			{"speaker": "anug", "text": "Then it's going to every kid who only has one dream. No kid here should have to choose between football and food."},
 			# Months later: the academy.
 			{"speaker": "", "text": "Months later, at the edge of the city, floodlights switch on over a brand new pitch.",
 				"set": "academy",
@@ -334,6 +336,358 @@ const ROUTES := {
 					{"who": "player", "pose": "block_hit", "delay": 2.5, "hold": 2.2}],
 				"shot": {"eye": [6.2, 1.2, 2.8], "look": [9.8, 0.9, -0.9], "eye_to": [7.0, 1.3, 2.3], "look_to": [11.8, 1.2, -1.0], "time": 5}},
 			{"speaker": "anug", "text": "Saved! Good shot, though. Again. Harder this time."},
+			{"speaker": "", "text": "THE END.", "shot": "wide"},
+		],
+	},
+	# Agasthya: the fastest hands in the valley, who can't stop seeing the
+	# people around him who are too poor to chase their dreams. He fights so
+	# that their lives can change.
+	"ish": {
+		"title": "THE FASTEST HANDS",
+		"subtitle": "THE STORY OF AGASTHYA",
+		"finale_title": "A BETTER CHANGE",
+		"cinematic": true,
+		"still": true,
+		"ladder": ["bib", "abhi", "anug", "sab", "sup", "anant"],
+		"prologue": [
+			{"speaker": "", "text": "Every evening, Agasthya drinks his tea at the same roadside stall in the city.",
+				"set": "street", "cast": {"player": {"at": "lamp", "face": [1, 0]}}, "shot": "wide"},
+			{"speaker": "", "text": "The boy who washes the glasses wants to be a doctor. The tea-maker's daughter paints on old newspapers."},
+			{"speaker": "", "text": "The porter on the next bench once ran for his district. Now he carries gas cylinders up four floors."},
+			{"speaker": "ish", "text": "Every one of them has a dream. And not one of them can afford it."},
+			{"speaker": "ish", "text": "Guruji used to say a fist is only as good as what it protects. I never knew what mine was for."},
+			{"speaker": "", "text": "Then the letter came. The same one, sealed, to all six of the master's old students.",
+				"banner": {"eyebrow": "AN INVITATION", "title": "ANANTA", "subtitle": "A TOURNAMENT OF MASTERS", "red": true}},
+			{"speaker": "", "text": "\"The strongest shall claim a reward of NPR 5 crore. The final victor shall discover the whereabouts of the missing Master.\""},
+			{"speaker": "ish", "text": "Five crore. A doctor. A painter. A runner. That's what my hands are for."},
+		],
+		"chapters": {
+			"bib": {
+				"intro": [
+					{"speaker": "bib", "text": "Agasthya... you were always the brave one. I'm only here to stop being scared."},
+					{"speaker": "ish", "text": "Then don't be scared of me. Fight me like you mean it."},
+				],
+				"victory": [
+					{"speaker": "bib", "text": "I didn't run. That's... a first."},
+					{"speaker": "ish", "text": "Keep that. It's worth more than winning."},
+				],
+				"defeat": [{"speaker": "bib", "text": "Sorry... I think I just got brave."}],
+			},
+			"abhi": {
+				"intro": [
+					{"speaker": "abhi", "text": "The Flash Hammer! Fighting for strangers now? Very noble. Very loud of you."},
+					{"speaker": "ish", "text": "They're not strangers, Kri. They're my neighbours."},
+				],
+				"victory": [{"speaker": "abhi", "text": "Fine. Buy your neighbours a good dinner on me."}],
+				"defeat": [{"speaker": "abhi", "text": "Noble AND slow? Again!"}],
+			},
+			"anug": {
+				"intro": [
+					{"speaker": "anug", "text": "You want the money for other people too, don't you? I can see it."},
+					{"speaker": "ish", "text": "Every kid with a dream and no money. Same as yours, keeper."},
+					{"speaker": "anug", "text": "Then only one of us can carry it. Come on."},
+				],
+				"victory": [{"speaker": "anug", "text": "Carry it for both of us, then."}],
+				"defeat": [{"speaker": "anug", "text": "Saved. Your heart's right. Your guard's not."}],
+			},
+			"sab": {
+				"intro": [
+					{"speaker": "sab", "text": "Ah, the saviour of the tea stall. Did you bring me a cup?"},
+					{"speaker": "ish", "text": "Get up and fight, Mahabali. For once in your life."},
+					{"speaker": "sab", "text": "For once in my life? Now you've made it personal."},
+				],
+				"victory": [{"speaker": "sab", "text": "Good. Now go and change some lives. I'll watch. Lying down, probably."}],
+				"defeat": [{"speaker": "sab", "text": "See? Even I get up sometimes. Your turn."}],
+			},
+			"sup": {
+				"intro": [
+					{"speaker": "sup", "text": "My family needs this, Agasthya."},
+					{"speaker": "ish", "text": "So does mine. A whole street of it."},
+				],
+				"victory": [{"speaker": "sup", "text": "...Then make it count. For all of them."}],
+				"defeat": [{"speaker": "sup", "text": "Too fast for your own good. Breathe, and come again."}],
+			},
+			"anant": {
+				"intro": [
+					{"speaker": "", "text": "The final opponent waits. And Agasthya knows him at once."},
+					{"speaker": "ish", "text": "Guruji. All these years... and you were the one who called us."},
+					{"speaker": "anant", "text": "Show me what your hands are for, Agasthya."},
+				],
+				"victory": [],
+				"defeat": [{"speaker": "anant", "text": "Fast. Not yet wise. Again."}],
+			},
+		},
+		"finale": [
+			{"speaker": "", "text": "When it was over, Ananta told him the truth: the final he lost, the shame, the years in hiding, the five crore he could not bring himself to spend.",
+				"set": "ananta_ground", "cast": {"player": {"at": "log_left", "face": "log_right"}, "anant": {"fighter": "anant", "at": "log_right", "face": "player"}}, "shot": "wide"},
+			{"speaker": "anant", "text": "It was meant for whichever of you would use it best."},
+			{"speaker": "ish", "text": "Then it isn't mine. It belongs to a doctor, a painter and a runner who never got the chance."},
+			{"speaker": "anant", "text": "I taught you to hit fast. You learned what to hit for. That I never taught."},
+			{"speaker": "", "text": "A month later, at the same roadside stall, a boy opened his first medical book.", "shot": "two"},
+			{"speaker": "", "text": "THE END.", "shot": "wide"},
+		],
+	},
+	# Vajraveer: the most athletic of the six, and the most afraid. He has
+	# never taken a risk in his life; he enters to face his own fear.
+	"bib": {
+		"title": "THE ENDLESS RUSH",
+		"subtitle": "THE STORY OF VAJRAVEER",
+		"finale_title": "NO MORE RUNNING",
+		"cinematic": true,
+		"still": true,
+		"ladder": ["anug", "abhi", "ish", "sab", "sup", "anant"],
+		"prologue": [
+			{"speaker": "", "text": "Before sunrise, while the city sleeps, Vajraveer trains alone on a rooftop.",
+				"set": "gym", "cast": {"player": {"at": "coach", "face": [0, 1]}}, "shot": "wide"},
+			{"speaker": "", "text": "He can run all day. He can kick higher than anyone Guruji ever trained. Nobody has ever seen it."},
+			{"speaker": "bib", "text": "Fights, trials, tournaments... I always find a reason not to go. What if I freeze? What if they laugh?"},
+			{"speaker": "", "text": "So he stays where it is safe. And every year, he stays exactly who he was."},
+			{"speaker": "", "text": "Then a letter slid under his door.",
+				"banner": {"eyebrow": "AN INVITATION", "title": "ANANTA", "subtitle": "A TOURNAMENT OF MASTERS", "red": true}},
+			{"speaker": "", "text": "Six names. His own among them. And the whereabouts of the master who once told him he was ready."},
+			{"speaker": "bib", "text": "My hands are shaking. That's how I know I have to go."},
+			{"speaker": "bib", "text": "Not for the money. For once, I'm not going to run from it."},
+		],
+		"chapters": {
+			"anug": {
+				"intro": [
+					{"speaker": "anug", "text": "Vajraveer? You actually came? You never came to anything."},
+					{"speaker": "bib", "text": "I know. That's why I'm here. Please... don't go easy on me."},
+				],
+				"victory": [{"speaker": "anug", "text": "Where have you been hiding THAT for ten years?"}],
+				"defeat": [{"speaker": "anug", "text": "You flinched. Don't. You're better than you think."}],
+			},
+			"abhi": {
+				"intro": [
+					{"speaker": "abhi", "text": "Look who left his room! Say something, quiet one! The crowd wants a speech!"},
+					{"speaker": "bib", "text": "...I'll let my feet talk."},
+				],
+				"victory": [{"speaker": "abhi", "text": "Okay. That was a speech. A loud one."}],
+				"defeat": [{"speaker": "abhi", "text": "Too quiet! Again, and louder this time!"}],
+			},
+			"ish": {
+				"intro": [
+					{"speaker": "ish", "text": "You were always faster than me in training. You just never believed it."},
+					{"speaker": "bib", "text": "Today I'm trying to."},
+				],
+				"victory": [{"speaker": "ish", "text": "Believe it now. You earned that one."}],
+				"defeat": [{"speaker": "ish", "text": "You stopped trusting your legs halfway. Don't."}],
+			},
+			"sab": {
+				"intro": [
+					{"speaker": "sab", "text": "Our little hermit! If you win, will you finally come to my birthday?"},
+					{"speaker": "bib", "text": "If I win... yes. I'll come."},
+					{"speaker": "sab", "text": "Ha! Now I have to lose on purpose. Just kidding. Come at me."},
+				],
+				"victory": [{"speaker": "sab", "text": "Saturday. Seven o'clock. Don't you dare hide."}],
+				"defeat": [{"speaker": "sab", "text": "Nope. You're not getting out of my birthday that easily. Up."}],
+			},
+			"sup": {
+				"intro": [
+					{"speaker": "sup", "text": "Race you to the end of this?"},
+					{"speaker": "bib", "text": "I've raced only myself for years. Let's see what happens with a real rival."},
+				],
+				"victory": [{"speaker": "sup", "text": "You weren't running away this time. I could feel it."}],
+				"defeat": [{"speaker": "sup", "text": "Climb, don't race. You'll get there."}],
+			},
+			"anant": {
+				"intro": [
+					{"speaker": "", "text": "The final fight. The opponent steps forward, and Vajraveer's breath stops."},
+					{"speaker": "bib", "text": "Guruji... you told me I was ready. And then you were gone."},
+					{"speaker": "anant", "text": "You were ready then. Are you brave enough now?"},
+				],
+				"victory": [],
+				"defeat": [{"speaker": "anant", "text": "You held back the last step. Again. Take it this time."}],
+			},
+		},
+		"finale": [
+			{"speaker": "", "text": "Afterwards, the master told him why he left: one lost final, a whole country's laughter, and a shame he could not face.",
+				"set": "ananta_ground", "cast": {"player": {"at": "log_left", "face": "log_right"}, "anant": {"fighter": "anant", "at": "log_right", "face": "player"}}, "shot": "wide"},
+			{"speaker": "bib", "text": "So you ran too. Just like me."},
+			{"speaker": "anant", "text": "For years. You stopped running today. Which of us is the master now?"},
+			{"speaker": "bib", "text": "Then let's stop together. Come back with me, Guruji."},
+			{"speaker": "", "text": "That Saturday, Vajraveer walked into a crowded birthday party. And stayed until the very end.", "shot": "two"},
+			{"speaker": "", "text": "THE END.", "shot": "wide"},
+		],
+	},
+	# Mahabali: strong enough to win everything and too lazy to try. He jokes
+	# and teases, but every jab is a push: he wants everyone he meets to
+	# succeed and be happy. At last he decides to use his own strength.
+	"sab": {
+		"title": "THE LAZY GIANT",
+		"subtitle": "THE STORY OF MAHABALI",
+		"finale_title": "GET UP, MAHABALI",
+		"cinematic": true,
+		"still": true,
+		"ladder": ["bib", "anug", "abhi", "ish", "sup", "anant"],
+		"prologue": [
+			{"speaker": "", "text": "In his village, everyone knows Mahabali. Mostly lying on a rope bed under the pipal tree.",
+				"set": "hill_road", "cast": {"player": {"at": "road", "face": "camera"}}, "shot": "wide"},
+			{"speaker": "", "text": "He is the strongest of the master's six students. And the laziest."},
+			{"speaker": "sab", "text": "Work? Today? The tree is giving me shade. It would be rude to leave."},
+			{"speaker": "", "text": "But his teasing has a habit of changing lives. The boy he called 'too slow' now runs for the district. The girl he said 'could never pass' topped her exams."},
+			{"speaker": "sab", "text": "Me? I didn't do anything. I just talk too much."},
+			{"speaker": "", "text": "Then the letter came, and for the first time in years, Mahabali sat up.",
+				"banner": {"eyebrow": "AN INVITATION", "title": "ANANTA", "subtitle": "A TOURNAMENT OF MASTERS", "red": true}},
+			{"speaker": "sab", "text": "Guruji's whereabouts... and all my old friends, in one place. Fighting."},
+			{"speaker": "sab", "text": "Everyone I've ever pushed has climbed higher than me. Maybe it's time I pushed myself."},
+		],
+		"chapters": {
+			"bib": {
+				"intro": [
+					{"speaker": "sab", "text": "Vajraveer! Out of your shell! Who are you and what have you done with my shy friend?"},
+					{"speaker": "bib", "text": "I'm facing my fears today. You're the first one."},
+					{"speaker": "sab", "text": "Wonderful. I'll be very scary, then."},
+				],
+				"victory": [{"speaker": "sab", "text": "You came out. That's the real win. I just got the points."}],
+				"defeat": [{"speaker": "bib", "text": "You let me win... didn't you?"}],
+			},
+			"anug": {
+				"intro": [
+					{"speaker": "anug", "text": "You, standing? This tournament really is special."},
+					{"speaker": "sab", "text": "Don't get used to it, keeper."},
+				],
+				"victory": [{"speaker": "anug", "text": "Lazy, my foot. You've been hiding this."}],
+				"defeat": [{"speaker": "anug", "text": "Nothing gets past me. Not even you, giant."}],
+			},
+			"abhi": {
+				"intro": [
+					{"speaker": "abhi", "text": "The only man in Nepal louder than me!"},
+					{"speaker": "sab", "text": "Louder AND stronger. Let's settle the first one quickly."},
+				],
+				"victory": [{"speaker": "abhi", "text": "Fine! But I'm still funnier."}],
+				"defeat": [{"speaker": "abhi", "text": "Too much talking, Mahabali. Not enough punching."}],
+			},
+			"ish": {
+				"intro": [
+					{"speaker": "ish", "text": "You actually want this? I thought you'd sleep through the whole tournament."},
+					{"speaker": "sab", "text": "I tried. The fights kept waking me up."},
+				],
+				"victory": [{"speaker": "ish", "text": "Use it well, giant. You always told us to."}],
+				"defeat": [{"speaker": "ish", "text": "Too slow, Mahabali. You'd tease anyone else for that."}],
+			},
+			"sup": {
+				"intro": [
+					{"speaker": "", "text": "Two old friends. One fight. Neither can afford to lose.",
+						"banner": {"eyebrow": "THE FIGHT BETWEEN FRIENDS", "title": "SARVOCHCHA", "subtitle": "BROTHERS IN TRAINING"}},
+					{"speaker": "sup", "text": "It's been a long time, hasn't it?"},
+					{"speaker": "sab", "text": "Too long. And you still drop your left hand when you're tired. I'll be kind and only use it a little."},
+				],
+				"victory": [
+					{"speaker": "sab", "text": "Get up, brother. You taught me to stop being lazy just by never stopping."},
+					{"speaker": "sup", "text": "...I'll see you again, my friend."},
+				],
+				"defeat": [{"speaker": "sup", "text": "Guruji never let us stop halfway. Neither will I."}],
+			},
+			"anant": {
+				"intro": [
+					{"speaker": "", "text": "The last opponent waits in silence. Mahabali stops joking."},
+					{"speaker": "sab", "text": "...Guruji."},
+					{"speaker": "anant", "text": "The strongest of my students. Finally standing up."},
+					{"speaker": "sab", "text": "You always said I'd only fight when it really mattered. It matters now."},
+				],
+				"victory": [],
+				"defeat": [{"speaker": "anant", "text": "Strength without effort. Again, and mean it."}],
+			},
+		},
+		"finale": [
+			{"speaker": "", "text": "When it was over, the master told him the truth: the final he lost, the shame, the years in hiding, the five crore saved for one of his students.",
+				"set": "ananta_ground", "cast": {"player": {"at": "log_left", "face": "log_right"}, "anant": {"fighter": "anant", "at": "log_right", "face": "player"}}, "shot": "wide"},
+			{"speaker": "sab", "text": "You lost one fight and hid for years. I won nothing and lay under a tree for years. We're quite a pair, Guruji."},
+			{"speaker": "anant", "text": "And yet everyone you teased became something. You were teaching all along."},
+			{"speaker": "sab", "text": "Then let's build a training hall. I'll do the teasing. You do the teaching."},
+			{"speaker": "", "text": "The rope bed under the pipal tree stayed empty after that. Mostly.", "shot": "two"},
+			{"speaker": "", "text": "THE END.", "shot": "wide"},
+		],
+	},
+	# Ananta: the master's own story. An international final lost in front of
+	# the whole country, years of shame and hiding in a remote village, five
+	# crore he could never spend, and the tournament he made to find which of
+	# his six students had truly earned it. His last opponent is Sarvochcha.
+	"anant": {
+		"title": "THE FINAL WORD",
+		"subtitle": "THE STORY OF ANANTA",
+		"finale_title": "THE STRENGTH HE LEFT BEHIND",
+		"cinematic": true,
+		"still": true,
+		"prologue_arena": 0,
+		"ladder": ["bib", "abhi", "anug", "ish", "sab", "sup"],
+		"prologue": [
+			{"speaker": "", "text": "Years ago, Ananta stood in an international final, with the whole of Nepal watching.", "shot": "wide"},
+			{"speaker": "", "text": "He was winning. One round from glory, he dropped his guard to celebrate before the bell."},
+			{"speaker": "", "text": "One mistake. One punch. The crowd went silent, and then it laughed.",
+				"banner": {"eyebrow": "INTERNATIONAL FINAL", "title": "DEFEAT", "subtitle": "ONE MISTAKE BEFORE THE BELL", "red": true}},
+			{"speaker": "anant", "text": "In the streets they said my name like a joke. I could not look my own students in the eye."},
+			{"speaker": "", "text": "So he disappeared. A stone hut, high in a remote village, far from anyone who knew him.",
+				"set": "ananta_ground", "cast": {"player": {"at": "dummy", "face": "camera"}}, "shot": "wide"},
+			{"speaker": "", "text": "For years he kept the prize money from that last tournament: five crore. He never spent a rupee of it."},
+			{"speaker": "anant", "text": "This money belongs to someone who deserves it. One of them. But which?"},
+			{"speaker": "", "text": "So he wrote six letters, one to each of his old students, and signed them with a single word.",
+				"banner": {"eyebrow": "SIX LETTERS", "title": "ANANTA", "subtitle": "A TOURNAMENT OF MASTERS", "red": true}},
+			{"speaker": "anant", "text": "I will test each of them myself. Every lesson I ever taught. Let them show me what remains."},
+		],
+		"chapters": {
+			"bib": {
+				"intro": [
+					{"speaker": "", "text": "First, the quiet one. The one who never came to anything."},
+					{"speaker": "bib", "text": "...Guruji? You're alive?"},
+					{"speaker": "anant", "text": "You came. That is already more than I expected. Now fight."},
+				],
+				"victory": [{"speaker": "anant", "text": "He held nothing back. The boy who never took a risk just took the biggest one."}],
+				"defeat": [{"speaker": "bib", "text": "I... I beat you? Then come back, Guruji. Please."}],
+			},
+			"abhi": {
+				"intro": [
+					{"speaker": "abhi", "text": "GURUJI! The legend returns! The crowd will go wild!"},
+					{"speaker": "anant", "text": "The crowd is what drove me away, Kri. Let us see if you fight louder than you talk."},
+				],
+				"victory": [{"speaker": "anant", "text": "Still all noise. But a good heart under it."}],
+				"defeat": [{"speaker": "abhi", "text": "Ha! Don't worry. I won't tell anyone. Loudly."}],
+			},
+			"anug": {
+				"intro": [
+					{"speaker": "anug", "text": "Hands up, chin down. I teach it every week. Your words, Guruji."},
+					{"speaker": "anant", "text": "Then show me the keeper's guard."},
+				],
+				"victory": [{"speaker": "anant", "text": "He guards other people's dreams better than his own."}],
+				"defeat": [{"speaker": "anug", "text": "Nothing gets past me. Not even you."}],
+			},
+			"ish": {
+				"intro": [
+					{"speaker": "ish", "text": "All these years, and you send a letter? People needed you, Guruji."},
+					{"speaker": "anant", "text": "I know. Show me who you fight for."},
+				],
+				"victory": [{"speaker": "anant", "text": "Fast hands, and a whole street behind them. Good."}],
+				"defeat": [{"speaker": "ish", "text": "Is this what you wanted to see? Then watch closely."}],
+			},
+			"sab": {
+				"intro": [
+					{"speaker": "sab", "text": "Guruji! I got off my rope bed for you. Be impressed."},
+					{"speaker": "anant", "text": "I am. Now get off it for good."},
+				],
+				"victory": [{"speaker": "anant", "text": "The laziest strength I ever trained. And the kindest."}],
+				"defeat": [{"speaker": "sab", "text": "I got up, Guruji. And I'm staying up."}],
+			},
+			"sup": {
+				"intro": [
+					{"speaker": "", "text": "The last letter. The last student. The one who reminds him most of himself.",
+						"banner": {"eyebrow": "FINAL CHAPTER", "title": "SARVOCHCHA", "subtitle": "THE STUDENT"}},
+					{"speaker": "sup", "text": "MASTER?!"},
+					{"speaker": "anant", "text": "No words, Sarvochcha. Not yet. Show me everything I taught you."},
+				],
+				"victory": [],
+				"defeat": [{"speaker": "anant", "text": "Again. You still drop your left hand. Again."}],
+			},
+		},
+		"finale": [
+			{"speaker": "", "text": "Sarvochcha fell. And got up. And fell. And got up again.",
+				"set": "ananta_ground", "cast": {"player": {"at": "log_right", "face": "log_left"}, "sup": {"fighter": "sup", "at": "log_left", "face": "player"}}, "shot": "wide"},
+			{"speaker": "anant", "text": "That is what I never did. After one defeat, I never got up."},
+			{"speaker": "sup", "text": "Master... where have you been all these years?"},
+			{"speaker": "anant", "text": "Hiding from one mistake. The five crore was never the prize, Sarvochcha. You are."},
+			{"speaker": "anant", "text": "Everything I taught, they carried. Patience. Courage. Kindness. Even laziness, used well."},
+			{"speaker": "anant", "text": "A master's greatest victory is not the battles he wins. It is the strength he leaves behind."},
+			{"speaker": "", "text": "The next morning, Ananta walked down into the city. As himself.", "shot": "two"},
 			{"speaker": "", "text": "THE END.", "shot": "wide"},
 		],
 	},
