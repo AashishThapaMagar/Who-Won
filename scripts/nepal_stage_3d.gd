@@ -398,6 +398,7 @@ func show_round(index: int) -> void:
 		content.queue_free()
 	flags.clear()
 	kites.clear()
+	eagles.clear()
 	yaks.clear()
 	lamp_lights.clear()
 	lanterns.clear()
@@ -748,8 +749,6 @@ func _batch_static() -> void:
 		moving[pivot] = true
 	for pivot in lanterns:
 		moving[pivot] = true
-	for kite in kites:
-		moving[kite] = true
 	var to_content := content.global_transform.affine_inverse()
 	var groups := {}
 	var merged: Array[Node] = []
@@ -832,12 +831,19 @@ func animate(delta: float) -> void:
 		flags[i].rotation.z = sin(elapsed * 2.3 - i * 0.4) * 0.08
 	for i in lanterns.size():
 		lanterns[i].rotation.z = sin(elapsed * 1.6 + i * 0.9) * 0.06
-	for i in kites.size():
-		# Kites swoop and tug on their strings: a wide figure-eight with dives.
-		var s := elapsed * (0.7 + 0.08 * (i % 5)) + i * 1.7
-		var home: Vector3 = kites[i].get_meta("home")
-		kites[i].position = home + Vector3(sin(s * 0.9) * 2.2, sin(s * 1.8) * 0.9 - maxf(0.0, sin(s * 0.37)) * 1.8, 0.0)
-		kites[i].rotation = Vector3(sin(s * 2.3) * 0.3, sin(s * 1.1) * 0.5, PI * 0.25 + sin(s * 1.7) * 0.6)
+	for kite in kites:
+		_fly_kite(kite)
+	for eagle in eagles:
+		# Soaring in wide circles on the thermal, banked into the turn, now
+		# and then a slow wingbeat-free rise and sink.
+		var orbit: Array = eagle.get_meta("orbit")
+		var a: float = float(orbit[2]) + elapsed * float(orbit[3])
+		var centre: Vector3 = orbit[0]
+		var radius: float = orbit[1]
+		eagle.position = centre + Vector3(cos(a) * radius, sin(elapsed * 0.21 + float(orbit[2])) * 1.6, sin(a) * radius)
+		var heading := Vector3(-sin(a), 0.0, cos(a))
+		eagle.rotation = Vector3(0.0, atan2(-heading.z, heading.x), 0.0)
+		eagle.rotate_object_local(Vector3.RIGHT, -0.38 * signf(float(orbit[3])))
 	for i in lamp_lights.size():
 		var flicker := 0.86 + 0.14 * sin(elapsed * 11.0 + i * 2.1) * sin(elapsed * 4.7 + i)
 		lamp_lights[i].light_energy = lamp_lights[i].get_meta("base") * flicker
@@ -1283,8 +1289,11 @@ func _dress_hill(folder: String) -> void:
 	_flag_line(Vector3(-11.0, floor_y + 6.2, -13.0), Vector3(11.5, floor_y + 6.6, -18.5), 0.9, 34, false)
 	yard_y = floor_y
 
-## Kites over the Dashain ground, animated in animate().
+## Kites over the Dashain ground and eagles above the valley, animated in
+## animate().
 var kites: Array[Node3D] = []
+var eagles: Array[Node3D] = []
+const EAGLE := "res://assets/teaser/eagle.glb"
 ## The hill ridge's floor height, set by _dress_hill for later dressing.
 var yard_y := -0.12
 const KITE_PAPER := [["c0301f", "f2c230"], ["1f4fa3", "f4ead2"], ["2e7d32", "f2c230"], ["c2185b", "f4ead2"], ["f57c00", "1f4fa3"], ["6a1b9a", "f2c230"]]
@@ -1296,7 +1305,7 @@ const KITE_PAPER := [["c0301f", "f2c230"], ["1f4fa3", "f4ead2"], ["2e7d32", "f2c
 func _dress_dashain() -> void:
 	var y := yard_y
 	_place_prop("res://assets/teaser/linge_ping.glb", Vector3(-9.0, y, -11.5), deg_to_rad(15.0), 10.0)
-	_place_prop("res://assets/teaser/tika_thali.glb", Vector3(-6.4, y + 0.45, -9.2), 0.0, 0.17)
+	_place_prop("res://assets/teaser/tika_thali.glb", Vector3(-6.4, y + 0.5, -9.2), 0.0, 0.19)
 	var table := BoxMesh.new()
 	table.size = Vector3(0.7, 0.45, 0.7)
 	_piece(table, Vector3(-6.4, y + 0.225, -9.2), _flat("dashain_table", Color("4a2c18")))
@@ -1387,46 +1396,102 @@ func _dress_dashain() -> void:
 		glow.set_meta("base", 0.9)
 		content.add_child(glow)
 		lamp_lights.append(glow)
-	# Kites high over the valley, each on a long string down to the ridge.
+	# A few kites flown from rooftops and the ridge (Dashain afternoons):
+	# each rides the wind at the end of its line, held at a steady angle,
+	# drifting and dipping with the gusts (animated in animate()).
+	var kite_layer := Node3D.new()
+	kite_layer.name = "Kites"
+	kite_layer.set_meta("unbatched", true)
+	content.add_child(kite_layer)
 	var quad := QuadMesh.new()
-	quad.size = Vector2(1.3, 1.3)
-	var thread := CylinderMesh.new()
-	thread.top_radius = 0.01
-	thread.bottom_radius = 0.01
-	thread.height = 22.0
-	for i in 14:
-		var colours: Array = KITE_PAPER[i % KITE_PAPER.size()]
+	quad.size = Vector2(0.95, 0.95)
+	var segment := CylinderMesh.new()
+	segment.top_radius = 0.006
+	segment.bottom_radius = 0.006
+	segment.height = 1.0
+	segment.radial_segments = 4
+	var line_material := _flat("kite_string", Color("e9e1d0"))
+	# [anchor (where it is flown from), line length, elevation, heading]
+	var flights := [
+		[Vector3(-11.5, y + 6.4, -14.0), 34.0, 52.0, -18.0],
+		[Vector3(12.0, y + 6.4, -19.5), 40.0, 57.0, 14.0],
+		[Vector3(-6.5, y + 4.6, -22.5), 28.0, 49.0, -4.0],
+		[Vector3(17.5, y + 1.4, -9.0), 46.0, 55.0, 26.0],
+		[Vector3(-17.0, y + 1.4, -6.0), 38.0, 50.0, -30.0],
+	]
+	for i in flights.size():
+		var colours: Array = KITE_PAPER[(i * 2 + 1) % KITE_PAPER.size()]
 		var image := Image.create(48, 48, false, Image.FORMAT_RGBA8)
 		image.fill(Color(0, 0, 0, 0))
 		for py in 48:
 			for px in 48:
 				var d := absf(px - 23.5) + absf(py - 23.5)
 				if d < 23.0:
-					image.set_pixel(px, py, Color("2a1d14") if d > 21.0 else (Color(colours[0]) if py < 24 else Color(colours[1])))
+					image.set_pixel(px, py, Color("2a1d14") if d > 21.5 else (Color(colours[0]) if py < 24 else Color(colours[1])))
 		var paper := StandardMaterial3D.new()
 		paper.albedo_texture = ImageTexture.create_from_image(image)
 		paper.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
 		paper.cull_mode = BaseMaterial3D.CULL_DISABLED
-		# Each kite flies on a pivot of its own (scenery batching leaves
-		# whatever hangs from a moving pivot alone).
 		var kite := Node3D.new()
 		var sail := MeshInstance3D.new()
 		sail.mesh = quad
 		sail.material_override = paper
 		sail.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		kite.add_child(sail)
-		var home := Vector3(-20.0 + i * 3.0 + sin(i * 7.1) * 1.5, y + 5.5 + fmod(i * 5.3, 5.5), -26.0 - fmod(i * 11.7, 16.0))
-		kite.position = home
-		kite.set_meta("home", home)
-		content.add_child(kite)
-		var string := MeshInstance3D.new()
-		string.mesh = thread
-		string.material_override = _flat("kite_string", Color("efe8da"))
-		string.position = Vector3(0, -11.0, 3.2)
-		string.rotation_degrees = Vector3(17, 0, 0)
-		string.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		kite.add_child(string)
+		kite_layer.add_child(kite)
+		var line := Node3D.new()
+		kite_layer.add_child(line)
+		for k in 6:
+			var piece := MeshInstance3D.new()
+			piece.mesh = segment
+			piece.material_override = line_material
+			piece.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			line.add_child(piece)
+		kite.set_meta("flight", flights[i])
+		kite.set_meta("line", line)
 		kites.append(kite)
+	# Himalayan eagles riding a thermal high over the valley.
+	if ResourceLoader.exists(EAGLE):
+		for i in 3:
+			var eagle: Node3D = load(EAGLE).instantiate()
+			eagle.scale = Vector3.ONE * 0.9
+			eagle.set_meta("orbit", [Vector3(-6.0 + i * 9.0, y + 22.0 + i * 4.0, -55.0 - i * 12.0), 14.0 + i * 5.0, i * 2.1, 0.11 - i * 0.02])
+			kite_layer.add_child(eagle)
+			eagles.append(eagle)
+
+## A kite at the end of its line: the wind holds it at a steady angle above
+## the flier, the heading and the angle wander slowly with the gusts, the
+## paper trembles, and the line sags in a shallow curve back to the anchor.
+func _fly_kite(kite: Node3D) -> void:
+	var flight: Array = kite.get_meta("flight")
+	var anchor: Vector3 = flight[0]
+	var length: float = flight[1]
+	var seed := float(kite.get_index())
+	var gust := sin(elapsed * 0.23 + seed * 1.9) * 0.6 + sin(elapsed * 0.61 + seed) * 0.4
+	var elevation := deg_to_rad(float(flight[2]) + gust * 4.0)
+	var heading := deg_to_rad(float(flight[3]) + sin(elapsed * 0.17 + seed * 2.3) * 7.0)
+	# The wind blows out over the valley (toward -Z).
+	var direction := Vector3(sin(heading) * cos(elevation), sin(elevation), -cos(heading) * cos(elevation))
+	var at := anchor + direction * length
+	kite.position = at
+	# Face back down the line, nose up, rocking a little on its bridle.
+	kite.look_at(anchor, Vector3.UP)
+	kite.rotate_object_local(Vector3.FORWARD, PI * 0.25 + sin(elapsed * 2.4 + seed) * 0.12)
+	kite.rotate_object_local(Vector3.RIGHT, -0.35 + sin(elapsed * 1.7 + seed * 3.0) * 0.06)
+	# The line: a shallow catenary from the flier's hand to the kite.
+	var line: Node3D = kite.get_meta("line")
+	var count := line.get_child_count()
+	var sag := length * 0.045
+	var previous := anchor
+	for k in count:
+		var u := float(k + 1) / count
+		var point := anchor.lerp(at, u) - Vector3(0, sin(u * PI) * sag, 0)
+		var piece := line.get_child(k) as Node3D
+		var mid := (previous + point) * 0.5
+		var span := point - previous
+		piece.position = mid
+		piece.basis = Basis(Quaternion(Vector3.UP, span.normalized())) * Basis.from_scale(Vector3(1, span.length(), 1))
+		previous = point
 
 ## Himalayan Pass: the final arena, high among the snows. A wind-scoured
 ## yard of snow and rock with a Sherpa stone lodge, a long mani wall, a
@@ -1451,6 +1516,21 @@ func _dress_himalaya(folder: String) -> void:
 		for node in content.get_children():
 			if node is MeshInstance3D and node.mesh is PlaneMesh and (node.mesh as PlaneMesh).size.x > 100.0:
 				node.material_override = _ground_material("snow_field_aerial", 10.0, Color(1.0, 1.0, 1.0))
+	# Rolling snow foothills between the snowfield and the range, so the
+	# ground rises into the mountains instead of meeting them in a line.
+	var drift := SphereMesh.new()
+	drift.radius = 1.0
+	drift.height = 2.0
+	drift.radial_segments = 24
+	drift.rings = 12
+	var snow := _ground_material("snow_field_aerial", 10.0, Color(1.0, 1.0, 1.0))
+	for i in 16:
+		var x := -135.0 + i * 18.0 + sin(i * 4.7) * 6.0
+		var z := -70.0 - fmod(i * 23.0, 45.0)
+		var r := 16.0 + fmod(i * 7.3, 14.0)
+		var mound := _piece(drift, Vector3(x, floor_y - r * 0.12, z), snow)
+		mound.scale = Vector3(r * 1.3, r * 0.34, r)
+		mound.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	for row: Array in HIMALAYA_LAYOUT:
 		_place_prop(folder + row[0], row[1] + Vector3(0.0, floor_y, 0.0), deg_to_rad(row[2]), row[3])
 	_add_yak(folder, floor_y)
@@ -1972,6 +2052,26 @@ func _lighting() -> void:
 	# lamplight low around the dais without dulling the fighters.
 	env.fog_height = 0.35 if night else -20.0
 	env.fog_height_density = 0.045 if night else 0.0
+	if current_round == 4 and not night:
+		# The pass: cold, bright high-altitude air. The snowfield runs into a
+		# blue-white haze that the peaks rise out of, and spindrift mist
+		# lies low over the snow, so ground and range meet softly.
+		env.fog_light_color = Color("d6e2f2")
+		env.fog_density = 0.0042
+		env.fog_sky_affect = 0.25
+		env.fog_sun_scatter = 0.3
+		env.fog_height = 1.2
+		env.fog_height_density = 0.06
+	if current_round == 5 and not night:
+		# Dashain afternoon: warm sunlit haze thickening with distance, so the
+		# far ridges and peaks melt into the air, and a bank of mist lying in
+		# the valley below the ridge.
+		env.fog_light_color = Color("f1caa0")
+		env.fog_density = 0.0048
+		env.fog_sky_affect = 0.3
+		env.fog_sun_scatter = 0.5
+		env.fog_height = -7.0
+		env.fog_height_density = 0.09
 	# Bloom on flames, lanterns, lit windows and the sun disc. The threshold
 	# is set so costume colours and pale stone stay crisp while anything
 	# emissive or sunlit-white blooms. Off at the lowest quality preset.
