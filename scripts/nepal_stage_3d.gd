@@ -1678,14 +1678,17 @@ func _dress_terai(folder: String) -> void:
 			if band[0] > -30.0 and absf(across) < 6.0:
 				continue
 			var depth := rng.randf_range(band[1], band[0])
-			_place_prop(folder + "sal_tree.glb", Vector3(across, floor_y, depth), rng.randf_range(0.0, TAU), rng.randf_range(band[3], band[4]))
+			# Past the first ranks the trees are far and hazed: the light
+			# version (a tenth of the triangles) reads the same there.
+			var tree := "sal_tree.glb" if depth > -34.0 else "sal_tree_far.glb"
+			_place_prop(folder + tree, Vector3(across, floor_y, depth), rng.randf_range(0.0, TAU), rng.randf_range(band[3], band[4]))
 	_forest_wall(floor_y)
 	# Sal forest along the horizon beyond the fields (far copies draw at
 	# their import LODs).
 	for i in 30:
 		var across := lerpf(-90.0, 90.0, (i + rng.randf_range(-0.3, 0.3)) / 29.0)
 		var depth := -78.0 - rng.randf_range(0.0, 14.0) - absf(across) * 0.1
-		_place_prop(folder + "sal_tree.glb", Vector3(across, floor_y, depth), rng.randf_range(0.0, TAU), rng.randf_range(5.5, 7.5))
+		_place_prop(folder + "sal_tree_far.glb", Vector3(across, floor_y, depth), rng.randf_range(0.0, TAU), rng.randf_range(5.5, 7.5))
 	# Maato tiles: the dais in sun-baked earthen clay instead of grey stone.
 	if model != null:
 		var clay := _surface("dais_terai", 5, Color("a87b52"), Color("5e3f28"))
