@@ -111,9 +111,6 @@ const MESHY_MOVES := {
 	# power punch, a jumping kick and a taunt), measured the same way.
 	# Vajraveer's Mixamo fight pack (STYLES bib.pack) covers his moves now; his
 	# Meshy set adds only the leg sweep the pack lacks.
-	"bib": {
-		"kick_front": ["Leg_Sweep", 0.95],
-	},
 	# Ananta's Meshy set exports with id names; each is [id, second the blow
 	# lands], measured from the peak reach of the striking hand or foot.
 }
@@ -207,6 +204,12 @@ const STYLES := {
 				"hit": "hit_left", "hit_heavy": "hit_right",
 				"hit_head": "hit_left", "hit_head_alt": "hit_right", "hit_head_heavy": "hit_right",
 				"hit_body": "hit_body", "hit_side": "hit_left", "hit_liver": "hit_body",
+				# The shared reactions and limp land badly on his rig (it is
+				# turned under its parent): the alternate body hit started
+				# folded nearly flat, so every other body blow looked like a
+				# fall. His own clips stand in for them.
+				"hit_body_alt": "hit_body", "injured": "walk_forward_combat",
+				"kick_front": "kick_low",
 				"ko": "knockout_back", "victory": "victory", "taunt": "taunt",
 				# Extra strikes, played by moves whose pose names them.
 				"strike_rear_hook": "punch_hook_rear", "strike_lead_uppercut": "punch_uppercut_lead",

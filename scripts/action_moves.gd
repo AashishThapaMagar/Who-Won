@@ -186,7 +186,9 @@ static func for_fighter(id: String) -> Dictionary:
 		"anug": ["Goal-line clearance", "front_kick", 64, -65, 0.12, 1.10, 1.35],
 		"ish": ["Flash rising fist", "uppercut", 57, -94, 0.10, 1.35, 1.1],
 		"sab": ["Anvil elbow", "elbow", 53, -85, 0.14, 1.45, 1.0],
-		"bib": ["Relay side kick", "side_kick", 70, -66, 0.09, 1.15, 1.2],
+		# His chain finisher plays his own side kick (pose "side_kick" fell
+		# back to the roundhouse).
+		"bib": ["Relay side kick", "strike_side_kick", 70, -66, 0.09, 1.15, 1.2],
 		"abhi": ["Thunder overhand", "overhand", 61, -89, 0.15, 1.55, 1.4],
 		"sup": ["Spiral heel", "spin", 69, -65, 0.13, 1.25, 1.3],
 		"anant": ["Crown knee", "knee", 53, -70, 0.12, 1.35, 1.2]
