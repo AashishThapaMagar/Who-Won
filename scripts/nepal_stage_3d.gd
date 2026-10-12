@@ -8,6 +8,7 @@ const ROUNDS := [
 	{"name": "HILL VILLAGE", "night": false, "detail": "MORNING / A ridge village above terraced valleys and the Himalaya"},
 	{"name": "GOMPA COURTYARD", "night": false, "detail": "SUNSET / A monastery courtyard glowing gold at dusk"},
 	{"name": "HIMALAYAN PASS", "night": false, "detail": "HIGH NOON / Prayer flags and a chorten among the snows"},
+	{"name": "DASHAIN GROUND", "night": false, "detail": "GOLDEN HOUR / Kites, a bamboo swing and marigolds on a festival ridge"},
 ]
 const ARENA_MODELS := [
 	"res://assets/arenas/models/heritage-square.glb",
@@ -15,6 +16,8 @@ const ARENA_MODELS := [
 	"res://assets/arenas/models/terrace-overlook.glb",
 	"res://assets/arenas/models/moonlit-stupa.glb",
 	# The pass is dressed from scratch on a plain dais.
+	"res://assets/arenas/models/terrace-overlook.glb",
+	# The Dashain ground: the hill village's ridge, dressed for the festival.
 	"res://assets/arenas/models/terrace-overlook.glb",
 ]
 ## Decode the source GLB with the running engine, not another version's
@@ -31,6 +34,7 @@ const PROPS := {
 	2: "res://assets/arenas/props/hill/",
 	3: "res://assets/arenas/props/stupa/",
 	4: "res://assets/arenas/props/himalaya/",
+	5: "res://assets/arenas/props/hill/",
 }
 ## Photo-scanned surfaces from Poly Haven (CC0), in assets/arenas/textures/:
 ## kind -> [texture folder, metres per repeat, tint, normal strength, saturation].
@@ -56,6 +60,7 @@ const AMBIENCE := [
 	["none", Color.WHITE, 0],
 	["sky_lanterns", Color(1.0, 0.66, 0.3, 0.95), 16],
 	["snow", Color(1.0, 1.0, 1.0, 0.9), 70],
+	["none", Color.WHITE, 0],
 ]
 ## Sky and light per round: [sky top, horizon, sun colour, sun energy,
 ## ambient colour, ambient energy, sun pitch, sun yaw, mountain tint].
@@ -72,6 +77,9 @@ const MOODS := [
 	[Color("3d5591"), Color("e9bfa0"), Color("ffd3a6"), 1.1, Color("8f98b8"), 0.4, -14.0, -65.0, Color(1.0, 0.93, 0.88)],
 	# The pass: a deep high-altitude blue, hard white sun, cold blue fill.
 	[Color("1f4fb0"), Color("c7d8ee"), Color("fffbf4"), 1.15, Color("a8bcdc"), 0.36, -48.0, -30.0, Color(1, 1, 1)],
+	# Dashain: late golden afternoon, the sun low and warm across the ridge,
+	# a soft lilac fill, the peaks blushing.
+	[Color("4a6db4"), Color("f2c99c"), Color("ffcf94"), 1.08, Color("a79fbc"), 0.42, -17.0, 52.0, Color(1.0, 0.94, 0.88)],
 ]
 ## Finishing grade per round (arena_grade.gdshader): [shadow tint,
 ## highlight tint, saturation, contrast, vignette, exposure, glow intensity,
@@ -90,6 +98,8 @@ const GRADES := [
 	[Color(0.94, 0.97, 1.05), Color(1.04, 1.0, 0.95), 1.06, 1.08, 0.24, 1.0, 0.7, 0.92],
 	# Crisp and cold: blue shadows, clean whites, a little extra contrast.
 	[Color(0.92, 0.97, 1.08), Color(1.0, 1.0, 1.0), 1.1, 1.1, 0.22, 1.0, 0.6, 0.95],
+	# Dashain: warm highlights, cool shadows, festival colour at full.
+	[Color(0.95, 0.97, 1.04), Color(1.05, 1.0, 0.94), 1.14, 1.07, 0.24, 1.02, 0.7, 0.92],
 ]
 ## Night version of any arena (cinematics set force_night): the starlit sky,
 ## lamp glow and teal-and-amber grade Heritage Square used to have.
@@ -387,6 +397,7 @@ func show_round(index: int) -> void:
 		remove_child(content)
 		content.queue_free()
 	flags.clear()
+	kites.clear()
 	yaks.clear()
 	lamp_lights.clear()
 	lanterns.clear()
@@ -404,11 +415,13 @@ func show_round(index: int) -> void:
 		_dress_terai(PROPS[index])
 	elif PROPS.has(index) and ResourceLoader.exists(PROPS[index] + "hill_house.glb"):
 		_dress_hill(PROPS[index])
+		if index == 5:
+			_dress_dashain()
 	elif PROPS.has(index) and ResourceLoader.exists(PROPS[index] + "sherpa_lodge.glb"):
 		_dress_himalaya(PROPS[index])
 	# The Terai is flat: no ranges behind it, a forest line instead.
 	if index != 1:
-		content.add_child(HIMALAYA.build(_mood()[1], night, index in [2, 3], index == 3))
+		content.add_child(HIMALAYA.build(_mood()[1], night, index in [2, 3, 5], index == 3))
 		_shape_backdrop(index, content.get_node("HimalayaBackdrop"))
 	_fight_lighting()
 	_arena_inlay()
@@ -688,7 +701,7 @@ func _fight_lighting() -> void:
 	rim.name = "FighterRim"
 	rim.position = Vector3(0, 3.4, -3)
 	rim.omni_range = 10
-	rim.light_color = Color("ffb46e") if current_round in [1, 2] else Color("a0cfff")
+	rim.light_color = Color("ffb46e") if current_round in [1, 2, 5] else Color("a0cfff")
 	rim.light_energy = 1.1 if night else 0.6
 	content.add_child(rim)
 	# A shadow-casting key light over the dais. At night the moon's shadows
@@ -735,6 +748,8 @@ func _batch_static() -> void:
 		moving[pivot] = true
 	for pivot in lanterns:
 		moving[pivot] = true
+	for kite in kites:
+		moving[kite] = true
 	var to_content := content.global_transform.affine_inverse()
 	var groups := {}
 	var merged: Array[Node] = []
@@ -817,6 +832,12 @@ func animate(delta: float) -> void:
 		flags[i].rotation.z = sin(elapsed * 2.3 - i * 0.4) * 0.08
 	for i in lanterns.size():
 		lanterns[i].rotation.z = sin(elapsed * 1.6 + i * 0.9) * 0.06
+	for i in kites.size():
+		# Kites swoop and tug on their strings: a wide figure-eight with dives.
+		var s := elapsed * (0.7 + 0.08 * (i % 5)) + i * 1.7
+		var home: Vector3 = kites[i].get_meta("home")
+		kites[i].position = home + Vector3(sin(s * 0.9) * 2.2, sin(s * 1.8) * 0.9 - maxf(0.0, sin(s * 0.37)) * 1.8, 0.0)
+		kites[i].rotation = Vector3(sin(s * 2.3) * 0.3, sin(s * 1.1) * 0.5, PI * 0.25 + sin(s * 1.7) * 0.6)
 	for i in lamp_lights.size():
 		var flicker := 0.86 + 0.14 * sin(elapsed * 11.0 + i * 2.1) * sin(elapsed * 4.7 + i)
 		lamp_lights[i].light_energy = lamp_lights[i].get_meta("base") * flicker
@@ -1260,6 +1281,152 @@ func _dress_hill(folder: String) -> void:
 		_place_prop(folder + row[0], row[1] + Vector3(0.0, floor_y, 0.0), deg_to_rad(row[2]), row[3])
 	# Prayer flags strung between the two houses, still in the morning air.
 	_flag_line(Vector3(-11.0, floor_y + 6.2, -13.0), Vector3(11.5, floor_y + 6.6, -18.5), 0.9, 34, false)
+	yard_y = floor_y
+
+## Kites over the Dashain ground, animated in animate().
+var kites: Array[Node3D] = []
+## The hill ridge's floor height, set by _dress_hill for later dressing.
+var yard_y := -0.12
+const KITE_PAPER := [["c0301f", "f2c230"], ["1f4fa3", "f4ead2"], ["2e7d32", "f2c230"], ["c2185b", "f4ead2"], ["f57c00", "1f4fa3"], ["6a1b9a", "f2c230"]]
+
+## Dashain on the ridge: a tall linge ping (bamboo swing), kites over the
+## valley, bamboo poles flying long red and saffron banners with marigold
+## garlands strung between them, butter lamps at the ends of the floor, and
+## jamara and the tika thali by the swing.
+func _dress_dashain() -> void:
+	var y := yard_y
+	_place_prop("res://assets/teaser/linge_ping.glb", Vector3(-9.0, y, -11.5), deg_to_rad(15.0), 10.0)
+	_place_prop("res://assets/teaser/tika_thali.glb", Vector3(-6.4, y + 0.45, -9.2), 0.0, 0.17)
+	var table := BoxMesh.new()
+	table.size = Vector3(0.7, 0.45, 0.7)
+	_piece(table, Vector3(-6.4, y + 0.225, -9.2), _flat("dashain_table", Color("4a2c18")))
+	# Jamara: barley shoots grown for the festival, in clay pots.
+	var pot := CylinderMesh.new()
+	pot.top_radius = 0.18
+	pot.bottom_radius = 0.13
+	pot.height = 0.3
+	var shoot := CylinderMesh.new()
+	shoot.top_radius = 0.0
+	shoot.bottom_radius = 0.012
+	shoot.height = 0.38
+	for p: Vector3 in [Vector3(-7.4, 0, -9.6), Vector3(-5.5, 0, -9.8), Vector3(-6.0, 0, -8.4)]:
+		_piece(pot, p + Vector3(0, y + 0.15, 0), _flat("clay", Color("8a4a2a")))
+		for k in 14:
+			var a := k * 2.39996
+			var r := 0.04 + 0.1 * float(k % 4) / 3.0
+			var blade := _piece(shoot, p + Vector3(cos(a) * r, y + 0.48, sin(a) * r), _flat("jamara", Color("d8c24a")))
+			blade.rotation = Vector3(sin(a) * 0.25, 0, cos(a) * 0.25)
+			blade.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	# Bamboo banner poles along the back, alternating red and saffron.
+	var pole := CylinderMesh.new()
+	pole.top_radius = 0.05
+	pole.bottom_radius = 0.07
+	pole.height = 7.0
+	var cloth := QuadMesh.new()
+	cloth.size = Vector2(0.75, 3.4)
+	var tops: Array[Vector3] = []
+	var xs := [-14.0, -10.0, -5.5, 5.5, 10.0, 14.0]
+	for i in xs.size():
+		var base := Vector3(xs[i], y, -13.0 - absf(xs[i]) * 0.25)
+		_piece(pole, base + Vector3(0, 3.5, 0), _flat("bamboo", Color("b59456")))
+		tops.append(base + Vector3(0, 6.2, 0))
+		var hanger := Node3D.new()
+		hanger.position = base + Vector3(0.42, 6.8, 0)
+		content.add_child(hanger)
+		var banner := _piece(cloth, Vector3(0, -1.7, 0), _flat("banner_red" if i % 2 == 0 else "banner_saffron", Color("b8261a") if i % 2 == 0 else Color("e8962a")), hanger)
+		banner.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		flags.append(hanger)
+	# Marigold garlands (sayapatri) swagged between neighbouring poles: one
+	# multimesh of blossoms for the lot.
+	var blossom := SphereMesh.new()
+	blossom.radius = 0.07
+	blossom.height = 0.12
+	blossom.radial_segments = 8
+	blossom.rings = 4
+	var points: Array[Vector3] = []
+	for i in tops.size() - 1:
+		if absf(tops[i].x - tops[i + 1].x) > 8.0:
+			continue
+		for k in 34:
+			var t := (k + 0.5) / 34.0
+			points.append(tops[i].lerp(tops[i + 1], t) - Vector3(0, sin(t * PI) * 0.9, 0))
+	var garlands := MultiMesh.new()
+	garlands.transform_format = MultiMesh.TRANSFORM_3D
+	garlands.use_colors = true
+	garlands.mesh = blossom
+	garlands.instance_count = points.size()
+	for k in points.size():
+		garlands.set_instance_transform(k, Transform3D(Basis(), points[k]))
+		garlands.set_instance_color(k, Color("f08a1c") if k % 3 else Color("f4c01e"))
+	var garland_node := MultiMeshInstance3D.new()
+	garland_node.multimesh = garlands
+	var petals := StandardMaterial3D.new()
+	petals.vertex_color_use_as_albedo = true
+	petals.roughness = 0.8
+	garland_node.material_override = petals
+	content.add_child(garland_node)
+	# Butter lamps (diyo) on low stands at both ends of the fighting floor.
+	var stand := CylinderMesh.new()
+	stand.top_radius = 0.22
+	stand.bottom_radius = 0.28
+	stand.height = 0.5
+	var flame := SphereMesh.new()
+	flame.radius = 0.035
+	flame.height = 0.09
+	for side in [-1.0, 1.0]:
+		var at := Vector3(side * 5.6, y, -1.4)
+		_piece(stand, at + Vector3(0, 0.25, 0), _flat("lamp_stand", Color("8c6a2a"), 0.0, 0.6))
+		for k in 5:
+			var a := k * TAU / 5.0
+			_piece(flame, at + Vector3(cos(a) * 0.14, 0.56, sin(a) * 0.14), _flat("diyo_flame", Color("ffb347"), 3.0))
+		var glow := OmniLight3D.new()
+		glow.position = at + Vector3(0, 0.75, 0)
+		glow.light_color = Color("ffb35c")
+		glow.omni_range = 3.4
+		glow.omni_attenuation = 1.6
+		glow.set_meta("base", 0.9)
+		content.add_child(glow)
+		lamp_lights.append(glow)
+	# Kites high over the valley, each on a long string down to the ridge.
+	var quad := QuadMesh.new()
+	quad.size = Vector2(1.3, 1.3)
+	var thread := CylinderMesh.new()
+	thread.top_radius = 0.01
+	thread.bottom_radius = 0.01
+	thread.height = 22.0
+	for i in 14:
+		var colours: Array = KITE_PAPER[i % KITE_PAPER.size()]
+		var image := Image.create(48, 48, false, Image.FORMAT_RGBA8)
+		image.fill(Color(0, 0, 0, 0))
+		for py in 48:
+			for px in 48:
+				var d := absf(px - 23.5) + absf(py - 23.5)
+				if d < 23.0:
+					image.set_pixel(px, py, Color("2a1d14") if d > 21.0 else (Color(colours[0]) if py < 24 else Color(colours[1])))
+		var paper := StandardMaterial3D.new()
+		paper.albedo_texture = ImageTexture.create_from_image(image)
+		paper.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+		paper.cull_mode = BaseMaterial3D.CULL_DISABLED
+		# Each kite flies on a pivot of its own (scenery batching leaves
+		# whatever hangs from a moving pivot alone).
+		var kite := Node3D.new()
+		var sail := MeshInstance3D.new()
+		sail.mesh = quad
+		sail.material_override = paper
+		sail.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		kite.add_child(sail)
+		var home := Vector3(-20.0 + i * 3.0 + sin(i * 7.1) * 1.5, y + 5.5 + fmod(i * 5.3, 5.5), -26.0 - fmod(i * 11.7, 16.0))
+		kite.position = home
+		kite.set_meta("home", home)
+		content.add_child(kite)
+		var string := MeshInstance3D.new()
+		string.mesh = thread
+		string.material_override = _flat("kite_string", Color("efe8da"))
+		string.position = Vector3(0, -11.0, 3.2)
+		string.rotation_degrees = Vector3(17, 0, 0)
+		string.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		kite.add_child(string)
+		kites.append(kite)
 
 ## Himalayan Pass: the final arena, high among the snows. A wind-scoured
 ## yard of snow and rock with a Sherpa stone lodge, a long mani wall, a
