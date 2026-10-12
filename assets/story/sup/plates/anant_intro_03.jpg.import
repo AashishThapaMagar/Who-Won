@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bm26i4p52lmrv"
-path="res://.godot/imported/finale_03.png-b74807ad8970cc069fa94a3410c7814d.ctex"
+uid="uid://c2fpeoc3n7yva"
+path="res://.godot/imported/anant_intro_03.jpg-acaec03ddd0d18ff37806ca534dba979.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/story/sup/plates/finale_03.png"
-dest_files=["res://.godot/imported/finale_03.png-b74807ad8970cc069fa94a3410c7814d.ctex"]
+source_file="res://assets/story/sup/plates/anant_intro_03.jpg"
+dest_files=["res://.godot/imported/anant_intro_03.jpg-acaec03ddd0d18ff37806ca534dba979.ctex"]
 
 [params]
 

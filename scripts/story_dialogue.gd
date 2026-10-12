@@ -748,7 +748,7 @@ func _line_key() -> String:
 
 ## The current line's baked storybook picture, if one has been made.
 func _plate_path() -> String:
-	return "res://assets/story/%s/plates/%s.png" % [ROSTER.profile(MatchSetup.selected_fighters[0]).id, _line_key()]
+	return "res://assets/story/%s/plates/%s.jpg" % [ROSTER.profile(MatchSetup.selected_fighters[0]).id, _line_key()]
 
 ## Plays this line's narration if there is a recording for it; silently
 ## does nothing otherwise (text is never blocked on a clip existing). A

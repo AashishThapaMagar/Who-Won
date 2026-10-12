@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://du2fev7ldec0k"
-path="res://.godot/imported/prologue_01.png-5c5bca4e969a10caea4804ba29f601ed.ctex"
+uid="uid://byk528r5431mx"
+path="res://.godot/imported/sab_victory_03.jpg-2002509c8c5c06824a42c2464013c94f.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/story/sup/plates/prologue_01.png"
-dest_files=["res://.godot/imported/prologue_01.png-5c5bca4e969a10caea4804ba29f601ed.ctex"]
+source_file="res://assets/story/sup/plates/sab_victory_03.jpg"
+dest_files=["res://.godot/imported/sab_victory_03.jpg-2002509c8c5c06824a42c2464013c94f.ctex"]
 
 [params]
 

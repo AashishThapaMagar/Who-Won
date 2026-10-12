@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bmy44v54uer8r"
-path="res://.godot/imported/sab_victory_01.png-6e1448563317fa12a2462f868d6e40b3.ctex"
+uid="uid://bl8qn6vf4ecdc"
+path="res://.godot/imported/anant_intro_04.jpg-42e5c3a05f6b40844c555cb22e6fce14.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/story/sup/plates/sab_victory_01.png"
-dest_files=["res://.godot/imported/sab_victory_01.png-6e1448563317fa12a2462f868d6e40b3.ctex"]
+source_file="res://assets/story/sup/plates/anant_intro_04.jpg"
+dest_files=["res://.godot/imported/anant_intro_04.jpg-42e5c3a05f6b40844c555cb22e6fce14.ctex"]
 
 [params]
 

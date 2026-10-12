@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://kqits07snum8"
-path="res://.godot/imported/prologue_11.png-edd586cdaa59e4de0f5a299ce67deb02.ctex"
+uid="uid://x8cicga23d34"
+path="res://.godot/imported/prologue_01.jpg-64239be297f315cfec1de0ba79391b3c.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/story/sup/plates/prologue_11.png"
-dest_files=["res://.godot/imported/prologue_11.png-edd586cdaa59e4de0f5a299ce67deb02.ctex"]
+source_file="res://assets/story/sup/plates/prologue_01.jpg"
+dest_files=["res://.godot/imported/prologue_01.jpg-64239be297f315cfec1de0ba79391b3c.ctex"]
 
 [params]
 

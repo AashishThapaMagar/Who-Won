@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://ccdakliu21td6"
-path="res://.godot/imported/prologue_07.png-4a4bb256c066a4e0bbcfa95f6a07ac22.ctex"
+uid="uid://dtyhpnvak43ss"
+path="res://.godot/imported/anant_intro_01.jpg-624062c32be6f719ed308fea59e4da90.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/story/sup/plates/prologue_07.png"
-dest_files=["res://.godot/imported/prologue_07.png-4a4bb256c066a4e0bbcfa95f6a07ac22.ctex"]
+source_file="res://assets/story/sup/plates/anant_intro_01.jpg"
+dest_files=["res://.godot/imported/anant_intro_01.jpg-624062c32be6f719ed308fea59e4da90.ctex"]
 
 [params]
 

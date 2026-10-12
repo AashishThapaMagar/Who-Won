@@ -1,6 +1,8 @@
 extends SceneTree
 ## Bakes Story Mode's composed pictures ("plates") to images in
-## assets/story/<fighter>/plates/<beat>_<line>.png, which the storybook
+## assets/story/<fighter>/plates/<beat>_<line>.jpg (1200x900, what ships in
+## the game) and, full size, art/story_plates/<fighter>/<beat>_<line>.png
+## (the original to paint over; art/ is outside the game), which the storybook
 ## shows instead of drawing the moment live. For each plate the story is
 ## played up to its line (so the cast stands where the story put them and
 ## strikes the line's pose), then the plate's own camera, light and mood
@@ -176,7 +178,7 @@ func _bake(plate: Dictionary) -> void:
 		var drawn := await _finish(page, plate, "frame_only")
 		var out: String = OS.get_environment("PLATE_OUT") if OS.has_environment("PLATE_OUT") else S_OUT % plate.fighter
 		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(out))
-		drawn.save_png(out + plate.key + ".png")
+		_save_plate(drawn, out, plate)
 		print("PLATE ", plate.key)
 		return
 	setup.arcade_index = int(plate.get("chapter", 0))
@@ -237,8 +239,18 @@ func _bake(plate: Dictionary) -> void:
 	var finished := await _finish(render, plate, style)
 	var folder: String = OS.get_environment("PLATE_OUT") if OS.has_environment("PLATE_OUT") else S_OUT % plate.fighter
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(folder))
-	finished.save_png(folder + plate.key + ".png")
+	_save_plate(finished, folder, plate)
 	print("PLATE ", plate.key)
+
+## The full-size original into art/story_plates/<fighter>/ and the game's
+## lighter copy (1200x900 JPEG) into the plates folder.
+func _save_plate(image: Image, folder: String, plate: Dictionary) -> void:
+	var originals := "res://art/story_plates/%s/" % plate.fighter
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(originals))
+	image.save_png(originals + plate.key + ".png")
+	var copy := image.duplicate() as Image
+	copy.resize(1200, 900, Image.INTERPOLATE_LANCZOS)
+	copy.save_jpg(folder + plate.key + ".jpg", 0.88)
 
 ## The plate's camera, light and props.
 func _compose(d: Node, plate: Dictionary) -> void:

@@ -362,7 +362,7 @@ func _build(name: String) -> void:
 			book.chapter("PROLOGUE", "THE MISSING MASTER", "The Story Of Sarvochcha", Color("a3271c"))
 			book.line("", "Years ago, on a hilltop above his village, a boy named Sarvochcha trained every morning under one master.", Color.WHITE)
 			book.reveal(1.0)
-			book.show_plate("res://assets/story/sup/plates/prologue_01.png")
+			book.show_plate("res://assets/story/sup/plates/prologue_01.jpg")
 			_caption("A STORY TOLD AS A NEPALI PICTURE BOOK", H - BAR + 30, 26, 1.0, 6.0, false, Color("efe2c4"), 6)
 		"voice":
 			screen_view.visible = true
@@ -463,7 +463,7 @@ func _update(name: String, local: float, delta: float) -> void:
 				set_meta(key, shot_start)
 				book.line("SARVOCHCHA" if step[1] == "finale_10" else "", step[2], Color("2f8a86"))
 				book.reveal(1.0)
-				book.show_plate("res://assets/story/sup/plates/%s.png" % step[1])
+				book.show_plate("res://assets/story/sup/plates/%s.jpg" % step[1])
 
 ## Four kites flown from below the ridge into the evening sky in front of
 ## the last shot: copies of the arena's own kites (same flight physics in

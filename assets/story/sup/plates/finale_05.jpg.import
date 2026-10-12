@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bk2mxus3w52hh"
-path="res://.godot/imported/sab_intro_06.png-ce20d5526ae10f7f7b8f489529c13939.ctex"
+uid="uid://brt3woumjcvo7"
+path="res://.godot/imported/finale_05.jpg-842114768ac18bb0354c116f561f59b1.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/story/sup/plates/sab_intro_06.png"
-dest_files=["res://.godot/imported/sab_intro_06.png-ce20d5526ae10f7f7b8f489529c13939.ctex"]
+source_file="res://assets/story/sup/plates/finale_05.jpg"
+dest_files=["res://.godot/imported/finale_05.jpg-842114768ac18bb0354c116f561f59b1.ctex"]
 
 [params]
 

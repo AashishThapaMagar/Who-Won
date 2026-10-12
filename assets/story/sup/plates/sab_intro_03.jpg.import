@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dcfyqguyyn31i"
-path="res://.godot/imported/sab_intro_01.png-fcf3906e840990a188de11279d7ae911.ctex"
+uid="uid://p8b0n3rjnpo"
+path="res://.godot/imported/sab_intro_03.jpg-d0d6f90da66e1e1ae11d4dc8908ae339.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/story/sup/plates/sab_intro_01.png"
-dest_files=["res://.godot/imported/sab_intro_01.png-fcf3906e840990a188de11279d7ae911.ctex"]
+source_file="res://assets/story/sup/plates/sab_intro_03.jpg"
+dest_files=["res://.godot/imported/sab_intro_03.jpg-d0d6f90da66e1e1ae11d4dc8908ae339.ctex"]
 
 [params]
 
