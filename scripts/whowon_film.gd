@@ -10,7 +10,7 @@ extends Node
 ## storybook and the voice studio, and closes with a Dashain greeting.
 ##
 ##   0-5    the game's own आनन्द PRESENTS card (splash.gd)
-##   5-14   the sky over the ridge: an eagle glides across the snow peaks
+##   5-14   the sky over the ridge, the peaks in the haze: UPDATED ARENA
 ##   14-23  the Dashain Ground: a slow track past banners and the swing
 ##   23-31  festival details: jamara, the tika thali, butter lamps
 ##   31-47  the arenas of Nepal, one still frame each
@@ -18,7 +18,7 @@ extends Node
 ##   56-63  the voice studio: record your own voice
 ##   63-73  evening on the Dashain Ground: banners and swing against the sky
 ##   73-82  Ananta and Sarvochcha watch the sun go down (the one wipe)
-##   82-90  WHO WON?  COMING SOON  विजया दशमीको शुभकामना
+##   82-90  WHO WON?  COMING SOON  विजया दशमीको शुभकामना  (music credit)
 ##
 ## Record: python tools/record_film.py <folder>  (frames from the 1920x1080
 ## canvas, sound from the movie maker, joined into an MP4).
@@ -298,6 +298,10 @@ func _use_stage(round_index: int) -> void:
 	stage = STAGE.new()
 	world.add_child(stage)
 	stage.show_round(round_index)
+	# No eagles in this film.
+	if stage.get("eagles") != null:
+		for eagle in stage.eagles:
+			eagle.visible = false
 
 func _build(name: String) -> void:
 	_clear()
@@ -315,19 +319,15 @@ func _build(name: String) -> void:
 			_use_stage(DASHAIN)
 			# Low on the ridge, a long lens raised to the sky: the peaks in the
 			# haze, an eagle gliding across them. Almost still; the bird moves.
-			_shot([[2.0, 1.2, 6.0], [-4.0, 13.0, -70.0], 22.0], [[2.0, 1.2, 6.0], [-3.0, 12.2, -70.0], 21.0])
-			if ResourceLoader.exists("res://assets/teaser/eagle.glb"):
-				var eagle: Node3D = load("res://assets/teaser/eagle.glb").instantiate()
-				eagle.name = "Eagle"
-				world.add_child(eagle)
-			_caption("पहाडमा दशैं आयो", H - BAR + 18, 40, 1.6, 5.0, true)
-			_caption("Dashain has come to the hills", H - BAR + 76, 26, 2.4, 4.2)
+			_shot([[9.0, 1.2, 5.0], [12.0, 13.0, -70.0], 22.0], [[9.0, 1.2, 5.0], [13.0, 12.2, -70.0], 21.0])
+
+			_caption("UPDATED ARENA", H - BAR + 40, 32, 1.6, 5.4, false, Color("f2c230"), 10)
 		"ground":
 			_use_stage(DASHAIN)
 			# A slow lateral track past the swing and the banners.
-			_shot([[-13.0, 1.6, 2.5], [-9.0, 3.2, -11.5], 32.0], [[-6.5, 1.6, 2.5], [-3.0, 3.0, -12.0], 32.0])
+			_shot([[-7.0, 1.5, 6.0], [-0.6, 3.6, -10.0], 32.0], [[-2.5, 1.5, 6.0], [0.5, 3.5, -10.0], 32.0])
 			_caption("DASHAIN GROUND", H - BAR + 22, 34, 2.0, 5.0, false, Color("f2c230"), 10)
-			_caption("A new arena: kites, a bamboo swing and marigolds", H - BAR + 78, 24, 2.8, 4.4)
+			_caption("A new arena: kites, a bamboo swing and butter lamps", H - BAR + 78, 24, 2.8, 4.4)
 		"details":
 			_use_stage(DASHAIN)
 			# Close on the festival things by the swing: jamara in clay pots,
@@ -391,6 +391,8 @@ func _build(name: String) -> void:
 			# the ridge edge with the valley and peaks beyond.
 			_dusk_light()
 			_shot([[-1.6, 1.0, -14.0], [0.0, 2.2, -40.0], 24.0], [[-1.6, 1.0, -15.5], [0.0, 2.3, -40.0], 23.0])
+			# A few kites still up over the valley as the day ends.
+			_dusk_kites()
 			_caption("गुरु र चेला", H - BAR + 18, 40, 1.6, 5.0, true)
 			_caption("Ananta and Sarvochcha", H - BAR + 76, 26, 2.4, 4.2)
 		"title":
@@ -403,7 +405,7 @@ func _build(name: String) -> void:
 			_caption("MOBILE  ·  PC", 620, 22, 2.8, 99.0, false, Color("a89878"))
 			_caption("विजया दशमीको शुभकामना", 780, 46, 3.8, 99.0, true, Color("f2c230"))
 			_caption("Happy Bijaya Dashami", 850, 24, 4.4, 99.0, false, Color("e9d7b0"))
-			_caption("AANANDA", 990, 20, 5.2, 99.0, false, Color("7d6d52"), 6)
+			_caption("MUSIC BY SUPREME KHATIWADA", 985, 20, 5.2, 99.0, false, Color("a89878"), 6)
 
 func _update(name: String, local: float, delta: float) -> void:
 	if not cam_from.is_empty():
@@ -462,6 +464,31 @@ func _update(name: String, local: float, delta: float) -> void:
 				book.line("SARVOCHCHA" if step[1] == "finale_10" else "", step[2], Color("2f8a86"))
 				book.reveal(1.0)
 				book.show_plate("res://assets/story/sup/plates/%s.png" % step[1])
+
+## Four kites flown from below the ridge into the evening sky in front of
+## the last shot: copies of the arena's own kites (same flight physics in
+## nepal_stage_3d.gd), given new lines.
+func _dusk_kites() -> void:
+	if stage.get("kites") == null or stage.kites.is_empty():
+		return
+	var source: Node3D = stage.kites[0]
+	var layer := source.get_parent()
+	var flights := [
+		[Vector3(-9.0, -6.0, -40.0), 32.8, 31.2, -4.1],
+		[Vector3(-1.5, -6.0, -40.0), 36.8, 22.3, -3.4],
+		[Vector3(2.0, -6.0, -40.0), 32.0, 35.4, 4.4],
+		[Vector3(9.0, -6.0, -40.0), 34.5, 25.8, 3.7],
+	]
+	for i in flights.size():
+		var original: Node3D = stage.kites[(i + 1) % stage.kites.size()]
+		var kite := original.duplicate() as Node3D
+		kite.scale = Vector3.ONE * 2.2
+		var line := (original.get_meta("line") as Node3D).duplicate() as Node3D
+		layer.add_child(kite)
+		layer.add_child(line)
+		kite.set_meta("flight", flights[i])
+		kite.set_meta("line", line)
+		stage.kites.append(kite)
 
 ## The sun low in the west behind the ridge: warm backlight, a lilac fill.
 func _dusk_light() -> void:

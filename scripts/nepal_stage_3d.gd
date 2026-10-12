@@ -1283,6 +1283,15 @@ func _dress_hill(folder: String) -> void:
 	var valley := PlaneMesh.new()
 	valley.size = Vector2(400, 300)
 	_piece(valley, Vector3(0, floor_y - HILL_DROP, -160), _ground_material("aerial_grass_rock", 12.0, Color(0.6, 0.72, 0.45))).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	# A broad river along the far side of the valley, where the valley floor
+	# meets the foothills (the sky showed through there as a white band).
+	var river := PlaneMesh.new()
+	river.size = Vector2(900, 170)
+	var water := StandardMaterial3D.new()
+	water.albedo_color = Color("3f6f9c")
+	water.roughness = 0.18
+	water.metallic = 0.35
+	_piece(river, Vector3(0, floor_y - HILL_DROP - 0.05, -390), water).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	for row: Array in HILL_LAYOUT:
 		_place_prop(folder + row[0], row[1] + Vector3(0.0, floor_y, 0.0), deg_to_rad(row[2]), row[3])
 	# Prayer flags strung between the two houses, still in the morning air.
@@ -1299,13 +1308,16 @@ var yard_y := -0.12
 const KITE_PAPER := [["c0301f", "f2c230"], ["1f4fa3", "f4ead2"], ["2e7d32", "f2c230"], ["c2185b", "f4ead2"], ["f57c00", "1f4fa3"], ["6a1b9a", "f2c230"]]
 
 ## Dashain on the ridge: a tall linge ping (bamboo swing), kites over the
-## valley, bamboo poles flying long red and saffron banners with marigold
-## garlands strung between them, butter lamps at the ends of the floor, and
-## jamara and the tika thali by the swing.
+## valley, butter lamps at the ends of the floor, and jamara and the tika
+## thali beside the floor.
 func _dress_dashain() -> void:
 	var y := yard_y
-	_place_prop("res://assets/teaser/linge_ping.glb", Vector3(-9.0, y, -11.5), deg_to_rad(15.0), 10.0)
-	_place_prop("res://assets/teaser/tika_thali.glb", Vector3(-6.4, y + 0.5, -9.2), 0.0, 0.19)
+	# The linge ping as the ground's centrepiece: four bamboo poles about
+	# 8 m tall, standing alone in the open ground behind the floor (clear
+	# of the chautara and the houses, with room for the
+	# swing's arc), its A-frame spread wide to face the arena.
+	_place_prop("res://assets/teaser/linge_ping.glb", Vector3(0.0, y, -10.0), deg_to_rad(90.0), 9.0)
+	_place_prop("res://assets/teaser/tika_thali.glb", Vector3(-6.4, y + 0.45, -9.2), 0.0, 0.19)
 	var table := BoxMesh.new()
 	table.size = Vector3(0.7, 0.45, 0.7)
 	_piece(table, Vector3(-6.4, y + 0.225, -9.2), _flat("dashain_table", Color("4a2c18")))
@@ -1326,54 +1338,6 @@ func _dress_dashain() -> void:
 			var blade := _piece(shoot, p + Vector3(cos(a) * r, y + 0.48, sin(a) * r), _flat("jamara", Color("d8c24a")))
 			blade.rotation = Vector3(sin(a) * 0.25, 0, cos(a) * 0.25)
 			blade.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	# Bamboo banner poles along the back, alternating red and saffron.
-	var pole := CylinderMesh.new()
-	pole.top_radius = 0.05
-	pole.bottom_radius = 0.07
-	pole.height = 7.0
-	var cloth := QuadMesh.new()
-	cloth.size = Vector2(0.75, 3.4)
-	var tops: Array[Vector3] = []
-	var xs := [-14.0, -10.0, -5.5, 5.5, 10.0, 14.0]
-	for i in xs.size():
-		var base := Vector3(xs[i], y, -13.0 - absf(xs[i]) * 0.25)
-		_piece(pole, base + Vector3(0, 3.5, 0), _flat("bamboo", Color("b59456")))
-		tops.append(base + Vector3(0, 6.2, 0))
-		var hanger := Node3D.new()
-		hanger.position = base + Vector3(0.42, 6.8, 0)
-		content.add_child(hanger)
-		var banner := _piece(cloth, Vector3(0, -1.7, 0), _flat("banner_red" if i % 2 == 0 else "banner_saffron", Color("b8261a") if i % 2 == 0 else Color("e8962a")), hanger)
-		banner.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		flags.append(hanger)
-	# Marigold garlands (sayapatri) swagged between neighbouring poles: one
-	# multimesh of blossoms for the lot.
-	var blossom := SphereMesh.new()
-	blossom.radius = 0.07
-	blossom.height = 0.12
-	blossom.radial_segments = 8
-	blossom.rings = 4
-	var points: Array[Vector3] = []
-	for i in tops.size() - 1:
-		if absf(tops[i].x - tops[i + 1].x) > 8.0:
-			continue
-		for k in 34:
-			var t := (k + 0.5) / 34.0
-			points.append(tops[i].lerp(tops[i + 1], t) - Vector3(0, sin(t * PI) * 0.9, 0))
-	var garlands := MultiMesh.new()
-	garlands.transform_format = MultiMesh.TRANSFORM_3D
-	garlands.use_colors = true
-	garlands.mesh = blossom
-	garlands.instance_count = points.size()
-	for k in points.size():
-		garlands.set_instance_transform(k, Transform3D(Basis(), points[k]))
-		garlands.set_instance_color(k, Color("f08a1c") if k % 3 else Color("f4c01e"))
-	var garland_node := MultiMeshInstance3D.new()
-	garland_node.multimesh = garlands
-	var petals := StandardMaterial3D.new()
-	petals.vertex_color_use_as_albedo = true
-	petals.roughness = 0.8
-	garland_node.material_override = petals
-	content.add_child(garland_node)
 	# Butter lamps (diyo) on low stands at both ends of the fighting floor.
 	var stand := CylinderMesh.new()
 	stand.top_radius = 0.22
@@ -1648,7 +1612,7 @@ func _bend_neck(yak: Dictionary) -> void:
 ## Per-arena changes to the distant ranges, once they are built.
 func _shape_backdrop(index: int, backdrop: Node3D) -> void:
 	match index:
-		2:
+		2, 5:
 			# The terraced foothills rise from the valley floor, not the ridge.
 			backdrop.position.y = -0.12 - HILL_DROP + 2.0
 		4:
@@ -1877,7 +1841,7 @@ static func _smooth_mesh(mesh: ArrayMesh) -> ArrayMesh:
 	return out
 
 ## Prop folders made with Tripo (models centred on their origin).
-const TRIPO_PROP_FOLDERS := ["terai", "hill", "himalaya"]
+const TRIPO_PROP_FOLDERS := ["terai", "hill", "himalaya", "teaser"]
 ## Tripo props in otherwise non-Tripo folders.
 const TRIPO_PROPS := ["monastery_drum.glb", "dungchen_horns.glb"]
 ## A mesh's bounds in its prop's own space, before the prop joins the tree.
