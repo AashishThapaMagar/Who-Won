@@ -1063,11 +1063,20 @@ func _heritage_night(floor_y: float) -> void:
 	_lantern_strings([[-9.0, 4.6], [-14.0, 4.9]], false, false)
 
 ## Lamplight behind a carved window: a warm pane just inside the lattice, so
-## the carving reads dark against it and the glow blooms into the night.
+## the carving reads dark against it. Each window differs, like rooms
+## people live in: about a third stay dark, the rest burn a dim oil-lamp
+## amber at one of three strengths (bright enough to glow, never so bright
+## the bloom turns them flat white).
+const WINDOW_LAMPS := [["window_glow_low", Color("b8602a"), 0.35], ["window_glow_dim", Color("d9782f"), 0.55], ["window_glow_warm", Color("ee9140"), 0.8]]
+
 func _window_glow(at: Vector3, facing: float, width: float, height: float) -> void:
+	var pick := absi(hash(Vector3i(roundi(at.x * 10.0), roundi(at.y * 10.0), roundi(at.z * 10.0)))) % 100
+	if pick < 35:
+		return
+	var lamp: Array = WINDOW_LAMPS[pick % WINDOW_LAMPS.size()]
 	var pane := QuadMesh.new()
 	pane.size = Vector2(width * 0.62, height * 0.62)
-	var glow := _piece(pane, at + Vector3(facing * 0.012, height * 0.5, 0.0), _flat("window_glow", Color("ffae55"), 2.4))
+	var glow := _piece(pane, at + Vector3(facing * 0.012, height * 0.5, 0.0), _flat(lamp[0], lamp[1], lamp[2]))
 	glow.rotation.y = facing * PI / 2.0
 	glow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
