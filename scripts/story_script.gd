@@ -351,7 +351,7 @@ const ROUTES := {
 		"ladder": ["bib", "abhi", "anug", "sab", "sup", "anant"],
 		"prologue": [
 			{"speaker": "", "text": "Every evening, Agasthya drinks his tea at the same roadside stall in the city.",
-				"set": "street", "cast": {"player": {"at": "lamp", "face": [1, 0]}}, "shot": "wide"},
+				"set": "tea_stall", "cast": {"player": {"at": "stall", "face": [-1, 0]}}, "shot": "wide"},
 			{"speaker": "", "text": "The boy who washes the glasses wants to be a doctor. The tea-maker's daughter paints on old newspapers."},
 			{"speaker": "", "text": "The porter on the next bench once ran for his district. Now he carries gas cylinders up four floors."},
 			{"speaker": "ish", "text": "Every one of them has a dream. And not one of them can afford it."},
@@ -438,7 +438,7 @@ const ROUTES := {
 		"ladder": ["anug", "abhi", "ish", "sab", "sup", "anant"],
 		"prologue": [
 			{"speaker": "", "text": "Before sunrise, while the city sleeps, Vajraveer trains alone on a rooftop.",
-				"set": "gym", "cast": {"player": {"at": "coach", "face": [0, 1]}}, "shot": "wide"},
+				"set": "rooftop", "cast": {"player": {"at": "center", "face": [0, -1]}}, "shot": "wide"},
 			{"speaker": "", "text": "He can run all day. He can kick higher than anyone Guruji ever trained. Nobody has ever seen it."},
 			{"speaker": "bib", "text": "Fights, trials, tournaments... I always find a reason not to go. What if I freeze? What if they laugh?"},
 			{"speaker": "", "text": "So he stays where it is safe. And every year, he stays exactly who he was."},
@@ -522,7 +522,7 @@ const ROUTES := {
 		"ladder": ["bib", "anug", "abhi", "ish", "sup", "anant"],
 		"prologue": [
 			{"speaker": "", "text": "In his village, everyone knows Mahabali. Mostly lying on a rope bed under the pipal tree.",
-				"set": "hill_road", "cast": {"player": {"at": "road", "face": "camera"}}, "shot": "wide"},
+				"set": "village_tree", "cast": {"player": {"at": "cot", "face": "camera"}}, "shot": "wide"},
 			{"speaker": "", "text": "He is the strongest of the master's six students. And the laziest."},
 			{"speaker": "sab", "text": "Work? Today? The tree is giving me shade. It would be rude to leave."},
 			{"speaker": "", "text": "But his teasing has a habit of changing lives. The boy he called 'too slow' now runs for the district. The girl he said 'could never pass' topped her exams."},
@@ -613,13 +613,14 @@ const ROUTES := {
 		"prologue_arena": 0,
 		"ladder": ["bib", "abhi", "anug", "ish", "sab", "sup"],
 		"prologue": [
-			{"speaker": "", "text": "Years ago, Ananta stood in an international final, with the whole of Nepal watching.", "shot": "wide"},
+			{"speaker": "", "text": "Years ago, Ananta stood in an international final, with the whole of Nepal watching.",
+				"set": "final_ring", "cast": {"player": {"at": "ring", "face": [1, 0]}}, "shot": "wide"},
 			{"speaker": "", "text": "He was winning. One round from glory, he dropped his guard to celebrate before the bell."},
 			{"speaker": "", "text": "One mistake. One punch. The crowd went silent, and then it laughed.",
 				"banner": {"eyebrow": "INTERNATIONAL FINAL", "title": "DEFEAT", "subtitle": "ONE MISTAKE BEFORE THE BELL", "red": true}},
 			{"speaker": "anant", "text": "In the streets they said my name like a joke. I could not look my own students in the eye."},
 			{"speaker": "", "text": "So he disappeared. A stone hut, high in a remote village, far from anyone who knew him.",
-				"set": "ananta_ground", "cast": {"player": {"at": "dummy", "face": "camera"}}, "shot": "wide"},
+				"set": "goth", "cast": {"player": {"at": "door", "face": "camera"}}, "shot": "wide"},
 			{"speaker": "", "text": "For years he kept the prize money from that last tournament: five crore. He never spent a rupee of it."},
 			{"speaker": "anant", "text": "This money belongs to someone who deserves it. One of them. But which?"},
 			{"speaker": "", "text": "So he wrote six letters, one to each of his old students, and signed them with a single word.",

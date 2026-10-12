@@ -15,14 +15,21 @@ extends Node3D
 ##                  to sit on, prayer flags, the range glowing behind
 ##   (both dressed with Tripo models from assets/arenas/props/hill and
 ##   props/story_sup)
+##   tea_stall      Agasthya's evening street with its chiya pasal
+##   rooftop        Vajraveer's rooftop at dawn, where he trains alone
+##   village_tree   Mahabali's khatiya under the tree on his village road
+##   final_ring     Ananta's international final: a ring under spotlights
+##   goth           the stone hut on the hilltop where Ananta hid
+##   (Tripo models in props/story_places/)
 ##
 ## Sets face the camera from +Z like the arenas, with the floor at y = 0.
 const PHOTO_SURFACE := preload("res://scripts/arena_photo_surface.gdshader")
 const UI := preload("res://scripts/ui_kit.gd")
-const NAMES := ["gym", "street", "pitch", "academy", "hill_road", "ananta_ground"]
+const NAMES := ["gym", "street", "pitch", "academy", "hill_road", "ananta_ground", "tea_stall", "rooftop", "village_tree", "final_ring", "goth"]
 const HIMALAYA := preload("res://scripts/himalaya_backdrop.gd")
 const HILL_PROPS := "res://assets/arenas/props/hill/"
 const SUP_PROPS := "res://assets/arenas/props/story_sup/"
+const PLACES := "res://assets/arenas/props/story_places/"
 
 ## Mark name -> Vector3 on the floor.
 var marks: Dictionary = {}
@@ -55,6 +62,26 @@ func build(set_name: String) -> void:
 			_hill_road()
 		"ananta_ground":
 			_ananta_ground()
+		"tea_stall":
+			_street()
+			_prop(PLACES + "chiya_pasal.glb", Vector3(-4.6, 0, -2.4), 15.0, 1.7)
+			_light(Vector3(-4.2, 2.2, -1.2), Color("ffb867"), 1.6, 5.0)
+			marks.merge({"stall": Vector3(-3.4, 0, -0.8), "bench": Vector3(-5.6, 0, -0.6)}, true)
+			wide = [Vector3(-1.2, 1.6, 4.6), Vector3(-4.4, 1.3, -1.6), Vector3(-1.8, 1.6, 4.0), Vector3(-4.2, 1.3, -1.6)]
+		"rooftop":
+			_rooftop()
+		"village_tree":
+			_hill_road()
+			_prop(PLACES + "khatiya.glb", Vector3(3.2, 0, -2.2), -20.0, 2.2)
+			marks["cot"] = Vector3(2.4, 0, -0.9)
+			wide = [Vector3(6.5, 1.5, 4.5), Vector3(3.0, 1.0, -2.0), Vector3(5.6, 1.5, 3.8), Vector3(3.0, 1.0, -2.0)]
+		"final_ring":
+			_final_ring()
+		"goth":
+			_ananta_ground()
+			_prop(PLACES + "stone_goth.glb", Vector3(-6.0, 0, -4.5), 25.0, 1.7)
+			marks["door"] = Vector3(-4.6, 0, -2.6)
+			wide = [Vector3(-1.0, 1.6, 4.0), Vector3(-5.5, 1.2, -4.0), Vector3(-1.6, 1.6, 3.4), Vector3(-5.5, 1.2, -4.0)]
 		_:
 			push_warning("Unknown story set %s" % set_name)
 
@@ -255,8 +282,8 @@ func _hill_road() -> void:
 	_environment(Color("c9dcef"), Color("b7c6d8"), 0.55, 0.004, Color("3f7bd2"))
 	_sun(Vector3(-38, -50, 0), Color("fff1dc"), 1.15)
 	_ground(Color(0.66, 0.58, 0.48), Color(0.62, 0.74, 0.46))
-	# The road, a strip of packed earth across the set.
-	_box(Vector3(60, 0.04, 3.2), Vector3(0, 0.0, 0.4), _flat(Color("9c8268"), 0.95))
+	# The road is the packed earth of the ground itself (a separate strip
+	# laid on it rendered as a blown-out white band).
 	_prop(HILL_PROPS + "hill_house.glb", Vector3(-6.0, 0, -8.0), 20.0, 1.7)
 	_prop(HILL_PROPS + "tea_house.glb", Vector3(6.0, 0, -8.5), -15.0, 1.3)
 	_prop(SUP_PROPS + "bus_shelter.glb", Vector3(11.0, 0, -2.6), -10.0, 1.0)
@@ -295,6 +322,41 @@ func _ananta_ground() -> void:
 	marks = {"dummy": Vector3(-2.0, 0, -1.4), "log_left": Vector3(1.0, 0, -0.7), "log_right": Vector3(2.2, 0, -0.8),
 		"edge": Vector3(-1.0, 0, 1.4), "far": Vector3(-8.0, 0, 1.0)}
 	wide = [Vector3(-5.0, 2.4, 7.0), Vector3(0.0, 1.4, -3.0), Vector3(-1.5, 1.8, 5.6), Vector3(1.0, 1.2, -2.0)]
+
+## Vajraveer's rooftop at dawn: a concrete roof with its water tank and
+## washing line, the valley haze and the Himalaya beyond.
+func _rooftop() -> void:
+	_environment(Color("e8c7a8"), Color("a8a6c0"), 0.55, 0.006, Color("6f8fcf"))
+	_sun(Vector3(-8, 150, 0), Color("ffc58c"), 1.3)
+	_box(Vector3(30, 0.2, 30), Vector3(0, -0.1, 0), _photo("stone"))
+	_prop(PLACES + "rooftop.glb", Vector3(0.6, 0, -3.4), 0.0, 2.6)
+	add_child(HIMALAYA.build(Color("e8c7a8"), false, true))
+	marks = {"center": Vector3(0.0, 0, 0.6), "edge": Vector3(2.4, 0, -1.6)}
+	wide = [Vector3(-3.0, 1.5, 5.0), Vector3(0.0, 1.4, -2.0), Vector3(-2.4, 1.5, 4.2), Vector3(0.0, 1.4, -2.0)]
+
+## Ananta's international final: a ring under hard white spotlights in a
+## dark stadium. The ring is sunk so its canvas is the floor (y = 0).
+func _final_ring() -> void:
+	night = true
+	_environment(Color("050608"), Color("2a2f44"), 0.3, 0.02)
+	_sun(Vector3(-70, -20, 0), Color("dfe6ff"), 0.4)
+	_prop(PLACES + "boxing_ring.glb", Vector3(0, -RING_CANVAS, 0), 0.0, 3.3)
+	_box(Vector3(60, 0.1, 60), Vector3(0, -RING_CANVAS - 0.05, 0), _flat(Color("101114"), 0.8))
+	for spot in [Vector3(-3.0, 9.0, 3.0), Vector3(3.0, 9.0, -3.0), Vector3(0.0, 10.0, 0.0)]:
+		var light := SpotLight3D.new()
+		light.position = spot
+		light.look_at_from_position(spot, Vector3.ZERO)
+		light.light_color = Color("f2f4ff")
+		light.light_energy = 6.0
+		light.spot_range = 20.0
+		light.spot_angle = 26.0
+		light.shadow_enabled = true
+		add_child(light)
+	marks = {"ring": Vector3(0.0, 0, 0.0), "corner": Vector3(-1.6, 0, 1.4), "canvas": Vector3(0.6, 0, -0.4)}
+	wide = [Vector3(-5.4, 2.4, 6.4), Vector3(0.0, 1.0, 0.0), Vector3(-4.2, 2.0, 5.2), Vector3(0.0, 1.0, 0.0)]
+
+## How far the ring's canvas stands above its base (metres, at its scale).
+const RING_CANVAS := 1.18
 
 ## Packed earth underfoot and meadow beyond, from the arenas' aerial scans.
 func _ground(earth: Color, grass: Color) -> void:
