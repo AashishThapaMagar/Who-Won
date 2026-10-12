@@ -37,8 +37,14 @@ func run() -> void:
 	current_scene = arena
 	p1 = arena.player1
 	p2 = arena.player2
+	var presentation: Node = arena.get_child(arena.get_child_count() - 1)
+	presentation._update_intro_hud(1.0)
+	check(is_zero_approx(presentation.gauges.modulate.a) and not arena.get_node("UI/MovesButton").visible, "Announcer intro clears the gameplay HUD")
+	check(presentation.name_plates.all(func(plate): return is_zero_approx(plate.modulate.a)), "Name plates fade with the intro HUD")
 	arena.intro_timer = 0
 	arena._hide_banner()
+	presentation._update_intro_hud(1.0)
+	check(is_equal_approx(presentation.gauges.modulate.a, 1.0) and arena.get_node("UI/MovesButton").visible, "Gameplay HUD returns when the fight starts")
 	await frames(10)
 	check(p1.body is CharacterBody3D and p1._is_grounded(), "Fighter uses a grounded 3D physics body")
 	check(p1.visual.world_root == p1.pivot and p1.visual.viewport_3d == null, "Characters render in the shared 3D world")
@@ -154,5 +160,24 @@ func run() -> void:
 		await frames(20)
 		await RenderingServer.frame_post_draw
 		root.get_texture().get_image().save_png("res://.godot/arena-3d-review.png")
+	# Auto-adjust may lower scenery quality in a match that repeats one arena.
+	# Keep the existing scenery during the exchange; rebuild at the round break.
+	var settings := root.get_node("Settings")
+	settings.adaptive_quality = false
+	settings.quality = settings.Quality.HIGH
+	settings.shadows = 1
+	settings.apply_graphics()
+	var stage: Node = arena.nepal_stage
+	var content_before: Node = stage.content
+	arena.fixed_stage = stage.current_round
+	settings.adaptive_adjusting = true
+	settings.quality = settings.Quality.MEDIUM
+	settings.shadows = 0
+	settings.apply_graphics()
+	settings.adaptive_adjusting = false
+	check(stage.content == content_before, "Automatic quality change preserves the arena during combat")
+	check(not stage.sun.shadow_enabled, "Shadow cost drops immediately")
+	arena._begin_round(2)
+	check(stage.content != content_before and stage.built_lite, "Next round applies cheaper scenery even in a fixed arena")
 	print("ARENA_3D_TEST: ", "ALL PASS" if failures.is_empty() else failures)
 	quit(0 if failures.is_empty() else 1)

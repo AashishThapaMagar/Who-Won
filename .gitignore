@@ -1,4 +1,9 @@
 # Godot 4+ specific ignores
+# Local service credentials
+.env
+.env.*
+__pycache__/
+
 .godot/
 .import/
 export_presets.cfg
@@ -51,3 +56,6 @@ assets/arenas/props/stupa/monastery_hall_src.glb
 assets/arenas/props/stupa/monastery_hall_src.glb.import
 assets/arenas/props/stupa/monk_quarters_src.glb
 assets/arenas/props/stupa/monk_quarters_src.glb.import
+
+# Development captures (tools/ui_gallery.gd)
+screenshots/

@@ -214,7 +214,9 @@ func frame(shot_name: String) -> void:
 
 ## The arena changes behind a quick dip to black.
 func _change_round(index: int) -> void:
-	if locked_round >= 0 or index == _pending_round:
+	# In picture mode the arena picker chooses the photo; a mode's default
+	# arena must not land on top of it (nor build the live 3D stage).
+	if picture_mode or locked_round >= 0 or index == _pending_round:
 		return
 	if _round_tween != null and _round_tween.is_valid():
 		_round_tween.kill()

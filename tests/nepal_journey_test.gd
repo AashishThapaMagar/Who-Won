@@ -43,8 +43,9 @@ func run() -> void:
 	arena._begin_round(2)
 	check(arena.nepal_stage.current_round == 0, "Every round of a match stays in the same arena")
 	for index in arena.nepal_stage.ROUNDS.size():
+		# Each arena is the next match of the journey: its first round.
 		setup_journey.journey_stage = index
-		arena._begin_round(index)
+		arena._begin_round(0)
 		arena.intro_timer = 0
 		arena._hide_banner()
 		arena.player1.body.position = Vector3(-1.0, 0.02, 0)
@@ -91,17 +92,18 @@ func run() -> void:
 		arena._begin_round(index)
 		check(arena.nepal_stage.current_round == 2, "Chosen versus arena is used for every round")
 	setup.arcade = true
-	check(arena._resolve_stage() == -1, "Arcade always plays the four-arena journey")
+	check(arena._resolve_stage() == -1, "Arcade always plays the full arena journey")
 	setup.arcade = false
 	setup.stage_choice = setup.JOURNEY_STAGE
 	var select: Node = load("res://scenes/CharacterSelect.tscn").instantiate()
 	root.add_child(select)
 	await frames(2)
-	check(select.arena_label != null and select.arena_label.text == "ALL 5 ARENAS", "Versus fighter select offers the arena picker, defaulting to the journey")
+	check(select.arena_label != null and select.arena_label.text == "ALL %d ARENAS" % arena.nepal_stage.ROUNDS.size(), "Versus fighter select offers the arena picker, defaulting to the journey")
 	select._cycle_stage(-1)
 	check(setup.stage_choice == setup.RANDOM_STAGE and select.arena_label.text == "RANDOM ARENA", "Arena picker wraps to random")
 	select._cycle_stage(-1)
-	check(setup.stage_choice == 4 and select.backdrop.stage.current_round == 4, "Picking an arena shows it live behind the roster")
+	var last: int = arena.nepal_stage.ROUNDS.size() - 1
+	check(setup.stage_choice == last and select.backdrop._round_shown == last, "Picking an arena shows its photo behind the roster")
 	setup.stage_choice = setup.JOURNEY_STAGE
 	# An unusable scene must never leave only fighters and sky on screen.
 	var fallback: Node3D = load("res://scripts/nepal_stage_3d.gd").new()

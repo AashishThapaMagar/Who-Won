@@ -474,7 +474,7 @@ func _next_chain_move(action: String) -> String:
 
 func _start_style_move(move_id: String, step: int = 0) -> void:
 	var data: Dictionary = available_moves()[move_id]
-	# "utility" moves (Abhi's taunt, Sarvochcha's feint) deal no damage and never
+	# "utility" moves (Kri's taunt, Sarvochcha's feint) deal no damage and never
 	# open a hitbox (see _process_attack) — they're on their own cooldown gate.
 	if data.get("utility", "") == "taunt" and combat_time < taunt_ready_at:
 		combat_notice = "LET THE FISTS TALK"
@@ -489,8 +489,7 @@ func _start_style_move(move_id: String, step: int = 0) -> void:
 	_start_attack(State.KICK if data.kind == "kick" else State.PUNCH, data.pose)
 	current_move = data
 	chain_step = step
-	if move_id in BATTLE_CRY.BIG_MOVES and not get("ai_controlled"):
-		BATTLE_CRY.fire(player_id - 1)
+	BATTLE_CRY.fire(player_id - 1, false, BATTLE_CRY.move_event(str(character_profile.id), move_id))
 	_update_animation()
 
 func move_name() -> String:
@@ -676,7 +675,7 @@ func take_hit(damage: int, knockback: float, attacker_facing: int, attacker: Nod
 	var perfect: bool = blocked and state == State.BLOCK and parry_window > 0.0 and block_hold_time <= parry_window
 	var guard_broken := false
 	if blocked and not perfect and is_action_fight():
-		# Abhi's trait is extra guard chip: blocking him drains stamina faster.
+		# Kri's trait is extra guard chip: blocking him drains stamina faster.
 		var guard_cost := damage * (1.1 if character_profile.id == "abhi" else 0.6)
 		guard_broken = stamina < guard_cost
 		stamina = maxf(0.0, stamina - guard_cost)
@@ -756,6 +755,8 @@ func take_hit(damage: int, knockback: float, attacker_facing: int, attacker: Nod
 	velocity.x = attacker_facing * knockback * (0.3 if blocked else (1.3 if last_hit_stagger else 1.0))
 	_knockback_start = absf(velocity.x)
 	health_changed.emit(health, max_health)
+	if not blocked:
+		_voice_impact(attacker)
 	current_move = {}
 	attack_connected = false
 	chain_step = 0
@@ -774,6 +775,17 @@ func take_hit(damage: int, knockback: float, attacker_facing: int, attacker: Nod
 ## Health actually lost to a blow of `amount` (the 3D fight scales it down).
 func scaled_damage(amount: int) -> int:
 	return amount
+
+## Voices on a blow that landed, only on the big ones: a blow that
+## staggers (a counter-hit or a heavy strike) gets the victim's "taking a
+## hit" line and the attacker's "got you" line. Ordinary hits stay silent;
+## the bank spaces the lines out further (voice_bank.gd EVENT_GAP).
+func _voice_impact(attacker: Node) -> void:
+	if not last_hit_stagger:
+		return
+	BATTLE_CRY.fire(player_id - 1, false, "hit")
+	if attacker != null:
+		BATTLE_CRY.fire(attacker.player_id - 1, false, "landed_hit")
 
 func has_super() -> bool:
 	return is_action_fight() and SUPERS.has(str(character_profile.id))
@@ -823,8 +835,7 @@ func start_super(victim: Node) -> void:
 	notice_until = combat_time + 1.6
 	_begin_super()
 	super_started.emit()
-	if not get("ai_controlled"):
-		BATTLE_CRY.fire(player_id - 1, true)
+	BATTLE_CRY.fire(player_id - 1, true, "super")
 	_update_animation()
 	victim._update_animation()
 
@@ -875,6 +886,7 @@ func _super_hit(index: int) -> void:
 	var dealt: int = victim.scaled_damage(data.damage[index])
 	victim.health = maxi(0, victim.health - dealt)
 	victim.health_changed.emit(victim.health, victim.max_health)
+	victim._voice_impact(self)
 	combo_hits = index + 1
 	combo_damage += dealt
 	victim._received_hits = index + 1
@@ -904,6 +916,7 @@ func _super_hit(index: int) -> void:
 ## Locks `victim` into this fighter's throw. Escapes and range were already
 ## checked by the victim's take_hit; `damage` is dealt on the slam.
 func start_throw(victim: Node, damage: int) -> void:
+	BATTLE_CRY.fire(player_id - 1, false, BATTLE_CRY.move_event(str(character_profile.id), "grapple"))
 	hitbox.set_active(false)
 	state = State.THROWING
 	throw_partner = victim
@@ -1022,6 +1035,7 @@ func _ground_hit() -> void:
 	var dealt: int = victim.scaled_damage(THROW.GROUND_DAMAGE[clampi(ground_hits - 1, 0, THROW.GROUND_DAMAGE.size() - 1)])
 	victim.health = maxi(0, victim.health - dealt)
 	victim.health_changed.emit(victim.health, victim.max_health)
+	victim._voice_impact(self)
 	combo_hits += 1
 	combo_damage += dealt
 	victim.last_hit_height = "mid"
@@ -1046,6 +1060,7 @@ func _slam() -> void:
 	var dealt: int = victim.scaled_damage(throw_damage)
 	victim.health = maxi(0, victim.health - dealt)
 	victim.health_changed.emit(victim.health, victim.max_health)
+	victim._voice_impact(self)
 	combo_damage += dealt
 	victim.last_hit_height = "mid"
 	victim.last_hit_force = 1.0

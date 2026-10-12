@@ -151,14 +151,14 @@ static func theme() -> Theme:
 		result.set_stylebox("normal", type, glass(Color(0.04, 0.05, 0.09, 0.78), Color(1, 1, 1, 0.22)))
 		result.set_stylebox("hover", type, glass(Color(GOLD, 0.2), GOLD))
 		result.set_stylebox("pressed", type, glass(Color(GOLD, 0.34), GOLD))
-		result.set_stylebox("focus", type, box(Color(0, 0, 0, 0), GOLD, 1, SLANT))
+		result.set_stylebox("focus", type, box(Color(0, 0, 0, 0), GOLD, 2, SLANT))
 		result.set_stylebox("disabled", type, glass(Color(0.04, 0.05, 0.09, 0.5), Color(1, 1, 1, 0.08)))
 		result.set_color("font_color", type, WHITE)
 		result.set_color("font_hover_color", type, WHITE)
 		result.set_color("font_focus_color", type, WHITE)
 		result.set_color("font_pressed_color", type, WHITE)
 		result.set_color("font_hover_pressed_color", type, WHITE)
-		result.set_color("font_disabled_color", type, Color("6d7389"))
+		result.set_color("font_disabled_color", type, Color("9da5b6"))
 		# Hovering a toggled control uses its own state; without a style it
 		# fell back to a bare face with dark text.
 		result.set_stylebox("hover_pressed", type, glass(Color(GOLD, 0.34), GOLD))
@@ -176,6 +176,8 @@ static func theme() -> Theme:
 	result.set_color("font_color", "PopupMenu", WHITE)
 	result.set_color("font_hover_color", "PopupMenu", INK)
 	result.set_font("font", "PopupMenu", strong_font())
+	result.set_stylebox("background", "ProgressBar", box(Color("202638"), Color("202638"), 0))
+	result.set_stylebox("fill", "ProgressBar", box(GOLD, GOLD, 0))
 	var track := box(Color("262a3d"), Color("262a3d"), 0)
 	track.content_margin_top = 4
 	track.content_margin_bottom = 4
@@ -298,9 +300,14 @@ static func _pop(node: Control, target_scale: float, duration: float) -> void:
 
 ## Slide in from the right with a fade, used for pages and modals alike.
 static func enter(control: Control) -> void:
+	var previous: Tween = control.get_meta("_enter_tween") if control.has_meta("_enter_tween") else null
+	if previous != null and previous.is_valid():
+		previous.kill()
 	control.modulate.a = 0.0
-	var target_position := control.position
-	control.position = target_position + Vector2(40, 0)
+	var target_position: Vector2 = control.get_meta("_enter_home", control.position)
+	control.set_meta("_enter_home", target_position)
+	control.position = target_position + Vector2(16, 0)
 	var tween := control.create_tween().set_parallel(true).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
-	tween.tween_property(control, "modulate:a", 1.0, 0.2)
-	tween.tween_property(control, "position", target_position, 0.35)
+	tween.tween_property(control, "modulate:a", 1.0, 0.15)
+	tween.tween_property(control, "position", target_position, 0.18)
+	control.set_meta("_enter_tween", tween)

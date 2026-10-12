@@ -41,6 +41,8 @@ var lines: Array = []
 var line_index: int = 0
 var name_label: Label
 var text_label: Label
+var next_button: Button
+var skip_button: Button
 var voice_player: AudioStreamPlayer
 var viewport: SubViewport
 var stage: Node3D
@@ -158,9 +160,14 @@ func _build_overlay() -> void:
 	# In the storybook the words are written on the page instead.
 	name_label.visible = storybook == null
 	text_label.visible = storybook == null
-	var hint := UI.label(self, "ENTER  NEXT     ESC  SKIP", Vector2(0, 24), Vector2(SIZE.x - 28, 16), 10, UI.MUTED)
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	hint.add_theme_font_override("font", UI.strong_font())
+	next_button = UI.button(self, "NEXT / ENTER", Vector2(626, 18), Vector2(176, 30))
+	next_button.add_theme_font_size_override("font_size", 12)
+	next_button.pressed.connect(func():
+		if not _finish_typing():
+			_next_line())
+	skip_button = UI.button(self, "SKIP / ESC", Vector2(810, 18), Vector2(122, 30))
+	skip_button.add_theme_font_size_override("font_size", 12)
+	skip_button.pressed.connect(_advance_flow)
 	fade = ColorRect.new()
 	fade.color = Color(0, 0, 0, 0)
 	fade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -871,6 +878,11 @@ func _exit_tree() -> void:
 		stage.free()
 
 func _process(delta: float) -> void:
+	if next_button != null:
+		var key := "A" if Settings.using_pad else "ENTER"
+		var label := "CONTINUE" if carding else ("REVEAL" if text_label.visible_ratio < 1.0 else "NEXT")
+		next_button.text = "%s / %s" % [label, key]
+		skip_button.text = "SKIP / " + ("B" if Settings.using_pad else "ESC")
 	elapsed += delta
 	_update_book(delta)
 	if storybook != null:

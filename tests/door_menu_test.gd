@@ -33,9 +33,8 @@ func run() -> void:
 	menu.home_modes.story.pressed.emit()
 	menu.home_modes.local.pressed.emit()
 	check(menu._selected_mode() == "story", "Repeated clicks cannot change the chosen mode")
-	await create_timer(0.35).timeout
-	check(menu.backdrop.opening > 0 and menu.backdrop.opening < 1, "Transition wipe animates before scene change")
-	await create_timer(0.9).timeout
+	check(is_instance_valid(menu.backdrop.wipe_canvas), "Confirmation creates a transition overlay above menu controls")
+	await create_timer(1.2).timeout
 	check(current_scene.get_script().resource_path.ends_with("character_select.gd"), "Mode leads to character selection")
 	change_scene_to_file("res://scenes/MainMenu.tscn")
 	await process_frame

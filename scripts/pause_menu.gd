@@ -59,6 +59,7 @@ func _draw() -> void:
 
 func _clear() -> void:
 	if is_instance_valid(panel):
+		panel.hide()
 		panel.queue_free()
 	panel = null
 	page = null
@@ -70,11 +71,11 @@ func _show_main() -> void:
 	_clear()
 	panel = Control.new()
 	add_child(panel)
-	var title := UI.heading(panel, "PAUSED", Vector2(56, 64), Vector2(420, 90), 76, UI.GOLD)
+	var title := UI.heading(panel, "PAUSED", Vector2(56, 50), Vector2(420, 76), 60, UI.GOLD)
 	title.add_theme_constant_override("shadow_offset_x", 5)
 	title.add_theme_constant_override("shadow_offset_y", 5)
 	var info := "ROUND %d  /  %s  VS  %s" % [arena.round_index + 1, arena.player1.character_profile.name, arena.player2.character_profile.name]
-	UI.eyebrow(panel, info, Vector2(62, 150), Vector2(500, 20))
+	UI.eyebrow(panel, info, Vector2(62, 132), Vector2(500, 20))
 	var entries := [
 		["RESUME", func(): resume_requested.emit()],
 		["MOVE LIST", func(): move_list_requested.emit()],
@@ -84,18 +85,10 @@ func _show_main() -> void:
 		["QUIT TO MENU", _confirm_quit],
 	]
 	for i in entries.size():
-		var row := _row(entries[i][0], Vector2(56, 190 + i * 56), i == entries.size() - 1)
+		var row := _row(entries[i][0], Vector2(56, 170 + i * 48), i >= entries.size() - 2)
 		row.pressed.connect(entries[i][1])
 		row.mouse_entered.connect(func(): _focus(i))
 		rows.append(row)
-		# Rows slide in one after another.
-		var target := row.position
-		row.position.x -= 60
-		row.modulate.a = 0.0
-		var tween := row.create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-		tween.tween_interval(0.04 * i)
-		tween.parallel().tween_property(row, "position", target, 0.28).set_delay(0.04 * i)
-		tween.parallel().tween_property(row, "modulate:a", 1.0, 0.18).set_delay(0.04 * i)
 	var hints := UI.label(panel, "↑↓  SELECT     ENTER  CONFIRM     ESC  RESUME", Vector2(62, 480), Vector2(500, 20), 12, Color(UI.WHITE, 0.6))
 	hints.add_theme_font_override("font", UI.strong_font())
 	_focus(0)
@@ -103,12 +96,12 @@ func _show_main() -> void:
 func _row(text: String, at: Vector2, danger := false) -> Button:
 	var row := Button.new()
 	row.position = at
-	row.size = Vector2(340, 46)
+	row.size = Vector2(340, 40)
 	row.focus_mode = Control.FOCUS_NONE
 	row.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	row.text = "   " + text
 	row.add_theme_font_override("font", UI.display_font())
-	row.add_theme_font_size_override("font_size", 26)
+	row.add_theme_font_size_override("font_size", 24)
 	row.set_meta("danger", danger)
 	panel.add_child(row)
 	return row
@@ -130,12 +123,18 @@ func _focus(index: int) -> void:
 			row.add_theme_color_override(state, UI.WHITE if active else Color(UI.WHITE, 0.72))
 		row.add_theme_color_override("font_outline_color", UI.INK)
 		row.add_theme_constant_override("outline_size", 5 if active else 3)
-		var offset := 22.0 if active else 0.0
-		row.create_tween().set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT).tween_property(row, "position:x", 56.0 + offset, 0.16)
+		var offset := 12.0 if active else 0.0
+		var previous: Tween = row.get_meta("_focus_tween") if row.has_meta("_focus_tween") else null
+		if previous != null and previous.is_valid():
+			previous.kill()
+		var move := row.create_tween().set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+		move.tween_property(row, "position:x", 56.0 + offset, 0.12)
+		row.set_meta("_focus_tween", move)
 
 ## Sub-pages share one slanted card on the right; Esc or BACK returns.
 func _open_page(title: String, eyebrow: String) -> Control:
 	if is_instance_valid(page):
+		page.hide()
 		page.queue_free()
 	page = Control.new()
 	page.position = Vector2(470, 70)
@@ -150,7 +149,22 @@ func _open_page(title: String, eyebrow: String) -> Control:
 	UI.eyebrow(page, eyebrow, Vector2(26, 18), Vector2(400, 20))
 	UI.heading(page, title, Vector2(24, 36), Vector2(400, 48), 36, UI.WHITE)
 	UI.enter(page)
+	call_deferred("_focus_page")
 	return page
+
+func _focus_page() -> void:
+	if not is_instance_valid(page):
+		return
+	var first: Control
+	for item in page.find_children("*", "Control", true, false):
+		if item.focus_mode == Control.FOCUS_ALL:
+			if item.get_meta("initial_focus", false):
+				item.grab_focus()
+				return
+			if first == null:
+				first = item
+	if first != null:
+		first.grab_focus()
 
 func _option(to: Control, text: String, y: float) -> void:
 	UI.panel(to, Vector2(26, y + 4), Vector2(4, 16), UI.GOLD, Color.TRANSPARENT)
@@ -169,7 +183,7 @@ func _show_settings() -> void:
 	quality.select(Settings.quality)
 	quality.position = Vector2(206, 172)
 	quality.size = Vector2(220, 32)
-	quality.focus_mode = Control.FOCUS_NONE
+	quality.focus_mode = Control.FOCUS_ALL
 	quality.item_selected.connect(func(index: int): Settings.set_quality(index))
 	to.add_child(quality)
 	var toggles := [["FULLSCREEN", Settings.fullscreen, func(on: bool): Settings.set_fullscreen(on)],
@@ -186,7 +200,7 @@ func _show_settings() -> void:
 		box.size = Vector2(220, 30)
 		box.button_pressed = toggles[i][1]
 		box.text = "ON" if box.button_pressed else "OFF"
-		box.focus_mode = Control.FOCUS_NONE
+		box.focus_mode = Control.FOCUS_ALL
 		box.toggled.connect(toggles[i][2])
 		box.toggled.connect(func(on: bool): box.text = "ON" if on else "OFF")
 		to.add_child(box)
@@ -201,7 +215,7 @@ func _slider(to: Control, text: String, y: float, level: float, apply: Callable)
 	slider.max_value = 1.0
 	slider.step = 0.05
 	slider.value = level
-	slider.focus_mode = Control.FOCUS_NONE
+	slider.focus_mode = Control.FOCUS_ALL
 	slider.value_changed.connect(func(volume: float):
 		apply.call(volume)
 		value.text = "%d%%" % roundi(volume * 100))
@@ -221,13 +235,14 @@ func _show_guide() -> void:
 	tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_back_button(to)
 
-func _back_button(to: Control, y := 336.0) -> void:
+func _back_button(to: Control, y := 388.0) -> void:
 	var back := UI.button(to, "◀  BACK", Vector2(300, y), Vector2(130, 32))
-	back.focus_mode = Control.FOCUS_NONE
+	back.focus_mode = Control.FOCUS_ALL
 	back.pressed.connect(_close_page)
 
 func _close_page() -> void:
 	if is_instance_valid(page):
+		page.hide()
 		page.queue_free()
 		page = null
 		preload("res://scripts/sfx.gd").fire("menu_back")
@@ -238,10 +253,11 @@ func _confirm_restart() -> void:
 	var warning := UI.label(to, "Back to round one with the score wiped. Same fighters, same arena.", Vector2(26, 100), Vector2(400, 50), 15, UI.WHITE)
 	warning.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var yes := UI.button(to, "RESTART", Vector2(26, 170), Vector2(200, 44), true)
-	yes.focus_mode = Control.FOCUS_NONE
+	yes.focus_mode = Control.FOCUS_ALL
 	yes.pressed.connect(func(): restart_requested.emit())
 	var no := UI.button(to, "KEEP FIGHTING", Vector2(236, 170), Vector2(190, 44))
-	no.focus_mode = Control.FOCUS_NONE
+	no.focus_mode = Control.FOCUS_ALL
+	no.set_meta("initial_focus", true)
 	no.pressed.connect(func(): resume_requested.emit())
 
 ## Quitting mid-fight loses the match, so it asks first.
@@ -250,15 +266,21 @@ func _confirm_quit() -> void:
 	var warning := UI.label(to, "This match will be lost. Head back to the main menu?", Vector2(26, 100), Vector2(400, 50), 15, UI.WHITE)
 	warning.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var yes := UI.button(to, "QUIT TO MENU", Vector2(26, 170), Vector2(200, 44), true)
-	yes.focus_mode = Control.FOCUS_NONE
+	yes.focus_mode = Control.FOCUS_ALL
 	yes.pressed.connect(func(): quit_requested.emit())
 	var no := UI.button(to, "KEEP FIGHTING", Vector2(236, 170), Vector2(190, 44))
-	no.focus_mode = Control.FOCUS_NONE
+	no.focus_mode = Control.FOCUS_ALL
+	no.set_meta("initial_focus", true)
 	no.pressed.connect(func(): resume_requested.emit())
 	confirming = true
 
 func _input(event: InputEvent) -> void:
 	if not visible:
+		return
+	if is_instance_valid(page):
+		if event.is_action_pressed("ui_cancel"):
+			_close_page()
+			get_viewport().set_input_as_handled()
 		return
 	if event is InputEventJoypadButton or event is InputEventJoypadMotion:
 		if event.is_action_pressed("ui_up"):

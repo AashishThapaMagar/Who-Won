@@ -13,6 +13,8 @@ const DUMMY_MODES := ["STAND", "GUARD ALL", "GUARD AFTER FIRST HIT", "ESCAPE GRA
 var dummy_mode := 0
 var dummy_ai: Node
 var mode_label: Label
+var training_card: Control
+var dummy_picker: OptionButton
 var _guard_hold := 0.0
 var _f2_was_down := false
 
@@ -28,10 +30,30 @@ func _ready() -> void:
 	player2.input_prefix = DUMMY_PREFIX
 	$UI/P2Label.text = player2.character_profile.name + " / PRACTICE DUMMY"
 	$UI/ControlsHint.text = "A/D WALK   W/S SIDESTEP   SHIFT + FORWARD RUN   DOUBLE-TAP + HOLD FORWARD TO RUN\nF 1   V 2   G 3   B 4   H THROW   E GUARD   SPACE JUMP   R RESET   F2 DUMMY   F1 MOVES   ESC PAUSE"
-	mode_label = UI.label($UI, "", Vector2(36, 446), Vector2(420, 20), 12, UI.WHITE)
+	training_card = UI.panel($UI, Vector2(360, 112), Vector2(584, 42), Color(0.025, 0.03, 0.055, 0.92), Color(UI.GOLD, 0.5))
+	training_card.process_mode = Node.PROCESS_MODE_ALWAYS
+	training_card.process_mode = Node.PROCESS_MODE_ALWAYS
+	mode_label = UI.label(training_card, "DUMMY", Vector2(14, 12), Vector2(90, 18), 12, UI.GOLD)
 	mode_label.add_theme_font_override("font", UI.strong_font())
 	mode_label.add_theme_constant_override("outline_size", 4)
 	mode_label.add_theme_color_override("font_outline_color", UI.INK)
+	dummy_picker = OptionButton.new()
+	dummy_picker.position = Vector2(104, 7)
+	dummy_picker.size = Vector2(280, 28)
+	dummy_picker.fit_to_longest_item = false
+	for mode in DUMMY_MODES:
+		dummy_picker.add_item(mode)
+	dummy_picker.item_selected.connect(set_dummy_mode)
+	dummy_picker.get_popup().about_to_popup.connect(func(): get_tree().paused = true)
+	dummy_picker.get_popup().popup_hide.connect(func(): get_tree().paused = false)
+	dummy_picker.get_popup().about_to_popup.connect(func(): get_tree().paused = true)
+	dummy_picker.get_popup().popup_hide.connect(func(): get_tree().paused = false)
+	training_card.add_child(dummy_picker)
+	var reset := UI.button(training_card, "RESET [R]", Vector2(398, 7), Vector2(112, 28))
+	reset.add_theme_font_size_override("font_size", 11)
+	reset.focus_mode = Control.FOCUS_NONE
+	reset.pressed.connect(_reset_practice)
+	UI.label(training_card, "F2", Vector2(528, 12), Vector2(40, 18), 11, UI.MUTED).tooltip_text = "Cycle dummy behaviour"
 	set_dummy_mode(0)
 
 func _begin_round(index: int) -> void:
@@ -45,12 +67,14 @@ func _begin_round(index: int) -> void:
 	pips2.hide()
 
 func _process(delta: float) -> void:
+	if training_card != null:
+		training_card.visible = not move_guide.visible and not is_paused()
 	time_remaining = 9999.0
-	if not move_guide.visible and Input.is_action_just_pressed("restart"):
+	if not move_guide.visible and not is_paused() and Input.is_action_just_pressed("restart"):
 		_reset_practice()
 	# F2, or clicking the left stick on the first pad.
 	var f2 := Input.is_physical_key_pressed(KEY_F2) or Input.is_joy_button_pressed(0, JOY_BUTTON_LEFT_STICK)
-	if f2 and not _f2_was_down and not move_guide.visible:
+	if f2 and not _f2_was_down and not move_guide.visible and not is_paused():
 		set_dummy_mode((dummy_mode + 1) % DUMMY_MODES.size())
 	_f2_was_down = f2
 	_drive_dummy(delta)
@@ -73,7 +97,9 @@ func set_dummy_mode(mode: int) -> void:
 		dummy_ai = null
 	player2.ai_controlled = fighting
 	if mode_label != null:
-		mode_label.text = "DUMMY   %s   (F2)" % DUMMY_MODES[mode]
+		mode_label.text = "DUMMY"
+	if dummy_picker != null:
+		dummy_picker.select(mode)
 
 func _drive_dummy(delta: float) -> void:
 	if player2 == null or DUMMY_MODES[dummy_mode] == "FIGHT BACK":

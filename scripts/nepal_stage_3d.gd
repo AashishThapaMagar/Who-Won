@@ -389,7 +389,11 @@ func _ready() -> void:
 func show_round(index: int) -> void:
 	index = clampi(index, 0, ROUNDS.size() - 1)
 	if index == current_round:
-		return
+		var settings := get_node_or_null("/root/Settings")
+		# A fixed arena can repeat every round. Apply deferred scenery quality
+		# here, during the round break, even when the stage index is unchanged.
+		if settings == null or (settings.detailed_textures == built_detailed and _lite_scenery() == built_lite):
+			return
 	current_round = index
 	night = ROUNDS[index].night or force_night
 	var changing := content != null
@@ -582,9 +586,14 @@ func _surface_kind(texture: Texture2D, bounds: AABB) -> String:
 ## rebuilds the current round so the change shows immediately.
 var built_detailed := true
 var built_lite := false
+## Decorative home-menu scenery can use the lighter prop set independently
+## of the player's graphics choice for actual fights.
+var light_scenery_override := false
 ## Lighter scenery props on LOW and MEDIUM; only HIGH (and a custom mix with
 ## shadows) pays for the full carving.
 func _lite_scenery() -> bool:
+	if light_scenery_override:
+		return true
 	var settings := get_node_or_null("/root/Settings")
 	if settings == null:
 		return false
@@ -606,6 +615,10 @@ func _apply_graphics() -> void:
 		environment.environment.glow_enabled = _effects_level() > 0
 		grade_rect.visible = _effects_level() > 0
 	if (settings.detailed_textures != built_detailed or _lite_scenery() != built_lite) and current_round >= 0:
+		# Auto-adjust must not stall combat rebuilding the stage. Immediate
+		# shadow/effect changes above still apply; new scenery loads next round.
+		if settings.adaptive_adjusting:
+			return
 		var round_index := current_round
 		current_round = -1
 		show_round(round_index)

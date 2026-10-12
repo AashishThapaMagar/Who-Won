@@ -47,10 +47,22 @@ var readout_move := ""
 var readout_blocked := false
 ## Damage of the combo the readout is following, per defender.
 var readout_combo: Array = [0, 0]
+var call_buttons: Array[Button] = []
+var intro_hud_alpha := 1.0
+var name_plates: Array[Polygon2D] = []
 
 func _ready() -> void:
 	arena = get_parent()
 	var layer: CanvasLayer = arena.get_node("UI")
+	for player in 2:
+		var key := "T" if player == 0 else "U"
+		var button := UI.button(layer, "P%d CALL ENEMY [%s]" % [player + 1, key], Vector2(18 + player * 186, 434 if MatchSetup.practice else 468), Vector2(176, 28))
+		button.name = "CallEnemyP%d" % (player + 1)
+		button.focus_mode = Control.FOCUS_NONE
+		button.add_theme_font_size_override("font_size", 11)
+		button.visible = player == 0 or (not MatchSetup.vs_ai and not MatchSetup.practice)
+		button.pressed.connect(_call_enemy.bind(player))
+		call_buttons.append(button)
 	gauges = preload("res://scripts/hud_gauges.gd").new()
 	gauges.hud = self
 	gauges.arena = arena
@@ -187,7 +199,7 @@ func _ready() -> void:
 	arena.banner_tagline.add_theme_color_override("font_outline_color", UI.INK)
 	arena.banner_tagline.add_theme_constant_override("outline_size", 6)
 	for child in layer.get_children():
-		if child is Button:
+		if child is Button and child.name == "MovesButton":
 			child.theme = UI.theme()
 			child.position = Vector2(815, 462)
 			child.add_theme_font_size_override("font_size", 12)
@@ -218,9 +230,9 @@ func _ready() -> void:
 	result_detail = UI.label(result_panel, "", Vector2(24, 108), Vector2(652, 22), 13, UI.MUTED)
 	result_detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	result_detail.add_theme_font_override("font", UI.strong_font())
-	var columns := ["ROUNDS", "DAMAGE", "BEST COMBO", "KNOCKOUTS", "PERFECTS"]
+	var columns := ["ROUNDS", "DAMAGE", "COMBO", "KOs", "PERFECT"]
 	for side in 2:
-		var color := UI.RED if side == 0 else UI.VIOLET
+		var color := UI.GOLD if side == 0 else UI.VIOLET
 		var name_label := UI.heading(result_panel, "", Vector2(24 if side == 0 else 356, 146), Vector2(320, 26), 18, color, Color(0, 0, 0, 0.7))
 		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if side == 0 else HORIZONTAL_ALIGNMENT_RIGHT
 		name_label.name = "StatsName%d" % side
@@ -230,18 +242,20 @@ func _ready() -> void:
 			var caption := UI.label(result_panel, columns[i], Vector2(x + 4, 180), Vector2(56, 12), 8, UI.MUTED)
 			caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			caption.add_theme_font_override("font", UI.strong_font())
+			caption.tooltip_text = ["Rounds won", "Damage dealt", "Best hit combo", "Knockouts", "Perfect rounds"][i]
+			caption.mouse_filter = Control.MOUSE_FILTER_PASS
 			var value := UI.heading(result_panel, "0", Vector2(x, 194), Vector2(60, 28), 20, UI.WHITE, Color(0, 0, 0, 0.6))
 			value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			stat_values[side].append(value)
 	next_button = UI.button(result_panel, "NEXT ROUND / R", Vector2(24, 250), Vector2(380, 44), true)
 	next_button.theme = UI.theme()
-	next_button.focus_mode = Control.FOCUS_NONE
+	next_button.focus_mode = Control.FOCUS_ALL
 	next_button.add_theme_font_override("font", UI.display_font())
 	next_button.add_theme_font_size_override("font_size", 20)
 	next_button.pressed.connect(_continue_match)
-	var menu := UI.button(result_panel, "MAIN MENU / ESC", Vector2(416, 250), Vector2(260, 44))
+	var menu := UI.button(result_panel, "MAIN MENU", Vector2(416, 250), Vector2(260, 44))
 	menu.theme = UI.theme()
-	menu.focus_mode = Control.FOCUS_NONE
+	menu.focus_mode = Control.FOCUS_ALL
 	menu.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/MainMenu.tscn"))
 	arena.result_label.position = Vector2(154, 172)
 	arena.result_label.size = Vector2(652, 56)
@@ -276,9 +290,10 @@ func _ready() -> void:
 		var x := 28.0 if i == 0 else 932.0
 		var dir := 1.0 if i == 0 else -1.0
 		plate.polygon = PackedVector2Array([Vector2(x, 54), Vector2(x + dir * 300, 54), Vector2(x + dir * 288, 86), Vector2(x - dir * 6, 86)])
-		plate.color = Color(UI.CRIMSON if i == 0 else Color("2f6fd1"), 0.55)
+		plate.color = Color(UI.GOLD if i == 0 else Color("2f6fd1"), 0.22)
 		plate.z_index = -1
 		layer.add_child(plate)
+		name_plates.append(plate)
 	layer.move_child(arena.move_guide, -1)
 	perfect_label = UI.heading(layer, "PERFECT!", Vector2(230, 282), Vector2(500, 44), 34, UI.WHITE, UI.CRIMSON)
 	perfect_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -552,7 +567,32 @@ func _slam(text: String, size: int) -> void:
 	arena.result_label.modulate.a = 0.0
 	arena.result_label.create_tween().tween_property(arena.result_label, "modulate:a", 1.0, 0.25).set_delay(0.95)
 
+func _can_call() -> bool:
+	return arena.round_active and arena.intro_timer <= 0.0 and not arena.is_paused() and not arena.is_replaying() and not arena.move_guide.visible
+
+func _call_enemy(player: int) -> void:
+	if not _can_call():
+		return
+	var bank := get_node("/root/BattleCry")
+	if not bank.has_cry(player, "call_enemy"):
+		Settings.notify("RECORD A CALL ENEMY LINE IN VOICE STUDIO FIRST")
+		return
+	bank.call_enemy(player)
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.physical_keycode == KEY_T:
+			_call_enemy(0)
+		elif event.physical_keycode == KEY_U and not MatchSetup.vs_ai and not MatchSetup.practice:
+			_call_enemy(1)
+
 func _process(_delta: float) -> void:
+	var bank := get_node("/root/BattleCry")
+	for player in call_buttons.size():
+		var wait: float = bank.call_time_left(player)
+		call_buttons[player].disabled = not _can_call() or not bank.can_call_enemy(player)
+		call_buttons[player].text = "P%d CALL ENEMY [%s]" % [player + 1, "T" if player == 0 else "U"] if wait <= 0.0 else "P%d CALL / %.1f s" % [player + 1, wait]
+		call_buttons[player].tooltip_text = "Play your recorded challenge" if bank.has_cry(player, "call_enemy") else "Record a Call Enemy line in Voice Studio on character select"
 	# Name plates: the fighter's name alone, the title and player tag below.
 	for i in 2:
 		var fighter: Node = arena.player1 if i == 0 else arena.player2
@@ -627,9 +667,11 @@ func _process(_delta: float) -> void:
 	show_result = show_result and arena.match_over and not arena.advancing
 	if show_result and not result_panel.visible:
 		UI.enter(result_panel)
+		result_panel.show()
+		next_button.grab_focus()
 	result_panel.visible = show_result
 	if show_result:
-		next_button.text = "REMATCH / R"
+		next_button.text = "REMATCH / " + ("A" if Settings.using_pad else "R")
 		result_detail.text = "%s  /  SCORE %d : %d" % ["MATCH COMPLETE" if arena.match_over else "ROUND %d COMPLETE" % (arena.round_index + 1), arena.round_wins[0], arena.round_wins[1]]
 		for side in 2:
 			var fighter: Node = arena.player1 if side == 0 else arena.player2
@@ -647,3 +689,24 @@ func _process(_delta: float) -> void:
 	# The last ten seconds throb once per second.
 	var beat := fposmod(arena.time_remaining, 1.0)
 	arena.timer_label.scale = Vector2.ONE * (1.0 + (0.18 * beat * beat if low else 0.0))
+	_update_intro_hud(_delta)
+
+func _update_intro_hud(delta: float) -> void:
+	var ceremony: bool = is_instance_valid(arena.announcer) and arena.intro_timer > 0.65
+	intro_hud_alpha = move_toward(intro_hud_alpha, 0.0 if ceremony else 1.0, delta * 6.0)
+	var chrome: Array = [gauges, arena.get_node("UI/P1Label"), arena.get_node("UI/P2Label"), arena.timer_label, arena.round_label]
+	chrome.append_array(name_plates)
+	chrome.append_array(title_tags)
+	chrome.append_array(stamina_bars)
+	chrome.append_array(super_bars)
+	chrome.append_array(super_tags)
+	for item in chrome:
+		item.modulate.a = intro_hud_alpha
+	for path in ["UI/ControlsHint", "UI/MovesButton"]:
+		var item := arena.get_node_or_null(path)
+		if item != null:
+			item.visible = not ceremony
+	for player in call_buttons.size():
+		call_buttons[player].visible = not ceremony and (player == 0 or (not MatchSetup.vs_ai and not MatchSetup.practice))
+	if is_instance_valid(input_display):
+		input_display.visible = not ceremony and Settings.input_display

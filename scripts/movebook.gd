@@ -24,7 +24,6 @@ const STRIKES := [
 const SPECIALS := [
 	["drive", ["↓", "↘", "→", "3"], "Command ender. Big damage; cancel into it from a landed jab or cross."],
 	["breaker", ["↓", "↙", "←", "3"], "Command ender. Big damage; cancel into it from a landed jab or cross."],
-	["grapple", ["1", "+", "3"], "Throw. Beats a blocking rival; tap 1+3 just before contact to escape."],
 ]
 ## Fighter-specific tips that frame data doesn't show.
 const NOTES := {
@@ -94,7 +93,7 @@ func _ready() -> void:
 	var header := UI.heading(self, "MOVEBOOK", Vector2(30, 8), Vector2(360, 60), 50, UI.GOLD)
 	header.add_theme_constant_override("shadow_offset_x", 4)
 	header.add_theme_constant_override("shadow_offset_y", 4)
-	var legend := UI.label(self, "L = LIGHT (F / K)     H = HEAVY (G / L)     → ← = TOWARD / AWAY FROM RIVAL", Vector2(34, 66), Vector2(600, 18), 11, Color(UI.WHITE, 0.75))
+	var legend := UI.label(self, "1 / 2 PUNCH   •   3 / 4 KICK   •   → ← TOWARD / AWAY FROM RIVAL", Vector2(34, 66), Vector2(600, 18), 12, Color(UI.WHITE, 0.75))
 	legend.add_theme_font_override("font", UI.strong_font())
 	for i in 2:
 		var tab := UI.button(self, "", Vector2(600 + i * 176, 20), Vector2(168, 38))
@@ -206,7 +205,7 @@ func _draw() -> void:
 	draw_rect(Rect2(30, 88, 900, 2), UI.GOLD)
 	draw_rect(Rect2(30, 494, 900, 1), Color(UI.GOLD, 0.45))
 	# Fighter panel frame in the fighter's colour.
-	var color: Color = UI.RED if side == 0 else UI.VIOLET
+	var color: Color = UI.GOLD if side == 0 else UI.VIOLET
 	var frame := PackedVector2Array([Vector2(36, 98), Vector2(300, 98), Vector2(294, 486), Vector2(30, 486)])
 	draw_colored_polygon(frame, Color(color.darkened(0.75), 0.6))
 	var closed := frame.duplicate()
@@ -226,10 +225,10 @@ func _show_side(value: int) -> void:
 	side = clampi(value, 0, 1)
 	var fighter: Node = arena.player1 if side == 0 else arena.player2
 	var profile: Dictionary = fighter.character_profile
-	var color: Color = UI.RED if side == 0 else UI.VIOLET
+	var color: Color = UI.GOLD if side == 0 else UI.VIOLET
 	for i in 2:
 		var active := i == side
-		var tint: Color = UI.RED if i == 0 else UI.VIOLET
+		var tint: Color = UI.GOLD if i == 0 else UI.VIOLET
 		tabs[i].add_theme_stylebox_override("normal", UI.blade(Color(tint, 0.85) if active else Color(0.05, 0.05, 0.09, 0.9), UI.GOLD if active else tint, 6 if active else 3))
 		tabs[i].add_theme_color_override("font_color", UI.WHITE if active else Color(UI.WHITE, 0.6))
 	for index in ROSTER.PROFILES.size():

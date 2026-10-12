@@ -16,18 +16,19 @@ run/main_scene="res://scenes/Splash.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.png"
 
+[audio]
+
+driver/enable_input=true
+
 [autoload]
 
 Settings="*res://scripts/settings.gd"
 MatchSetup="*res://scripts/match_setup.gd"
 StoryDirector="*res://scripts/story_director.gd"
 Sfx="*res://scripts/sfx.gd"
+Music="*res://scripts/music.gd"
 Records="*res://scripts/records.gd"
 BattleCry="*res://scripts/battle_cry.gd"
-
-[audio]
-
-driver/enable_input=true
 
 [display]
 
@@ -112,6 +113,6 @@ common/physics_interpolation=true
 
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
-anti_aliasing/quality/msaa_2d=2
+anti_aliasing/quality/msaa_2d=0
 anti_aliasing/quality/msaa_3d=2
 environment/defaults/default_clear_color=Color(0, 0, 0, 1)

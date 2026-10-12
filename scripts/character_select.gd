@@ -57,7 +57,13 @@ var arena_thumb: TextureRect
 var start_text_ready := ""
 var info_modal: Control
 ## Versus arena options, in cycling order (see MatchSetup.stage_choice).
-const STAGE_OPTIONS := [-1, 0, 1, 2, 3, 4, 99]
+## The arena picker's choices: the journey, every arena, then random.
+static func stage_options() -> Array:
+	var options := [MatchSetup.JOURNEY_STAGE]
+	for i in preload("res://scripts/nepal_stage_3d.gd").ROUNDS.size():
+		options.append(i)
+	options.append(MatchSetup.RANDOM_STAGE)
+	return options
 ## Random pick roulette per player: the portrait spins through the roster,
 ## slowing down until it lands, then locks in.
 var rolling: Array[bool] = [false, false]
@@ -715,14 +721,14 @@ func _build_stage_picker() -> void:
 func _cycle_stage(step: int) -> void:
 	if transitioning or not is_instance_valid(arena_label):
 		return
-	var at := STAGE_OPTIONS.find(MatchSetup.stage_choice)
-	MatchSetup.stage_choice = STAGE_OPTIONS[posmod(at + step, STAGE_OPTIONS.size())]
+	var at := stage_options().find(MatchSetup.stage_choice)
+	MatchSetup.stage_choice = stage_options()[posmod(at + step, stage_options().size())]
 	_show_stage()
 
 ## Name the choice and show that arena live behind the roster.
 func _show_stage() -> void:
 	var rounds: Array = backdrop.STAGE.ROUNDS
-	arena_number.text = "%02d/%02d" % [STAGE_OPTIONS.find(MatchSetup.stage_choice) + 1, STAGE_OPTIONS.size()]
+	arena_number.text = "%02d/%02d" % [stage_options().find(MatchSetup.stage_choice) + 1, stage_options().size()]
 	match MatchSetup.stage_choice:
 		MatchSetup.JOURNEY_STAGE:
 			arena_label.text = "ALL %d ARENAS" % rounds.size()

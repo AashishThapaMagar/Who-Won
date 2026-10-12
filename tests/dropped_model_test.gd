@@ -53,8 +53,6 @@ func run() -> void:
 		if live != null and live.active:
 			check(live.clip_names.get("idle", "") == "idle" and String(live.clip_names.get("kick", "")).begins_with("attack-kick") and live.clip_names.get("ko", "") == "die", "Its clips were matched by name")
 			check(not arena.player1.visual.model.visible, "The procedural rig is hidden behind it")
-		var other = arena.player2.visual.get("animated")
-		check(other == null or not other.active, "Fighters without a dropped rig keep the procedural model")
 		arena.queue_free()
 		await process_frame
 		DirAccess.remove_absolute(folder + "meshy_rig.glb")

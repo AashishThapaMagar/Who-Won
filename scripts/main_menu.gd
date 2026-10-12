@@ -82,10 +82,15 @@ var transitioning: bool = false
 ## Buttons navigated by keys that never take focus.
 var nav_buttons: Array[Button] = []
 var _flicker := 0.0
+var _layout_tween: Tween
+var _entrance_tween: Tween
+var selected_marker: Label
+var _hover_blocked_until := 0
 
 func _ready() -> void:
 	theme = UI.theme()
 	backdrop = BACKDROP.new()
+	backdrop.locked_round = 0
 	add_child(backdrop)
 	backdrop.shade_width = 0.0
 	if DisplayServer.get_name() != "headless":
@@ -130,8 +135,8 @@ func _build_logo() -> void:
 		node.modulate.a = 0.0
 		node.position.y += 12
 		var rise: Tween = node.create_tween().set_parallel(true).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
-		rise.tween_property(node, "position:y", node.position.y - 12, 0.9)
-		rise.tween_property(node, "modulate:a", 1.0, 0.7)
+		rise.tween_property(node, "position:y", node.position.y - 12, 0.25)
+		rise.tween_property(node, "modulate:a", 1.0, 0.2)
 
 func _build_list() -> void:
 	# The diya: a small butter-lamp flame that marks the chosen entry.
@@ -150,9 +155,16 @@ func _build_list() -> void:
 	diya.pivot_offset = Vector2(11, 11)
 	diya.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(diya)
+	selected_marker = UI.label(self, "▶", Vector2(LIST_X - 8, LIST_TOP), Vector2(28, ROW_LARGE), 18, UI.GOLD)
+	selected_marker.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	for i in ENTRIES.size():
 		var key: String = ENTRIES[i][0]
-		var button := UI.button(self, "", Vector2(LIST_X, LIST_TOP), Vector2(ROW_WIDTH, ROW_SMALL))
+		var button := Button.new()
+		button.position = Vector2(LIST_X, LIST_TOP)
+		button.size = Vector2(ROW_WIDTH, ROW_SMALL)
+		button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		add_child(button)
+		button.pressed.connect(func(): preload("res://scripts/sfx.gd").fire("menu_confirm"))
 		button.name = String(ENTRIES[i][1]).replace(" ", "").capitalize().replace(" ", "") + "Mode"
 		button.focus_mode = Control.FOCUS_NONE
 		var clear := StyleBoxEmpty.new()
@@ -171,7 +183,7 @@ func _build_list() -> void:
 			home_modes[key] = button
 		else:
 			button.pressed.connect(_activate_extra.bind(key))
-		button.mouse_entered.connect(_select.bind(i))
+		button.mouse_entered.connect(_hover_select.bind(i))
 		nav_buttons.append(button)
 		rows.append({"button": button, "key": key, "title": ENTRIES[i][1], "desc": ENTRIES[i][2], "heading": heading, "nepali": nepali})
 	var rule := ColorRect.new()
@@ -226,18 +238,24 @@ func _build_footer() -> void:
 
 ## The rows slide in one after another as the screen opens.
 func _entrance() -> void:
+	_entrance_tween = create_tween().set_parallel(true).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	for i in rows.size():
 		var button: Button = rows[i].button
 		var home: Vector2 = button.position
-		button.position = home - Vector2(40, 0)
-		button.modulate.a = 0.0
-		var tween := button.create_tween().set_parallel(true).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
-		tween.tween_property(button, "position", home, 0.5).set_delay(0.25 + 0.05 * i)
-		tween.tween_property(button, "modulate:a", 1.0, 0.3).set_delay(0.25 + 0.05 * i)
+		button.position = home - Vector2(12, 0)
+		button.modulate.a = 0.5
+		_entrance_tween.tween_property(button, "position", home, 0.18).set_delay(0.012 * i)
+		_entrance_tween.tween_property(button, "modulate:a", 1.0, 0.15).set_delay(0.012 * i)
 
 ## Stack the rows: the chosen one large, the rest small, with a gap after
 ## the fight entries; the diya moves to the chosen one.
 func _layout(animate := true) -> void:
+	if _layout_tween != null and _layout_tween.is_valid():
+		_layout_tween.kill()
+	if animate:
+		if _entrance_tween != null and _entrance_tween.is_valid():
+			_entrance_tween.kill()
+		_layout_tween = create_tween().set_parallel(true).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	var y := LIST_TOP
 	for i in rows.size():
 		var row: Dictionary = rows[i]
@@ -248,17 +266,22 @@ func _layout(animate := true) -> void:
 		row.heading.add_theme_color_override("font_color", UI.WHITE if active else Color(1, 1, 1, 0.55))
 		row.heading.size.y = height
 		row.button.size.y = height
+		row.button.modulate.a = 1.0
+		for state in ["normal", "hover", "pressed"]:
+			row.button.add_theme_stylebox_override(state, UI.glass(Color(UI.CRIMSON, 0.78), UI.CRIMSON) if active else StyleBoxEmpty.new())
 		row.nepali.visible = active
 		row.nepali.position.x = 26 + row.heading.get_minimum_size().x + 14
 		var target := Vector2(LIST_X + (6.0 if active else 0.0), y)
 		if animate and row.button.is_inside_tree():
-			row.button.create_tween().set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT).tween_property(row.button, "position", target, 0.25)
+			_layout_tween.tween_property(row.button, "position", target, 0.16)
 		else:
 			row.button.position = target
 		if active:
+			selected_marker.position = Vector2(LIST_X - 8, y)
+			selected_marker.size.y = height
 			var spot := Vector2(LIST_X - 2, y + height * 0.5 - 11)
 			if animate and diya.is_inside_tree():
-				diya.create_tween().set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT).tween_property(diya, "position", spot, 0.25)
+				_layout_tween.tween_property(diya, "position", spot, 0.16)
 			else:
 				diya.position = spot
 			mode_desc_label.text = row.desc
@@ -274,6 +297,13 @@ func _process(delta: float) -> void:
 
 ## Highlight entry `index`: a fight mode becomes the chosen mode; anything
 ## else is pointed at without changing it.
+func _hover_select(index: int) -> void:
+	if Time.get_ticks_msec() < _hover_blocked_until:
+		return
+	if index != cursor:
+		preload("res://scripts/sfx.gd").fire("menu_move")
+	_select(index)
+
 func _select(index: int) -> void:
 	if transitioning or is_instance_valid(modal):
 		return
@@ -318,11 +348,12 @@ func _refresh_mode_summary() -> void:
 	if key in MODE_KEYS:
 		backdrop.selected = maxi(0, BACKDROP.MODE_ORDER.find(key))
 	backdrop.frame(key)
-	var arena: Dictionary = backdrop.STAGE.ROUNDS[backdrop.MODE_ROUND[backdrop.selected]]
+	var arena: Dictionary = backdrop.STAGE.ROUNDS[backdrop._round_shown]
 	arena_label.text = "%s   /   %s" % [arena.name, "KATHMANDU VALLEY"]
 	play_button.text = "START" if cursor_key.is_empty() or cursor_key == "practice" else ("QUIT" if cursor_key == "exit" else "OPEN")
 
 func _step_entries(step: int) -> void:
+	_hover_blocked_until = Time.get_ticks_msec() + 220
 	_select(posmod(cursor + step, ENTRIES.size()))
 	preload("res://scripts/sfx.gd").fire("menu_move")
 	play_button.grab_focus()
@@ -444,12 +475,23 @@ func _show_records() -> void:
 		line.add_theme_font_override("font", UI.strong_font())
 	if favourite != "":
 		UI.eyebrow(modal_content, "FAVOURITE: " + ROSTER.profile(_roster_index(favourite)).name, Vector2(28, 300), Vector2(300, 16))
-	var reset := UI.button(modal_content, "RESET RECORDS", Vector2(28, 311), Vector2(170, 38))
-	reset.pressed.connect(func():
-		records.reset()
+	var reset := UI.button(modal_content, "RESET RECORDS", Vector2(28, 338), Vector2(170, 30))
+	reset.pressed.connect(_confirm_reset_records)
+
+func _confirm_reset_records() -> void:
+	_close_modal()
+	_open_modal("RESET RECORDS?", "RECORDS")
+	var message := UI.label(modal_content, "Clear your recorded wins, losses, streaks and fighter statistics? This cannot be undone.", Vector2(28, 112), Vector2(560, 64), 16, UI.WHITE)
+	message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var keep := UI.button(modal_content, "KEEP RECORDS", Vector2(28, 214), Vector2(270, 42))
+	keep.pressed.connect(func(): _close_modal(); _show_records())
+	var clear := UI.button(modal_content, "CLEAR RECORDS", Vector2(310, 214), Vector2(282, 42), true)
+	clear.pressed.connect(func():
+		get_node("/root/Records").reset()
 		_refresh_record_strip()
 		_close_modal()
 		_show_records())
+	keep.grab_focus()
 
 ## The mode the current MatchSetup state maps to — shared by
 ## _refresh_mode_summary (styling every row after a change) and each row's
@@ -523,8 +565,8 @@ func _start_fight() -> void:
 	move_child(fade, -1)
 	preload("res://scripts/sfx.gd").fire("wipe")
 	var tween := create_tween()
-	tween.tween_property(backdrop, "opening", 1.0, 0.7).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
-	tween.tween_property(fade, "modulate:a", 1.0, 0.2)
+	tween.tween_property(backdrop, "opening", 1.0, 0.2).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(fade, "modulate:a", 1.0, 0.05)
 	tween.tween_callback(func(): get_tree().change_scene_to_file("res://scenes/CharacterSelect.tscn"))
 
 func _show_roster() -> void:
@@ -535,6 +577,7 @@ func _show_roster() -> void:
 ## Full-screen option page: dark scrim, a crimson header slash, then a
 ## slanted content panel. Content keeps a 620 x 372 coordinate space.
 func _open_modal(title: String, eyebrow: String) -> void:
+	backdrop.suspended = true
 	return_focus = get_viewport().gui_get_focus_owner()
 	for child in get_children():
 		if child is Button:
@@ -556,13 +599,14 @@ func _open_modal(title: String, eyebrow: String) -> void:
 	var face := UI.box(Color(0.045, 0.05, 0.09, 0.97), UI.GOLD, 0, 0.04)
 	face.border_width_left = 6
 	var body := Panel.new()
-	body.size = Vector2(620, 372)
+	body.size = Vector2(620, 420)
 	body.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	body.add_theme_stylebox_override("panel", face)
 	modal_content.add_child(body)
 	UI.eyebrow(modal_content, eyebrow, Vector2(28, 20), Vector2(500, 20))
 	UI.heading(modal_content, title, Vector2(26, 40), Vector2(560, 50), 40, UI.WHITE)
-	var close := UI.button(modal_content, "BACK  /  ESC", Vector2(440, 311), Vector2(152, 38))
+	var close := UI.button(modal_content, "BACK  /  ESC", Vector2(440, 374), Vector2(152, 32))
+	close.name = "ModalBack"
 	close.pressed.connect(_close_modal)
 	close.grab_focus()
 	UI.enter(modal_content)
@@ -608,7 +652,7 @@ func _show_controls() -> void:
 			else [["← / →", "APPROACH / RETREAT"], ["↑ / ↓", "SIDESTEP"], ["ENTER", "JUMP"], ["O", "GUARD"], ["K", "1  LEFT PUNCH"], [",", "2  RIGHT PUNCH"], ["L", "3  LEFT KICK"], [".", "4  RIGHT KICK"], ["J", "GRAPPLE"], ["CTRL", "RUN"]]
 		for k in keys.size():
 			UI.key_hint(modal_content, keys[k][0], keys[k][1], Vector2(x + 14, 132 + k * 17))
-	var tip := UI.label(modal_content, "Double-tap forward to dash, back to backdash. Punch + Kick together grapples; the same tap just before contact escapes a throw.\nF1 movebook  /  Esc pause  /  R next round or rematch.", Vector2(28, 314), Vector2(400, 46), 11, UI.MUTED)
+	var tip := UI.label(modal_content, "Double-tap forward to dash, back to backdash. Chain light and heavy strikes into combos.\nF1 movebook  /  Esc pause  /  R next round or rematch.", Vector2(28, 314), Vector2(400, 46), 11, UI.MUTED)
 	tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
 const QUALITY_NAMES := ["LOW", "MEDIUM", "HIGH", "CUSTOM"]
@@ -655,7 +699,7 @@ func _show_graphics() -> void:
 	pickers.detailed_textures.item_selected.connect(func(index: int):
 		Settings.set_graphic("detailed_textures", index == 1)
 		refresh.call())
-	for pair in [["VSYNC", "vsync", 28.0, 296.0], ["SHOW FPS", "show_fps", 176.0, 296.0], ["BLOOM AND GRADE", "post_effects", 316.0, 296.0], ["AUTO-ADJUST WHEN A FIGHT DROPS UNDER 30 FPS", "adaptive_quality", 28.0, 330.0]]:
+	for pair in [["VSYNC", "vsync", 28.0, 296.0], ["SHOW FPS", "show_fps", 176.0, 296.0], ["BLOOM AND GRADE", "post_effects", 316.0, 296.0], ["AUTO-ADJUST FOR SMOOTHER FIGHTS (55 FPS)", "adaptive_quality", 28.0, 330.0]]:
 		var toggle := CheckBox.new()
 		toggle.text = pair[0]
 		toggle.position = Vector2(pair[2], pair[3])
@@ -717,6 +761,7 @@ F1 in a fight: every move and combo.", Vector2(28, 282), Vector2(290, 34), 11, U
 		UI.label(modal_content, moves[row][2], Vector2(390, y + 12), Vector2(210, 14), 11, UI.MUTED)
 
 func _close_modal() -> void:
+	backdrop.suspended = false
 	if not is_instance_valid(modal):
 		return
 	preload("res://scripts/sfx.gd").fire("menu_back")
@@ -736,6 +781,8 @@ func _unhandled_input(event: InputEvent) -> void:
 ## Up / Down (or Left / Right) walk the list, Enter or A confirms, F2 jumps
 ## into practice.
 func _input(event: InputEvent) -> void:
+	if event is InputEventMouseMotion:
+		_hover_blocked_until = 0
 	if transitioning or is_instance_valid(modal):
 		return
 	if event is InputEventJoypadButton or event is InputEventJoypadMotion:

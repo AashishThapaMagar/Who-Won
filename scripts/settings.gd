@@ -18,15 +18,12 @@ enum Quality { LOW, MEDIUM, HIGH, CUSTOM }
 const RENDER_SCALES := [0.5, 0.75, 1.0]
 ## [render scale index, anti-aliasing (0 off, 1 2x, 2 4x),
 ##  shadows (0 off, 1 low, 2 high), photo-real arena textures].
-## Every preset renders at full resolution: a lower 3D scale turns the
-## fighters' faces and outfits into visible pixels. Cheaper presets save
-## time on shadows and arena textures instead.
-## Every preset smooths edges with FXAA, which is almost free: MSAA cost
-## about 6.5 ms of a 27 ms frame on integrated graphics (Intel UHD). It
-## stays available as a custom setting for stronger GPUs.
+## Medium keeps full resolution and the grade, with contact shadows only.
+## Low trades some sharpness for steadier frames on integrated graphics.
+## MSAA remains available as a custom setting; Compatibility has no FXAA.
 const PRESETS := [
+	[1, 0, 0, false],
 	[2, 0, 0, false],
-	[2, 0, 1, false],
 	[2, 0, 1, false],
 ]
 var quality: int = Quality.HIGH
@@ -48,14 +45,16 @@ var hit_effects: bool = true
 var input_display: bool = false
 ## The "SUPER READY: press 2 + 4" tip shows until a player has seen it once.
 var super_tip_seen: bool = false
-## Steps the graphics preset down by itself when a fight runs under 30 FPS
+## Steps the graphics preset down by itself when a fight runs under 55 FPS
 ## for a few seconds (never up, never past LOW, never from CUSTOM).
 var adaptive_quality: bool = true
-const ADAPTIVE_FLOOR_FPS := 45.0
+const ADAPTIVE_FLOOR_FPS := 55.0
 const ADAPTIVE_WINDOW := 2.0
 const ADAPTIVE_WARMUP := 2.5
-## True once LOW itself has been cut to 75% resolution for speed.
+## True once LOW itself has been cut to 50% resolution for speed.
 var scaled_down := false
+## Scenery changes wait until the next round during automatic adjustment.
+var adaptive_adjusting := false
 var _adaptive_scene: Node
 var _adaptive_time := 0.0
 var _adaptive_frames := 0
@@ -120,15 +119,17 @@ func _adapt(delta: float) -> void:
 	_adaptive_frames = 0
 	_adaptive_window = 0.0
 	if average < ADAPTIVE_FLOOR_FPS:
+		adaptive_adjusting = true
 		if quality == Quality.LOW:
 			# Already the cheapest preset: trade a little sharpness for speed.
 			scaled_down = true
-			render_scale = 1
+			render_scale = 0
 			apply_graphics()
-			notify("SMOOTHER PLAY: RESOLUTION 75%  (SETTINGS ▸ GRAPHICS TO CHANGE)")
+			notify("SMOOTHER PLAY: RESOLUTION 50%  (SETTINGS ▸ GRAPHICS TO CHANGE)")
 		else:
 			set_quality(quality - 1)
 			notify("SMOOTHER PLAY: GRAPHICS SET TO %s  (SETTINGS ▸ GRAPHICS TO CHANGE)" % ["LOW", "MEDIUM", "HIGH", "CUSTOM"][quality])
+		adaptive_adjusting = false
 		_adaptive_time = 0.0
 
 ## A short line of gold text over the top of the screen.
@@ -168,7 +169,8 @@ func apply_graphics() -> void:
 	var viewport := get_tree().root
 	viewport.scaling_3d_scale = RENDER_SCALES[render_scale]
 	viewport.msaa_3d = [Viewport.MSAA_DISABLED, Viewport.MSAA_2X, Viewport.MSAA_4X][anti_aliasing]
-	viewport.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA if anti_aliasing == 0 else Viewport.SCREEN_SPACE_AA_DISABLED
+	var compatibility := RenderingServer.get_current_rendering_method() == "gl_compatibility"
+	viewport.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA if anti_aliasing == 0 and not compatibility else Viewport.SCREEN_SPACE_AA_DISABLED
 	# Adaptive: locked to the display's refresh when the game keeps up, but a
 	# slow frame is shown at once rather than waiting a whole extra refresh
 	# (plain vsync turns 45 FPS into a juddering 30).
@@ -215,9 +217,8 @@ func apply_audio() -> void:
 func _load() -> void:
 	var cfg := ConfigFile.new()
 	if cfg.load(SAVE_PATH) != OK:
-		# First launch: integrated graphics (most laptops) start on MEDIUM,
-		# whose FXAA and reduced scenery hold the frame rate; MSAA on HIGH
-		# alone costs them a sixth of a frame.
+		# First launch: integrated graphics start on MEDIUM, with reduced
+		# scenery and contact shadows to leave more time for fighter animation.
 		if RenderingServer.get_video_adapter_type() == RenderingDevice.DEVICE_TYPE_INTEGRATED_GPU:
 			quality = Quality.MEDIUM
 			render_scale = PRESETS[quality][0]
@@ -238,8 +239,7 @@ func _load() -> void:
 		show_fps = cfg.get_value("graphics", "show_fps", show_fps)
 		post_effects = cfg.get_value("graphics", "post_effects", post_effects)
 		adaptive_quality = cfg.get_value("graphics", "adaptive_quality", adaptive_quality)
-		# A preset always means its current values, so older saves (half
-		# resolution on LOW) come back sharp.
+		# A saved preset always follows its current performance settings.
 		if quality < PRESETS.size():
 			render_scale = PRESETS[quality][0]
 			anti_aliasing = PRESETS[quality][1]
