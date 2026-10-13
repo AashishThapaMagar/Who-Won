@@ -223,17 +223,17 @@ const PLATES := [
 		# "Lock in": Kri's face as he says it, his master beside him.
 		"eye": [1.6, 1.5, 1.4], "look": [0.9, 1.45, -0.7], "fov": 32},
 	# ── Kurosawa trials (bake with PLATE_STYLE=kurosawa) ──
-	{"key": "k_ring", "fighter": "anant", "phase": "prologue", "line": 2, "sky": "arena", "haze": 0.012,
+	{"key": "k_ring", "fighter": "anant", "phase": "prologue", "line": 2, "sky": "arena", "haze": 0.012, "weather": "mist", "weather_amount": 0.5,
 		"sun_at": [0.6, 0.12, 0.06], "horizon_y": 0.25,
 		# Low on the canvas, looking up: he stands alone, doubled over, in
 		# the white haze of the spotlights.
 		"eye": [2.4, 0.3, 1.6], "look": [0.0, 1.5, 0.0], "fov": 40, "poses": {"player": ["hit_heavy", 0.35]}},
-	{"key": "k_ridge", "fighter": "sup", "phase": "finale", "line": 14, "sky": "dusk", "haze": 0.02,
+	{"key": "k_ridge", "fighter": "sup", "phase": "finale", "line": 14, "sky": "dusk", "haze": 0.02, "weather": "dust",
 		"sun_at": [0.5, 0.6, 0.06], "horizon_y": 0.68,
 		"eye": [0.0, 0.45, 4.6], "look": [0.0, 1.6, -8.0], "fov": 40,
 		"place": {"player": [-0.5, 0.2, 0.0, -1.0], "anant": [0.5, 0.2, 0.0, -1.0]},
 		"poses": {"player": ["bow", 0.2], "anant": ["taunt", 1.0]}},
-	{"key": "k_lamp", "fighter": "abhi", "phase": "prologue", "line": 0, "sky": "night", "haze": 0.015,
+	{"key": "k_lamp", "fighter": "abhi", "phase": "prologue", "line": 0, "sky": "night", "haze": 0.015, "weather": "rain",
 		"sun_at": [0.3, 0.24, 0.03], "horizon_y": 0.72,
 		# Low and close: the lone figure punching under the lamp.
 		"eye": [2.6, 0.3, 0.9], "look": [-8.0, 1.6, 0.4], "fov": 32,
@@ -588,6 +588,11 @@ uniform vec2 sun = vec2(0.5, 0.62);
 uniform float sun_size = 0.07;
 uniform float horizon_y = 0.66;
 uniform float seed = 1.0;
+// Kurosawa's weather: 0 clear, 1 driving rain, 2 wind-blown dust, 3 low mist.
+uniform int weather = 0;
+uniform float weather_amount = 1.0;
+// Scope bars across the page (fraction of height, each).
+uniform float bars = 0.11;
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7)) + seed) * 43758.5453); }
 float noise(vec2 p) {
 	vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
@@ -603,6 +608,8 @@ void fragment() {
 	vec2 d = (UV - sun) * vec2(res.x / res.y, 1.0);
 	float r = length(d);
 	sky = mix(sky, sun_color, smoothstep(sun_size * 4.0, 0.0, r) * 0.55);
+	// Halation: old film blooms around a bright light.
+	sky += sun_color * exp(-r / (sun_size * 3.5)) * 0.18;
 	sky = mix(sky, sun_color, smoothstep(sun_size, sun_size * 0.92, r));
 	float band = noise(vec2(UV.x * 3.0, UV.y * 26.0) + seed) * noise(vec2(UV.x * 7.0, UV.y * 40.0));
 	sky = mix(sky, mix(top, horizon, 0.35), smoothstep(0.35, 0.6, band) * (1.0 - h) * 0.6);
@@ -611,10 +618,33 @@ void fragment() {
 	vec3 col = mix(ink, sky, air);
 	// A whisper of warm rim where the ink meets the haze.
 	col += sun_color * 0.05 * smoothstep(0.3, 0.45, depth) * (1.0 - smoothstep(0.45, 0.6, depth));
-	// Film: grain and a heavy vignette.
-	col *= 0.92 + 0.12 * hash(floor(UV * res / 1.5) + seed);
+	// Weather in the air, over everything.
+	if (weather == 1) {
+		// Driving rain: long slanted streaks in two layers, catching the light.
+		vec2 q = vec2(UV.x * 1.0 + UV.y * 0.22, UV.y);
+		float s1 = step(0.985, hash(floor(vec2(q.x * 260.0, q.y * 9.0 + floor(q.x * 260.0) * 0.37))));
+		float s2 = step(0.99, hash(floor(vec2(q.x * 520.0 + 7.0, q.y * 14.0 + floor(q.x * 520.0) * 0.53))));
+		col = mix(col, mix(sky, vec3(1.0), 0.4), (s1 * 0.5 + s2 * 0.3) * weather_amount);
+		col = mix(col, sky, 0.12 * weather_amount);
+	} else if (weather == 2) {
+		// Wind-blown dust: warm streaks racing sideways, thickest near the ground.
+		float streak = noise(vec2(UV.x * 2.2 - UV.y * 0.8, UV.y * 18.0) + seed) * 0.6 + noise(vec2(UV.x * 5.0, UV.y * 30.0) + seed * 2.0) * 0.4;
+		float low = smoothstep(0.45, 1.0, UV.y);
+		col = mix(col, mix(horizon, sun_color, 0.3), smoothstep(0.45, 0.8, streak) * (0.12 + 0.35 * low) * weather_amount);
+		float grit = step(0.996, hash(floor(UV * res / 2.0) + seed));
+		col = mix(col, sun_color, grit * 0.6 * weather_amount);
+	} else if (weather == 3) {
+		// Low mist creeping over the ground, swallowing the feet.
+		float bank = smoothstep(0.62, 1.0, UV.y) * (0.55 + 0.45 * noise(vec2(UV.x * 5.0, UV.y * 8.0) + seed));
+		col = mix(col, mix(sky, horizon, 0.5), bank * 0.75 * weather_amount);
+	}
+	// Film: gate weave and heavy grain, a deep vignette.
+	col *= 0.9 + 0.16 * hash(floor(UV * res / 1.8) + seed);
 	vec2 v = UV - 0.5;
-	col *= 1.0 - smoothstep(0.35, 0.85, length(v * vec2(1.1, 1.3))) * 0.55;
+	col *= 1.0 - smoothstep(0.3, 0.85, length(v * vec2(1.1, 1.3))) * 0.6;
+	// Scope bars, a cinema frame on the page.
+	float bar = step(UV.y, bars) + step(1.0 - bars, UV.y);
+	col = mix(col, vec3(0.03, 0.025, 0.02), clamp(bar, 0.0, 1.0));
 	COLOR = vec4(col, 1.0);
 }
 """
@@ -639,6 +669,9 @@ func _kurosawa(render: Image, plate: Dictionary) -> Image:
 	material.set_shader_parameter("sun", Vector2(sun[0], sun[1]))
 	material.set_shader_parameter("sun_size", sun[2])
 	material.set_shader_parameter("horizon_y", float(plate.get("horizon_y", 0.66)))
+	material.set_shader_parameter("weather", ["clear", "rain", "dust", "mist"].find(str(plate.get("weather", "clear"))))
+	material.set_shader_parameter("weather_amount", float(plate.get("weather_amount", 1.0)))
+	material.set_shader_parameter("bars", float(plate.get("bars", 0.11)))
 	material.set_shader_parameter("seed", float(hash(plate.key) % 1000) / 100.0)
 	rect.material = material
 	canvas.add_child(rect)
