@@ -119,18 +119,24 @@ static func _shader_material(code: String) -> ShaderMaterial:
 	return material
 
 func _build_logo() -> void:
-	var title := UI.label(self, "WHO WON?", Vector2(LIST_X - 4, 24), Vector2(520, 76), 62, Color.WHITE)
+	# One language at a time: WHO WON? in English, कसले जित्यो? in Nepali.
+	var nepali_mode: bool = Settings.is_nepali()
+	var title := UI.label(self, "कसले जित्यो?" if nepali_mode else "WHO WON?", Vector2(LIST_X - 4, 18 if nepali_mode else 24), Vector2(520, 86 if nepali_mode else 76), 66 if nepali_mode else 62, Color.WHITE)
 	title.name = "GameTitle"
-	title.add_theme_font_override("font", UI.saira(900, 112, true))
+	title.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	title.add_theme_font_override("font", UI.devanagari_font() if nepali_mode else UI.saira(900, 112, true))
 	title.add_theme_constant_override("outline_size", 4)
 	title.add_theme_color_override("font_outline_color", Color("1a1206"))
 	title.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.55))
 	title.add_theme_constant_override("shadow_offset_x", 3)
 	title.add_theme_constant_override("shadow_offset_y", 4)
 	title.material = _shader_material(LOGO_METAL)
-	var nepali := UI.label(self, "को जित्यो?", Vector2(LIST_X, 94), Vector2(240, 32), 26, UI.GOLD)
+	var nepali := UI.label(self, "कसले जित्यो?", Vector2(LIST_X, 94), Vector2(240, 32), 26, UI.GOLD)
 	nepali.name = "NepaliTitle"
 	nepali.add_theme_font_override("font", UI.teko(500))
+	# The second-language subtitle stays hidden; the title above already
+	# speaks the player's language.
+	nepali.visible = false
 	for node in [title, nepali]:
 		node.modulate.a = 0.0
 		node.position.y += 12
@@ -175,7 +181,9 @@ func _build_list() -> void:
 		heading.add_theme_font_override("font", UI.saira(600, 104, true))
 		heading.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
 		heading.add_theme_constant_override("shadow_offset_y", 2)
-		var nepali := UI.label(button, NEPALI.get(key, ""), Vector2(26, 4), Vector2(170, ROW_LARGE), 22, UI.GOLD)
+		# Kept empty: a Devanagari tag beside an English heading (or the
+		# same word twice in Nepali) mixed the two scripts.
+		var nepali := UI.label(button, "", Vector2(26, 4), Vector2(170, ROW_LARGE), 22, UI.GOLD)
 		nepali.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		nepali.add_theme_font_override("font", UI.teko(500))
 		if key in MODE_KEYS:

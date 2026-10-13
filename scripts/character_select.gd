@@ -246,7 +246,8 @@ func _build_title() -> void:
 		diamond.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var mode_names := {"local": "VERSUS", "ai": "VS COMPUTER", "arcade": "ARCADE", "story": "STORY", "practice": "PRACTICE"}
 	var nepali := {"local": "भिडन्त", "ai": "कम्प्युटरसँग", "arcade": "आर्केड", "story": "कथा", "practice": "अभ्यास"}
-	var mode := UI.label(self, "%s   ·   %s" % [mode_names[mode_id], nepali[mode_id]], Vector2(280, 36), Vector2(400, 22), 17, Color(UI.WHITE, 0.7))
+	var mode := UI.label(self, nepali[mode_id] if Settings.is_nepali() else mode_names[mode_id], Vector2(280, 36), Vector2(400, 22), 17, Color(UI.WHITE, 0.7))
+	mode.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	mode.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	mode.add_theme_font_override("font", UI.teko(400))
 	var second := "P2"
@@ -729,7 +730,7 @@ func _cycle_stage(step: int) -> void:
 ## Name the choice and show that arena live behind the roster.
 func _show_stage() -> void:
 	var rounds: Array = backdrop.STAGE.ROUNDS
-	arena_number.text = "%02d/%02d" % [stage_options().find(MatchSetup.stage_choice) + 1, stage_options().size()]
+	arena_number.text = Settings.digits("%02d/%02d" % [stage_options().find(MatchSetup.stage_choice) + 1, stage_options().size()])
 	match MatchSetup.stage_choice:
 		MatchSetup.JOURNEY_STAGE:
 			arena_label.text = Settings.fmt("ALL %d ARENAS", [rounds.size()])
@@ -831,7 +832,7 @@ func _refresh() -> void:
 		frames[i].width = 2.5 if chosen else 1.0
 		tiles[i].modulate = Color.WHITE if chosen else Color(0.55, 0.55, 0.62)
 		previews[i].modulate = Color.WHITE if chosen else Color(0.6, 0.6, 0.66)
-		markers[i].text = ("P1 " if p1 else "") + (("CPU" if MatchSetup.vs_ai else "P2") if p2 else "")
+		markers[i].text = (tr("P1") + " " if p1 else "") + ((tr("CPU") if MatchSetup.vs_ai else tr("P2")) if p2 else "")
 	for player in 2:
 		var profile := ROSTER.profile(selections[player])
 		if portraits[player].index != selections[player] and portraits[player].is_inside_tree() and portraits[player].visible:
@@ -849,11 +850,14 @@ func _refresh() -> void:
 			_name_shown[player] = selections[player]
 			# Long names (SARVOCHCHA) shrink to stay inside the panel.
 			var font: Font = names[player].get_theme_font("normal_font")
-			var width := font.get_string_size(profile.name, HORIZONTAL_ALIGNMENT_LEFT, -1, 30).x
+			var shown_name := tr(profile.name)
+			var width := font.get_string_size(shown_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 30).x
 			names[player].add_theme_font_size_override("normal_font_size", 30 if width <= names[player].size.x else int(30.0 * names[player].size.x / width))
-			names[player].text = "[slam start=%.3f]%s[/slam]" % [Time.get_ticks_msec() / 1000.0, profile.name]
+			names[player].text = "[slam start=%.3f]%s[/slam]" % [Time.get_ticks_msec() / 1000.0, shown_name]
 		titles[player].text = String(profile.title).to_upper()
-		watermarks[player].text = ROSTER.NEPALI_NAMES.get(profile.id, "")
+		# No second-script watermark: the name above is already in the
+		# player's language.
+		watermarks[player].text = ""
 		var summary: Array = SUMMARIES[profile.id]
 		dossiers[player].text = "[color=#ffd257]%s[/color]\n[color=#d2d8e8]%s[/color]" % [tr(summary[0]), tr(summary[1])]
 		var super_data: Dictionary = SUPERS.get_super(str(profile.id))
@@ -866,7 +870,7 @@ func _refresh() -> void:
 			if record.picks > 0:
 				ledger = Settings.fmt("RECORD  %dW / %d", [record.wins, record.picks])
 		details[player].text = ledger
-		var who := "P%d" % (player + 1)
+		var who := tr("P%d" % (player + 1))
 		var player_color := P1_COLOR if player == 0 else P2_COLOR
 		player_tabs[player].text = "%s  ·  %s" % [who, tr("LOCKED IN") if ready_players[player] else tr("SELECTING")]
 		player_tabs[player].add_theme_color_override("font_color", player_color)

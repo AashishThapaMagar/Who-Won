@@ -281,9 +281,9 @@ func _end_round(winner: int) -> void:
 	var round_no := round_index + 1
 	var winner_text := "DRAW"
 	if winner == 1:
-		winner_text = "%s WINS" % player1.character_profile.name
+		winner_text = tr("%s WINS") % tr(player1.character_profile.name)
 	elif winner == 2:
-		winner_text = "%s WINS" % player2.character_profile.name
+		winner_text = tr("%s WINS") % tr(player2.character_profile.name)
 
 	if round_wins[0] >= WINS_NEEDED or round_wins[1] >= WINS_NEEDED or round_no >= round_styles.size():
 		match_over = true
@@ -292,7 +292,7 @@ func _end_round(winner: int) -> void:
 			match_winner = player1.character_profile.name
 		elif round_wins[1] > round_wins[0]:
 			match_winner = player2.character_profile.name
-		result_label.text = "MATCH DRAW" if match_winner == "DRAW" else match_winner + " WINS"
+		result_label.text = tr("MATCH DRAW") if match_winner == "DRAW" else tr("%s WINS") % tr(match_winner)
 		if records != null:
 			var outcome := 0 if match_winner == "DRAW" else (1 if round_wins[0] > round_wins[1] else 2)
 			records.record_match(records.mode_key(MatchSetup), player1.character_profile.id, player2.character_profile.id, outcome, round_wins)
@@ -499,7 +499,7 @@ func _update_combo_ui() -> void:
 func _show_banner(index: int, fight_style: FightStyle) -> void:
 	var deciding: bool = round_wins[0] == WINS_NEEDED - 1 and round_wins[1] == WINS_NEEDED - 1
 	banner_round.text = "FINAL ROUND" if deciding or index == round_styles.size() - 1 else Settings.fmt("ROUND %d", [index + 1])
-	banner_name.text = "%s  VS  %s" % [player1.character_profile.name, player2.character_profile.name]
+	banner_name.text = tr("%s  VS  %s") % [tr(player1.character_profile.name), tr(player2.character_profile.name)]
 	banner_name.modulate = fight_style.accent_color
 	banner_tagline.text = fight_style.tagline
 	if MatchSetup.arcade:

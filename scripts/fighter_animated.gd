@@ -192,6 +192,7 @@ func configure(owner_visual: Node, profile: Dictionary) -> void:
 	skeleton = null
 	guard_weight = 0.0
 	_last_state = -1
+	_face_bones = []
 	config = MODELS.entry(str(profile.id))
 	if config.is_empty() or visual.model == null:
 		visual.model.visible = true if visual.model != null else false
@@ -1509,7 +1510,49 @@ func _procedural(fighter: Node, logical: String, delta: float, frozen: bool) -> 
 			_push = 0.0
 			_push_vel = 0.0
 	_apply_layers()
+	_limit_facing(fighter)
 	_aim_at_rival(fighter, delta, frozen)
+
+## A blow turns a fighter, it doesn't spin him round. Some reaction clips
+## (Vajraveer's hit_left / hit_right, Anug's hit_react) swing the whole body
+## past 110 degrees, so the back of the head ended up facing the attacker.
+## Real fighters turn 45-70 degrees from a hit, so the hips are turned back
+## until the chest is no more than FACE_LIMIT off the line to the rival.
+## Only while reacting, guarding or striking: the ground, throws, the super
+## and cutscene poses keep their own turn.
+const FACE_LIMIT := deg_to_rad(75.0)
+var _face_bones: Array = []
+## The last chest angle off the rival before the limit (radians), for tests.
+var last_face := 0.0
+
+func _limit_facing(fighter: Node) -> void:
+	var S: Dictionary = fighter.State
+	var rival = fighter.get("opponent")
+	if pose_override != "" or rival == null or rival.get("body") == null:
+		return
+	if not fighter.state in [S.HITSTUN, S.BLOCKSTUN, S.STRUCK, S.PUNCH, S.KICK]:
+		return
+	if _face_bones.is_empty():
+		_face_bones = [_bone("hips"), _bone("leftarm"), _bone("rightarm")]
+	if _face_bones.has(-1):
+		return
+	var to_skeleton := skeleton.global_transform.basis.orthonormalized().inverse()
+	var up: Vector3 = (to_skeleton * Vector3.UP).normalized()
+	var shoulders: Vector3 = skeleton.get_bone_global_pose(_face_bones[2]).origin - skeleton.get_bone_global_pose(_face_bones[1]).origin
+	shoulders -= up * shoulders.dot(up)
+	var to_rival: Vector3 = to_skeleton * (rival.body.global_position - fighter.body.global_position)
+	to_rival -= up * to_rival.dot(up)
+	if shoulders.length_squared() < 0.0001 or to_rival.length_squared() < 0.0001:
+		return
+	var chest := up.cross(shoulders)
+	var off := chest.signed_angle_to(to_rival, up)
+	last_face = off
+	if absf(off) <= FACE_LIMIT:
+		return
+	var turn := off - signf(off) * FACE_LIMIT
+	var hips: int = _face_bones[0]
+	var axis: Vector3 = (skeleton.get_bone_global_pose(hips).basis.orthonormalized().inverse() * up).normalized()
+	skeleton.set_bone_pose_rotation(hips, skeleton.get_bone_pose_rotation(hips) * Quaternion(axis, turn))
 
 ## A fighter keeps its eyes on the rival whatever its body does: walk and
 ## stance clips turn the head with a bladed chest, which read as looking

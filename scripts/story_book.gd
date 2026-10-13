@@ -239,13 +239,18 @@ func _build() -> void:
 	band.position = Vector2(PICTURE.position.x, PICTURE.end.y + 46)
 	band.size = Vector2(PICTURE.size.x, 18)
 	add_child(band)
-	var motto := _label("॥ कथा ॥", Vector2(PICTURE.position.x, BOOK.end.y - 48), Vector2(PICTURE.size.x, 34), 20, OCHRE)
+	# Each language keeps to its own script: the Nepali book is set in
+	# Devanagari throughout, the English one in the book's Latin face.
+	var nepali := Settings.is_nepali()
+	var motto := _label("॥ कथा ॥" if nepali else "~  A Tale  ~", Vector2(PICTURE.position.x, BOOK.end.y - 48), Vector2(PICTURE.size.x, 34), 20, OCHRE)
 	motto.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	motto.add_theme_font_override("font", UI.devanagari_font())
+	motto.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	motto.add_theme_font_override("font", UI.devanagari_font() if nepali else _book_font(true))
 	# Right page: the chapter heading, a rule, the entries, the page number.
 	heading_np = _label("", Vector2(TEXT_LEFT, 82), Vector2(TEXT_WIDTH, 44), 30, VERMILION)
 	heading_np.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	heading_np.add_theme_font_override("font", UI.devanagari_font())
+	heading_np.add_theme_font_override("font", UI.devanagari_font() if nepali else _book_font(false))
+	heading_np.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	heading_en = _label("", Vector2(TEXT_LEFT, 126), Vector2(TEXT_WIDTH, 18), 11, INK_SOFT)
 	heading_en.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	heading_en.add_theme_font_override("font", UI.strong_font())
@@ -315,9 +320,15 @@ static func _book_font(italic := false) -> Font:
 ## A title card becomes the right page's chapter heading on a fresh page.
 func chapter(eyebrow: String, title: String, subtitle: String, accent: Color) -> void:
 	_accent = accent.darkened(0.35) if accent != Color.WHITE else VERMILION
-	heading_np.text = _in_nepali(eyebrow)
-	heading_en.text = "  ".join((eyebrow + "  ·  " + title).split(" "))
-	caption.text = subtitle.capitalize() if subtitle != "" else title.capitalize()
+	# The eyebrow and title arrive already in the reader's language.
+	if Settings.is_nepali():
+		heading_np.text = eyebrow if UI.is_devanagari(eyebrow) else _in_nepali(eyebrow)
+		heading_en.text = title
+		caption.text = subtitle if subtitle != "" else title
+	else:
+		heading_np.text = eyebrow.capitalize()
+		heading_en.text = "  ".join(title.split(" "))
+		caption.text = subtitle.capitalize() if subtitle != "" else title.capitalize()
 	_plate_shown = false
 	_turn_page()
 
@@ -391,7 +402,7 @@ func _turn_page() -> void:
 	turn.tween_callback(func(): leaf.visible = false)
 
 func _number_page() -> void:
-	page_number.text = "॥ %s ॥" % _nepali_digits(_page)
+	page_number.text = ("॥ %s ॥" % _nepali_digits(_page)) if Settings.is_nepali() else ("—  %d  —" % _page)
 
 static func _nepali_digits(value: int) -> String:
 	var out := ""

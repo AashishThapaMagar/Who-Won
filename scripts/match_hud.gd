@@ -56,7 +56,7 @@ func _ready() -> void:
 	var layer: CanvasLayer = arena.get_node("UI")
 	for player in 2:
 		var key := "T" if player == 0 else "U"
-		var button := UI.button(layer, "P%d CALL ENEMY [%s]" % [player + 1, key], Vector2(18 + player * 186, 434 if MatchSetup.practice else 468), Vector2(176, 28))
+		var button := UI.button(layer, Settings.fmt("P%d CALL ENEMY [%s]", [player + 1, key]), Vector2(18 + player * 186, 434 if MatchSetup.practice else 468), Vector2(176, 28))
 		button.name = "CallEnemyP%d" % (player + 1)
 		button.focus_mode = Control.FOCUS_NONE
 		button.add_theme_font_size_override("font_size", 11)
@@ -404,7 +404,7 @@ func _show_clash() -> void:
 		streak.scale.x = 1.0 if from_left else -1.0
 		clash.add_child(streak)
 		streak.create_tween().set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT).tween_property(streak, "position:x", (440.0 - length * 0.5) if from_left else 520.0 + length * 0.5, 0.55).set_delay(0.04 * k)
-	var names := [arena.player1.character_profile.name, arena.player2.character_profile.name]
+	var names := [tr(arena.player1.character_profile.name), tr(arena.player2.character_profile.name)]
 	var labels: Array[Label] = []
 	for i in 2:
 		var color := UI.RED if i == 0 else UI.VIOLET
@@ -599,8 +599,8 @@ func _process(_delta: float) -> void:
 		var label: Label = arena.get_node("UI/P1Label" if i == 0 else "UI/P2Label")
 		label.text = str(fighter.character_profile.name)
 		if i < title_tags.size():
-			var who := "P%d" % (i + 1) if not (MatchSetup.vs_ai and i == 1) else "CPU"
-			var title := str(fighter.character_profile.get("title", "")).to_upper()
+			var who := tr("P%d" % (i + 1)) if not (MatchSetup.vs_ai and i == 1) else tr("CPU")
+			var title := tr(str(fighter.character_profile.get("title", "")).to_upper())
 			title_tags[i].text = ("%s   /   %s" % [who, title]) if i == 0 else ("%s   /   %s" % [title, who])
 	# The opener plays over round one's intro; a rematch gets a fresh one.
 	if arena.round_index != 0:
@@ -675,7 +675,7 @@ func _process(_delta: float) -> void:
 		result_detail.text = Settings.fmt("%s  /  SCORE %d : %d", [tr("MATCH COMPLETE") if arena.match_over else Settings.fmt("ROUND %d COMPLETE", [arena.round_index + 1]), arena.round_wins[0], arena.round_wins[1]])
 		for side in 2:
 			var fighter: Node = arena.player1 if side == 0 else arena.player2
-			result_panel.get_node("StatsName%d" % side).text = fighter.character_profile.name + (" / CPU" if MatchSetup.vs_ai and side == 1 else "")
+			result_panel.get_node("StatsName%d" % side).text = tr(fighter.character_profile.name) + (" / " + tr("CPU") if MatchSetup.vs_ai and side == 1 else "")
 			var values := [arena.round_wins[side], stats[side].damage, stats[side].combo, stats[side].kos, stats[side].perfects]
 			for i in values.size():
 				stat_values[side][i].text = str(values[i])

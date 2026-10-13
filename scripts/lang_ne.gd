@@ -258,7 +258,25 @@ F1 in a fight: every move and combo.": "1 2 मुक्का, 3 4 लात।
 	"RECORD  %dW / %d": "रेकर्ड  %d जित / %d",
 	"PICK YOUR FIGHTERS, THEN LOCK IN": "लडाकु छान्नुहोस्, अनि पक्का गर्नुहोस्",
 
+	# ── Fighters, players ──
+	"ANUG": "अनुग",
+	"AGASTHYA": "अगस्त्य",
+	"MAHABALI": "महाबली",
+	"VAJRAVEER": "वज्रवीर",
+	"KRI": "क्रि",
+	"SARVOCHCHA": "सर्वोच्च",
+	"ANANTA": "अनन्त",
+	"VS": "बनाम",
+	"%s  VS  %s": "%s  बनाम  %s",
+	"P1": "खेलाडी १",
+	"P2": "खेलाडी २",
+	"CPU": "कम्प्युटर",
+	"%s WINS": "%s विजयी",
+
 	# ── Fight screen ──
+	"P%d CALL ENEMY [%s]": "खेलाडी %d ललकार [%s]",
+	"P1  A/D move  W/S sidestep  |  F 1  V 2  G 3  B 4  E guard     |     P2  Left/Right move  Up/Down sidestep  |  K 1  , 2  L 3  . 4  O guard\nSpace / Enter jump   |   F1 combos     |     Esc pause": "खेलाडी १  A/D चल्ने  W/S छेउ सर्ने  |  F 1  V 2  G 3  B 4  E बचाउ     |     खेलाडी २  ←/→ चल्ने  ↑/↓ छेउ सर्ने  |  K 1  , 2  L 3  . 4  O बचाउ
+Space / Enter उफ्रिने   |   F1 कम्बो     |     Esc रोक्ने",
 	"ROUND %d": "राउन्ड %d",
 	"FINAL ROUND": "अन्तिम राउन्ड",
 	"FIGHT!": "लडाइँ सुरु!",

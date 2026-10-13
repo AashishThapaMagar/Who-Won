@@ -182,7 +182,7 @@ func _begin_round(index: int) -> void:
 	super._begin_round(index)
 	# One short comment under the round call: where the fight is, plus the
 	# arcade ladder position when there is one.
-	var place: String = nepal_stage.ROUNDS[stage].name
+	var place: String = tr(nepal_stage.ROUNDS[stage].name)
 	if MatchSetup.arcade:
 		place += "   /   " + (tr("FINAL BOSS") if MatchSetup.is_final_boss() else Settings.fmt("RIVAL %d OF %d", [MatchSetup.arcade_index + 1, MatchSetup.arcade_opponents.size()]))
 	banner_tagline.text = place

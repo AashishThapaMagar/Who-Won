@@ -547,7 +547,8 @@ func _celebrate() -> void:
 	root.move_child(petals, 0)
 	_celebration.append(petals)
 	# The titles stand on the right; the winner is framed on the left.
-	var tag := UI.label(root, "विजयी", Vector2(470, 196), Vector2(440, 40), 34, UI.GOLD)
+	# Left empty: VICTORY below is already in the player's language.
+	var tag := UI.label(root, "", Vector2(470, 196), Vector2(440, 40), 34, UI.GOLD)
 	tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	tag.add_theme_font_override("font", UI.teko(500))
 	tag.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
