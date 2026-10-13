@@ -22,7 +22,7 @@ const MITHILA_SHADER := preload("res://shaders/storybook_mithila.gdshader")
 ## Mithila colours and patterns) or "mithila_frame" (the watercolour inside
 ## a Mithila border on lokta paper) (PLATE_STYLE in the environment
 ## overrides it for a run; PLATE_OUT bakes into another folder instead).
-const STYLE := "mithila_frame"
+const STYLE := "kurosawa"
 const SIZE := Vector2i(1600, 1200)
 
 const DAWN := Color(1.0, 0.86, 0.66)
@@ -249,6 +249,24 @@ func run() -> void:
 	var only := OS.get_cmdline_user_args()
 	# "--fill <fighter> ...": bake the moments a fighter's book still lacks,
 	# up to BOOK_SIZE pictures, in the story's own shots.
+	# "--only fighter:key ...": re-bake single pages, composed or automatic.
+	if "--only" in only:
+		for item in only:
+			if not ":" in item:
+				continue
+			var fighter: String = item.get_slice(":", 0)
+			var key: String = item.get_slice(":", 1)
+			var found := false
+			for plate: Dictionary in PLATES:
+				if plate.fighter == fighter and plate.key == key:
+					await _bake(plate)
+					found = true
+			if not found:
+				for plate in _auto_plates(fighter, true):
+					if plate.key == key:
+						await _bake(plate)
+		quit()
+		return
 	if "--fill" in only:
 		for id in only:
 			if id != "--fill":
@@ -260,6 +278,9 @@ func run() -> void:
 		# Arguments pick plates by key or by fighter id (e.g. -- ish).
 		if not only.is_empty() and not only.has(plate.key) and not only.has(plate.fighter):
 			continue
+		# Style trials (k_*) bake only when named.
+		if plate.key.begins_with("k_") and not only.has(plate.key):
+			continue
 		await _bake(plate)
 	quit()
 
@@ -270,11 +291,11 @@ const BOOK_SIZE := 21
 ## prologue and finale line, then the first and last line of each rival's
 ## chapter intro and the first of its victory, in that order, until the
 ## book has BOOK_SIZE pictures (composed plates in PLATES count first).
-func _auto_plates(fighter: String) -> Array:
+func _auto_plates(fighter: String, everything := false) -> Array:
 	var route: Dictionary = preload("res://scripts/story_script.gd").ROUTES.get(fighter, {})
 	var have := {}
 	for plate: Dictionary in PLATES:
-		if plate.fighter == fighter:
+		if plate.fighter == fighter and not str(plate.key).begins_with("k_"):
 			have[plate.key] = true
 	var wanted: Array = []
 	var add := func(phase: String, line: int, chapter: int, lines: Array) -> void:
@@ -304,6 +325,8 @@ func _auto_plates(fighter: String) -> Array:
 				0: add.call(ladder[c] + "_intro", 0, c, intro)
 				1: add.call(ladder[c] + "_intro", intro.size() - 1, c, intro)
 				2: add.call(ladder[c] + "_victory", 0, c, victory)
+	if everything:
+		return wanted
 	var room := maxi(0, BOOK_SIZE - (have.size() - wanted.size()))
 	return wanted.slice(0, room)
 
@@ -368,7 +391,12 @@ func _bake(plate: Dictionary) -> void:
 	_compose(d, plate)
 	viewport.size = SIZE
 	if style == "kurosawa":
+		plate = _kuro_defaults(d, plate)
+		if not plate.get("keep_camera", false):
+			_low_camera(d)
 		_ink_world(viewport, plate)
+		if not plate.get("keep_camera", false) and not str(d.get("set_name")) in ["street", "tea_stall", "gym"]:
+			await _open_sky_angle(d, viewport)
 	else:
 		LOOK.apply(viewport, "mithila" if style == "mithila" else "wash")
 	if style == "mithila":
@@ -521,6 +549,124 @@ func _vary_camera(d: Node, index: int) -> void:
 	camera.global_position = eye
 	camera.look_at(subject)
 
+## Sky, weather and haze for a page that names none, from where it
+## happens: the story set, or the tournament arena by its time of day.
+const SET_MOODS := {
+	"street": ["night", "rain", 0.02], "tea_stall": ["night", "rain", 0.02],
+	"gym": ["night", "rain", 0.02], "rooftop": ["dawn", "clear", 0.012],
+	"hill_road": ["dawn", "dust", 0.012], "village_tree": ["dawn", "dust", 0.012],
+	"pitch": ["dusk", "dust", 0.012], "academy": ["night", "clear", 0.02],
+	"ananta_ground": ["dusk", "dust", 0.012], "goth": ["dusk", "mist", 0.012],
+	"final_ring": ["arena", "mist", 0.012],
+}
+const ARENA_MOODS := [
+	["night", "rain", 0.015],   # Heritage Square
+	["dawn", "mist", 0.012],    # Terai Plains
+	["dawn", "dust", 0.012],    # Hill Village
+	["dusk", "dust", 0.012],    # Gompa Courtyard
+	["storm", "mist", 0.012],   # Himalayan Pass
+	["dusk", "dust", 0.012],    # Dashain Ground
+]
+
+func _kuro_defaults(d: Node, plate: Dictionary) -> Dictionary:
+	var out := plate.duplicate()
+	var mood: Array = ARENA_MOODS[0]
+	var set_name: String = str(d.get("set_name"))
+	if SET_MOODS.has(set_name):
+		mood = SET_MOODS[set_name]
+	elif d.get("stage") != null:
+		mood = ARENA_MOODS[clampi(int(d.stage.current_round), 0, ARENA_MOODS.size() - 1)]
+	if not out.has("sky"):
+		out["sky"] = mood[0]
+	if not out.has("weather"):
+		out["weather"] = mood[1]
+		# A defeat always plays in the rain.
+		if str(out.get("phase", "")).ends_with("_defeat"):
+			out["weather"] = "rain"
+	if not out.has("haze"):
+		out["haze"] = mood[2]
+	if not out.has("sun_at"):
+		# A low sun or moon off to one side, never behind a head.
+		var side := 0.3 if hash(str(out.key)) % 2 == 0 else 0.72
+		out["sun_at"] = [side, 0.5, 0.05]
+	return out
+
+## Walks the low camera round the figures (six angles) and keeps the one
+## that sees the most open sky through the middle of the frame, so no page
+## is spent staring into a wall, a water tank or the back of a house.
+func _open_sky_angle(d: Node, viewport: SubViewport) -> void:
+	var camera: Camera3D = d.camera
+	var subject := Vector3.ZERO
+	var count := 0
+	for key in d.actors:
+		var rig: Node3D = d.actors[key].rig
+		if rig.visible:
+			subject += rig.global_position
+			count += 1
+	if count == 0:
+		return
+	subject /= count
+	var start := camera.global_position
+	var offset := Vector2(start.x - subject.x, start.z - subject.z)
+	var best := -1.0
+	var best_eye := start
+	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	for step in 6:
+		var turned := offset.rotated(deg_to_rad(60.0 * step))
+		camera.global_position = Vector3(subject.x + turned.x, start.y, subject.z + turned.y)
+		camera.look_at(subject + Vector3(0, 1.45, 0))
+		await RenderingServer.frame_post_draw
+		await RenderingServer.frame_post_draw
+		var image := viewport.get_texture().get_image()
+		image.resize(64, 48)
+		# Brightness in the middle band = haze and sky; ink there is a wall.
+		var light := 0.0
+		for y in range(10, 38):
+			for x in range(12, 52):
+				light += image.get_pixel(x, y).v
+		# Prefer the story's own angle when it is nearly as open.
+		if step == 0:
+			light *= 1.15
+		if light > best:
+			best = light
+			best_eye = camera.global_position
+	camera.global_position = best_eye
+	camera.look_at(subject + Vector3(0, 1.45, 0))
+
+## The Kurosawa camera: brought down near the ground and tilted up, so the
+## figures stand against the sky instead of a wall.
+func _low_camera(d: Node) -> void:
+	var camera: Camera3D = d.camera
+	var subject := Vector3.ZERO
+	var floor_y := 0.0
+	var count := 0
+	for key in d.actors:
+		var rig: Node3D = d.actors[key].rig
+		if rig.visible:
+			subject += rig.global_position
+			count += 1
+	if count == 0:
+		return
+	subject /= count
+	floor_y = subject.y
+	# Walled sets (the city street, the hall): look down the open street,
+	# where the sky is, not into the walls.
+	if str(d.get("set_name")) in ["street", "tea_stall", "gym"]:
+		# Behind and below him, looking past his shoulder down the street.
+		camera.global_position = subject + Vector3(3.0, 0.42, 0.45)
+		camera.look_at(subject + Vector3(-9.0, 1.9, -0.6))
+		camera.fov = 34.0
+		return
+	var eye := camera.global_position
+	var flat := Vector2(eye.x - subject.x, eye.z - subject.z)
+	# Keep some distance so heads and the sky both fit.
+	if flat.length() < 2.2:
+		flat = flat.normalized() * 2.2 if flat.length() > 0.01 else Vector2(0, 2.2)
+	eye = Vector3(subject.x + flat.x, floor_y + 0.42, subject.z + flat.y)
+	camera.global_position = eye
+	camera.look_at(subject + Vector3(0, 1.45, 0))
+	camera.fov = clampf(camera.fov, 30.0, 44.0)
+
 ## ── Kurosawa style ─────────────────────────────────────────────────────
 ## Every shape becomes black ink and the air between them white haze, so
 ## the render is pure depth: near things black, far things fading into the
@@ -630,9 +776,10 @@ void fragment() {
 		// Wind-blown dust: warm streaks racing sideways, thickest near the ground.
 		float streak = noise(vec2(UV.x * 2.2 - UV.y * 0.8, UV.y * 18.0) + seed) * 0.6 + noise(vec2(UV.x * 5.0, UV.y * 30.0) + seed * 2.0) * 0.4;
 		float low = smoothstep(0.45, 1.0, UV.y);
-		col = mix(col, mix(horizon, sun_color, 0.3), smoothstep(0.45, 0.8, streak) * (0.12 + 0.35 * low) * weather_amount);
+		// Dust drifts through the air, not over the ink of the figures.
+		col = mix(col, mix(horizon, sun_color, 0.3), smoothstep(0.45, 0.8, streak) * (0.12 + 0.35 * low) * weather_amount * air);
 		float grit = step(0.996, hash(floor(UV * res / 2.0) + seed));
-		col = mix(col, sun_color, grit * 0.6 * weather_amount);
+		col = mix(col, sun_color, grit * 0.6 * weather_amount * (0.3 + 0.7 * air));
 	} else if (weather == 3) {
 		// Low mist creeping over the ground, swallowing the feet.
 		float bank = smoothstep(0.62, 1.0, UV.y) * (0.55 + 0.45 * noise(vec2(UV.x * 5.0, UV.y * 8.0) + seed));
