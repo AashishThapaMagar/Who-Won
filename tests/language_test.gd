@@ -5,7 +5,7 @@ const NEPALI := preload("res://scripts/lang_ne.gd")
 const NEPALI_STORY := preload("res://scripts/lang_story_ne.gd")
 const STORY := preload("res://scripts/story_script.gd")
 ## Books translated so far: every line in them must have its Nepali.
-const TRANSLATED_BOOKS := ["ish", "sab", "bib", "abhi"]
+const TRANSLATED_BOOKS := ["ish", "sab", "bib", "abhi", "anug"]
 var failures := 0
 
 func _initialize() -> void:
