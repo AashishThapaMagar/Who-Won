@@ -127,4 +127,53 @@ const STRINGS := {
 	"And yet everyone you teased became something. You were teaching all along.": "तैपनि तिमीले जिस्क्याएका सबै केही न केही बने। तिमी त सधैँ सिकाइरहेका रहेछौ।",
 	"Then let's build a training hall. I'll do the teasing. You do the teaching.": "त्यसो भए एउटा तालिमशाला बनाऔँ। जिस्क्याउने काम मेरो, सिकाउने काम हजुरको।",
 	"The rope bed under the pipal tree stayed empty after that. Mostly.": "त्यसपछि पीपलमुनिको त्यो खाट खाली रह्यो। प्रायः।",
+
+	# ── Vajraveer: The Endless Rush ──
+	"THE STORY OF VAJRAVEER": "वज्रवीरको कथा",
+	"NO MORE RUNNING": "अब भाग्नु छैन",
+	"Before sunrise, while the city sleeps, Vajraveer trains alone on a rooftop.": "घाम उदाउनुअघि, सहर निदाइरहँदा, वज्रवीर एक्लै छतमा अभ्यास गर्छ।",
+	"He can run all day. He can kick higher than anyone Guruji ever trained. Nobody has ever seen it.": "ऊ दिनभरि दौडन सक्छ। गुरुजीले सिकाएका जोकोहीभन्दा माथि लात हान्न सक्छ। तर यो कसैले कहिल्यै देखेको छैन।",
+	"Fights, trials, tournaments... I always find a reason not to go. What if I freeze? What if they laugh?": "लडाइँ, छनोट, प्रतियोगिता... म सधैँ नजाने कुनै बहाना खोज्छु। म अक्क न बक्क भएँ भने? सबै हाँसे भने?",
+	"So he stays where it is safe. And every year, he stays exactly who he was.": "त्यसैले ऊ सुरक्षित ठाउँमै बस्छ। अनि हरेक वर्ष ऊ जस्तो थियो, ठ्याक्कै उस्तै रहन्छ।",
+	"Then a letter slid under his door.": "अनि एक दिन ढोकामुनिबाट एउटा चिठी छिर्‍यो।",
+	"Six names. His own among them. And the whereabouts of the master who once told him he was ready.": "छ वटा नाम। तीमध्ये उसको आफ्नै पनि। अनि कुनै बेला 'तिमी तयार छौ' भन्नुहुने गुरुको ठेगाना।",
+	"My hands are shaking. That's how I know I have to go.": "मेरा हात काँपिरहेका छन्। त्यसैले थाहा छ, मैले जानैपर्छ।",
+	"Not for the money. For once, I'm not going to run from it.": "पैसाका लागि होइन। यस पटक म भाग्दिनँ।",
+	# Anug
+	"Vajraveer? You actually came? You never came to anything.": "वज्रवीर? तिमी साँच्चै आयौ? तिमी त कहीँ पनि आउँदैनथ्यौ।",
+	"I know. That's why I'm here. Please... don't go easy on me.": "थाहा छ। त्यसैले त आएँ। कृपया... मलाई दया नगर।",
+	"Where have you been hiding THAT for ten years?": "दस वर्षसम्म यो सब कहाँ लुकाएर राखेका थियौ?",
+	"You flinched. Don't. You're better than you think.": "तिमी तर्सियौ। नतर्स। तिमी आफूले सोचेभन्दा धेरै राम्रो छौ।",
+	# Kri
+	"Look who left his room! Say something, quiet one! The crowd wants a speech!": "हेर त, को कोठाबाट निस्कियो! केही बोल न, चुपचापे! दर्शक भाषण सुन्न चाहन्छन्!",
+	"...I'll let my feet talk.": "...मेरा खुट्टाले बोल्छन्।",
+	"Okay. That was a speech. A loud one.": "ठिक छ। त्यो त भाषण नै थियो। ठूलो स्वरको।",
+	"Too quiet! Again, and louder this time!": "धेरै चुपचाप! फेरि, यस पटक ठूलो स्वरमा!",
+	# Agasthya
+	"You were always faster than me in training. You just never believed it.": "तालिममा तिमी सधैँ मभन्दा छिटो थियौ। तिमीले मात्र कहिल्यै पत्याएनौ।",
+	"Today I'm trying to.": "आज पत्याउने कोसिस गर्दै छु।",
+	"Believe it now. You earned that one.": "अब पत्याऊ। यो जित तिमीले आफैँ कमायौ।",
+	"You stopped trusting your legs halfway. Don't.": "आधा बाटोमा तिमीले आफ्ना खुट्टामाथि भरोसा छोड्यौ। नछोड।",
+	# Mahabali
+	"Our little hermit! If you win, will you finally come to my birthday?": "हाम्रो सानो सन्न्यासी! जितेमा आखिर मेरो जन्मदिनमा आउँछौ त?",
+	"If I win... yes. I'll come.": "जितेँ भने... हो। म आउँछु।",
+	"Ha! Now I have to lose on purpose. Just kidding. Come at me.": "हाहा! अब त जानाजान हार्नुपर्ने भयो। ठट्टा गरेको। आऊ।",
+	"Saturday. Seven o'clock. Don't you dare hide.": "शनिबार। साँझ सात बजे। लुक्ने आँट नगर्नू।",
+	"Nope. You're not getting out of my birthday that easily. Up.": "हुँदैन। मेरो जन्मदिनबाट यति सजिलै उम्कन पाउँदैनौ। उठ।",
+	# Sarvochcha
+	"Race you to the end of this?": "यसको अन्त्यसम्म दौड लगाऔँ?",
+	"I've raced only myself for years. Let's see what happens with a real rival.": "वर्षौँदेखि म आफैँसँग मात्र दौडिएँ। साँच्चैको प्रतिद्वन्द्वीसँग के हुन्छ, हेरौँ।",
+	"You weren't running away this time. I could feel it.": "यस पटक तिमी भागिरहेका थिएनौ। मैले महसुस गरेँ।",
+	"Climb, don't race. You'll get there.": "दौडेर होइन, उक्लेर जाऊ। पुगिहाल्छौ।",
+	# Ananta
+	"The final fight. The opponent steps forward, and Vajraveer's breath stops.": "अन्तिम लडाइँ। प्रतिद्वन्द्वी अगाडि आउनुहुन्छ, र वज्रवीरको सास अड्किन्छ।",
+	"Guruji... you told me I was ready. And then you were gone.": "गुरुजी... हजुरले मलाई 'तिमी तयार छौ' भन्नुभएको थियो। अनि हजुर हराउनुभयो।",
+	"You were ready then. Are you brave enough now?": "त्यतिबेला तिमी तयार थियौ। के अहिले तिमीसँग त्यति साहस छ?",
+	"You held back the last step. Again. Take it this time.": "अन्तिम पाइला तिमीले रोकेर राख्यौ। फेरि आऊ, यस पटक त्यो पाइला चाल।",
+	# Finale
+	"Afterwards, the master told him why he left: one lost final, a whole country's laughter, and a shame he could not face.": "त्यसपछि गुरुले आफू किन हराउनुभएको थियो, उसलाई सुनाउनुभयो: एउटा हारेको फाइनल, पूरै देशको हाँसो, र सामना गर्न नसकेको लाज।",
+	"So you ran too. Just like me.": "त्यसो भए हजुर पनि भाग्नुभएको रहेछ। ठ्याक्कै म जस्तै।",
+	"For years. You stopped running today. Which of us is the master now?": "वर्षौँसम्म। तिमीले आज भाग्न छोड्यौ। अब भन, हामीमध्ये गुरु को हो?",
+	"Then let's stop together. Come back with me, Guruji.": "त्यसो भए सँगै रोकिऔँ। मसँगै फर्किनुहोस्, गुरुजी।",
+	"That Saturday, Vajraveer walked into a crowded birthday party. And stayed until the very end.": "त्यो शनिबार वज्रवीर भीडले भरिएको जन्मदिनको भोजमा पुग्यो। अनि अन्तिमसम्मै बस्यो।",
 }
