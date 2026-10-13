@@ -302,26 +302,16 @@ func _update_fight_camera(delta: float) -> void:
 	# round is announced, landing on the fight view as the banner clears. The
 	# swing stays small so neither fighter is ever seen from behind.
 	var intro := clampf(intro_timer / intro_length, 0.0, 1.0)
-	var host_look := Vector3.ZERO
-	var host_weight := 0.0
 	if intro > 0.0:
 		var ease_in := intro * intro * (3.0 - 2.0 * intro)
 		var orbit := Basis(Vector3.UP, ease_in * 0.22)
 		eye = camera_target + orbit * (back * camera_distance * (1.0 + 0.55 * ease_in)) + Vector3.UP * (1.6 * ease_in)
-		if announcer != null and announcer.visible and intro_length != INTRO_TIME:
-			# Aamai's scene: in on her as she walks up and calls the round,
-			# then easing back to the fight view as she walks out at the lens.
-			var through := 1.0 - intro
-			host_weight = smoothstep(0.0, 0.2, through) * (1.0 - smoothstep(HOST_LEAVE - 0.02, 0.97, through))
-			var her: Vector3 = announcer.focus()
-			eye = eye.lerp(her + back * 3.0 + Vector3.UP * 0.1, host_weight)
-			host_look = her
 	# A heavy hit kicks the lens in for a few frames.
 	ko_hold = maxf(0.0, ko_hold - delta)
 	ko_push = move_toward(ko_push, 8.0 if ko_hold > 0.0 else 0.0, delta * (40.0 if ko_hold > 0.0 else 16.0))
 	camera_3d.fov = CAMERA_FOV - (fov_kick if MatchSetup.camera_shake else 0.0) - ko_push
 	var nudge := camera_nudge if MatchSetup.camera_shake else Vector3.ZERO
-	var look: Vector3 = camera_target.lerp(host_look, host_weight) if host_weight > 0.0 else camera_target
+	var look: Vector3 = camera_target
 	# Super: swing to a low close-up from the attacker's front quarter and
 	# ease back out once the combo is over.
 	var performing: bool = is_instance_valid(super_fighter) and super_fighter.state == super_fighter.State.SUPER

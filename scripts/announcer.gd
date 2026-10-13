@@ -1,24 +1,47 @@
 extends Node3D
-## The match announcer: Aamai, a Nepali village grandmother (Tripo model,
-## assets/announcer/hajurama.glb with idle / greet / clap / cheer / victory /
+## The arena's host: a local character for each arena (a Newar hajurbuwa,
+## a Tharu didi, Aamai the village grandmother, a lama, a Sherpa dai; Tripo
+## models in assets/announcer/ with idle / greet / clap / cheer / victory /
 ## walk).
 ##
-## Like a ring announcer she stands in the middle of the stage, between and
-## just behind the two fighters, facing the camera. She walks up to her spot
-## toward the camera, calls the round (the round's name big over her head,
-## her call beneath), and when the fight starts carries on walking toward
-## the camera, past the fighters and out of view. She walks in again to clap
-## the round's winner and dance for the match winner.
+## The rounds are called on screen (ROUND n, then FIGHT!); the host is part
+## of the scenery, watching from the edge of the stage behind the fighters
+## (spectate()), reacting now and then and cheering each round won. The
+## walk-up call (call_out, round_call, leave) is kept for cutscenes.
 const MODEL := "res://assets/announcer/hajurama.glb"
 ## Each arena has its own announcer (stage index as in nepal_stage_3d
 ## ROUNDS): model and the greeting that opens their round call. A missing
 ## model falls back to Aamai.
+## The call keeps to the arcade's logic: the round, "Ready?", then FIGHT!
+## on screen as the host steps away. Only the first time they walk out do
+## they greet the crowd in their own tradition (a Newar ज्वजलपा, a Tharu राम
+## राम, a lama's टासी देलेक, a Sherpa's कि कि सो सो). Each language keeps
+## its own script.
 const HOSTS := {
-	0: {"model": "res://assets/announcer/hajurbuwa.glb", "height": 1.64, "greet": ["JWAJALAPA! LADAI SURU!", "LA LA, LADAI SURU!", "TAYAR? SURU GARAU!"], "match": "KHEL JITYO!"},
-	1: {"model": "res://assets/announcer/tharu_didi.glb", "height": 1.58, "greet": ["RAM RAM! LADAI SURU!", "TAYAR? LADAI SURU!", "RAMRO SANGA LADA!"], "match": "KHEL JITYO!"},
-	2: {"model": MODEL, "greet": ["LADAI SURU!", "RAMRO SANGA LADA!", "TAYAR? LADAI SURU!"], "match": "KHEL JITYO!"},
-	3: {"model": "res://assets/announcer/lama.glb", "height": 1.68, "greet": ["TASHI DELEK! LADAI SURU!", "SHANTA MANN, LADAI SURU!", "TAYAR? LADAI SURU!"], "match": "TASHI DELEK!"},
-	4: {"model": "res://assets/announcer/sherpa_dai.glb", "height": 1.72, "greet": ["KI KI SO SO! LADAI SURU!", "TAYAR? LADAI SURU!", "HIMAL JASTAI LADA!"], "match": "LHA GYALO!"},
+	# Heritage Square: a Newar hajurbuwa.
+	0: {"model": "res://assets/announcer/hajurbuwa.glb", "height": 1.64,
+		"hello": {"ne": "ज्वजलपा!", "en": "JWAJALAPA!"},
+		"match": {"ne": "खेल जित्यो!", "en": "THE MATCH IS WON!"}},
+	# Terai Plains: a Tharu didi.
+	1: {"model": "res://assets/announcer/tharu_didi.glb", "height": 1.58,
+		"hello": {"ne": "राम राम!", "en": "RAM RAM!"},
+		"match": {"ne": "खेल जित्यो!", "en": "THE MATCH IS WON!"}},
+	# Hill Village: Aamai, a village hajuramaa.
+	2: {"model": MODEL,
+		"hello": {"ne": "नमस्ते!", "en": "NAMASTE!"},
+		"match": {"ne": "खेल जित्यो!", "en": "THE MATCH IS WON!"}},
+	# Gompa Courtyard: a lama.
+	3: {"model": "res://assets/announcer/lama.glb", "height": 1.68,
+		"hello": {"ne": "टासी देलेक!", "en": "TASHI DELEK!"},
+		"match": {"ne": "टासी देलेक!", "en": "TASHI DELEK!"}},
+	# Himalayan Pass: a Sherpa dai.
+	4: {"model": "res://assets/announcer/sherpa_dai.glb", "height": 1.72,
+		"hello": {"ne": "कि कि सो सो!", "en": "KI KI SO SO!"},
+		"match": {"ne": "ल्हा ग्यालो!", "en": "LHA GYALO!"}},
+	# Dashain Ground: Aamai again, under the kites.
+	5: {"model": MODEL,
+		"hello": {"ne": "जय होस्!", "en": "VICTORY TO THE BRAVE!"},
+		"match": {"ne": "जय होस्!", "en": "VICTORY TO THE BRAVE!"}},
 }
 ## Which arena this match is in (set by the arena before she is added).
 var stage := 2
@@ -28,7 +51,7 @@ const BACK := 1.1
 ## Her walk in to her spot, and on past the camera when the fight starts
 ## (metres).
 const WALK_IN := 1.2
-const WALK_OUT := 5.0
+const WALK_OUT := 6.0
 ## Out of view once she is this close to the camera (metres).
 const CAMERA_CLEAR := 1.6
 ## An unhurried grandmother's pace (m/s): in to her spot, a little brisker
@@ -36,10 +59,14 @@ const CAMERA_CLEAR := 1.6
 ## second at 1x, so the steps play at the speed she really moves and her
 ## feet don't skate.
 const WALK_SPEED := 0.95
-const LEAVE_SPEED := 1.3
+const LEAVE_SPEED := 1.6
 const CLIP_SPEED := 1.07
-## Gone from view once she has walked this far away.
-const FADE_AFTER := 3.6
+## Gone once she has walked this far away, or out of the camera's view.
+const FADE_AFTER := 5.0
+## When her round call waits (round one: the VS card plays first).
+var _start_at := -1.0
+var _greeted := false
+var _pending := {}
 
 var _model: Node3D
 var _player: AnimationPlayer
@@ -68,7 +95,7 @@ func _ready() -> void:
 	visible = false
 	_host = HOSTS.get(stage, HOSTS[2])
 	var path: String = _host.model if ResourceLoader.exists(_host.model) else MODEL
-	if path == MODEL:
+	if path == MODEL and not stage in [2, 5]:
 		_host = HOSTS[2]
 	if not ResourceLoader.exists(path):
 		return
@@ -98,8 +125,8 @@ func _ready() -> void:
 	if not skeletons.is_empty():
 		_skeleton = skeletons[0]
 		_hip = _skeleton.find_bone("Hip")
-	_title = _label(Vector3(0, 2.12, 0), 120, Color("ffd34d"))
-	_call = _label(Vector3(0, 1.84, 0), 60, Color("fff3dc"))
+	_title = _label(Vector3(0, 2.04, 0), 120, Color("ffd34d"))
+	_call = _label(Vector3(0, 1.8, 0), 60, Color("fff3dc"))
 
 ## Holds the hip over her spot: some clips (the greeting) carry her most
 ## of a metre across the floor, and the game moves her itself. Only the
@@ -126,9 +153,14 @@ func _label(at: Vector3, size: int, color: Color) -> Label3D:
 	label.outline_modulate = Color("3a0a00")
 	label.no_depth_test = true
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var font_path := "res://assets/fonts/Teko.ttf"
-	if ResourceLoader.exists(font_path):
-		label.font = load(font_path)
+	# Nepali in a Devanagari face with true Devanagari numerals; English
+	# in Teko.
+	if Settings.is_nepali():
+		label.font = preload("res://scripts/ui_kit.gd").devanagari_font()
+	else:
+		var font_path := "res://assets/fonts/Teko.ttf"
+		if ResourceLoader.exists(font_path):
+			label.font = load(font_path)
 	add_child(label)
 	return label
 
@@ -199,27 +231,88 @@ func _arrive(move: String) -> void:
 
 ## The round call as it starts: the round over her head, her call below;
 ## she stays until the fight is on.
-func round_call(round_text: String) -> void:
-	var lines: Array = _host.get("greet", HOSTS[2].greet)
-	call_out(round_text, lines[randi() % lines.size()], "greet", 0.0)
+func round_call(round_text: String, delay := 0.0) -> void:
+	# "Ready?" every round; the greeting only on the host's first walk out.
+	var line: String = tr("READY?")
+	if not _greeted:
+		_greeted = true
+		line = str(_lines("hello")) + "  " + line
+	if delay > 0.0:
+		# Waits off stage (round one's VS card), then walks up.
+		_pending = {"title": round_text, "text": line}
+		_start_at = _clock + delay
+		return
+	call_out(round_text, line, "greet", 0.0)
+
+## This host's lines for `key` in the player's language.
+func _lines(key: String) -> Variant:
+	var entry: Dictionary = _host.get(key, HOSTS[2][key])
+	return entry.get("ne" if Settings.is_nepali() else "en")
 
 ## The round or match winner ("" for a draw).
 func winner_call(winner_name: String, match_won: bool) -> void:
+	var shown := tr(winner_name)
 	if winner_name == "":
-		call_out("BARABARI!", "", "clap", 3.0)
+		call_out(tr("DRAW") + "!", "", "clap", 3.0)
 	elif match_won:
-		call_out("SHABASH, %s!" % winner_name, str(_host.get("match", "KHEL JITYO!")), "victory", 0.0)
+		call_out(tr("WELL FOUGHT, %s!") % shown, str(_lines("match")), "victory", 0.0)
 	else:
-		call_out("SHABASH, %s!" % winner_name, "", ["clap", "cheer"][randi() % 2], 3.0)
+		call_out(tr("WELL FOUGHT, %s!") % shown, "", ["clap", "cheer"][randi() % 2], 3.0)
+
+## ── Spectator ──────────────────────────────────────────────────────────
+## The host no longer calls the rounds (ROUND 1 / FIGHT! is on screen); they
+## watch from the edge of the stage instead, behind the fighters and off to
+## one side, facing the fight: shifting their weight, clapping, cheering or
+## waving now and then, and cheering when a round is won.
+const SPECTATE_SIDE := 3.6
+const SPECTATE_BACK := 2.4
+const MOODS := ["idle", "idle", "clap", "cheer", "greet"]
+var spectating := false
+var _next_mood := 0.0
+
+func spectate(a: Vector3, b: Vector3, camera: Camera3D) -> void:
+	if spectating:
+		return
+	place(a, b, camera)
+	var centre := _spot + _to_camera * BACK
+	var side := _to_camera.cross(Vector3.UP).normalized() * (1.0 if randf() < 0.5 else -1.0)
+	global_position = centre + side * SPECTATE_SIDE - _to_camera * SPECTATE_BACK
+	var look := centre - global_position
+	look.y = 0.0
+	_face(look.normalized())
+	spectating = true
+	_shown = true
+	visible = true
+	_title.visible = false
+	_call.visible = false
+	_play("idle")
+	_next_mood = _clock + randf_range(2.0, 5.0)
+
+## A round has been won: the crowd's favourite moment.
+func react() -> void:
+	if not spectating:
+		return
+	_play("cheer" if randf() < 0.6 else "clap")
+	_next_mood = _clock + randf_range(3.0, 4.5)
+
+func _spectate_tick() -> void:
+	if not spectating or _clock < _next_mood:
+		return
+	var mood: String = MOODS[randi() % MOODS.size()]
+	_play(mood, mood == "greet")
+	_next_mood = _clock + randf_range(4.0, 8.0)
 
 ## Where the camera looks when it frames her: her spot at head height, so
 ## her call fits in the shot. Fixed while she walks.
 func focus() -> Vector3:
-	return _spot + Vector3.UP * 1.45
+	return _spot + Vector3.UP * 1.58
 
-## Gone at once (a quick shrink), for FIGHT! if she is still in view.
+## FIGHT!: a call still waiting is dropped; if she is already walking off
+## she carries on (a quick shrink only if she never got going).
 func vanish() -> void:
-	if not _shown:
+	_pending = {}
+	_start_at = -1.0
+	if not _shown or _leaving:
 		return
 	_shown = false
 	_leaving = false
@@ -237,7 +330,9 @@ func queue(call: Callable, ready: Callable, timeout := 8.0) -> void:
 	_queued_ready = ready
 	_queued_until = _clock + timeout
 
-## Walks on toward the camera, past the fighters and out of view.
+## Steps off the way a ring announcer clears the ring: turns and walks to
+## the side and upstage, behind the fighters' line, never through them or
+## into the lens.
 func leave() -> void:
 	if not _shown or _leaving:
 		return
@@ -245,11 +340,18 @@ func leave() -> void:
 	_hide_at = 0.0
 	_title.visible = false
 	_call.visible = false
-	_face(_to_camera)
-	_walk(global_position + _to_camera * WALK_OUT, "")
+	var side := _to_camera.cross(Vector3.UP).normalized()
+	var away := (side * 0.85 - _to_camera * 0.5).normalized()
+	_face(away)
+	_walk(global_position + away * WALK_OUT, "")
 
 func _process(delta: float) -> void:
 	_clock += delta
+	if _start_at >= 0.0 and _clock >= _start_at and not _pending.is_empty():
+		_start_at = -1.0
+		var call: Dictionary = _pending
+		_pending = {}
+		call_out(call.title, call.text, "greet", 0.0)
 	if _queued_call.is_valid() and (_clock > _queued_until or bool(_queued_ready.call())):
 		var call := _queued_call
 		_queued_call = Callable()
@@ -260,6 +362,7 @@ func _process(delta: float) -> void:
 			rate = (LEAVE_SPEED if _leaving else WALK_SPEED) / CLIP_SPEED
 		_player.advance(delta * rate)
 		_pin_hip()
+	_spectate_tick()
 	if _hide_at > 0.0 and _clock >= _hide_at:
 		leave()
 	if not _walking:
@@ -279,7 +382,8 @@ func _process(delta: float) -> void:
 		return
 	global_position += step.normalized() * travel
 	var near_camera := _camera != null and is_instance_valid(_camera) and global_position.distance_to(_camera.global_position) < CAMERA_CLEAR
-	if _leaving and (near_camera or global_position.distance_to(_spot) > FADE_AFTER):
+	var out_of_shot := _camera != null and is_instance_valid(_camera) and not _camera.is_position_in_frustum(global_position + Vector3.UP * 0.9)
+	if _leaving and (near_camera or out_of_shot or global_position.distance_to(_spot) > FADE_AFTER):
 		_walking = false
 		_shown = false
 		_leaving = false

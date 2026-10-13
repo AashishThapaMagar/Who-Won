@@ -274,6 +274,11 @@ F1 in a fight: every move and combo.": "1 2 मुक्का, 3 4 लात।
 	"%s WINS": "%s विजयी",
 
 	# ── Fight screen ──
+	"READY?": "तयार?",
+	"P%d CALL / %.1f s": "खेलाडी %d ललकार / %.1f सेकेन्ड",
+	"SMOOTHER PLAY: RESOLUTION 50%  (SETTINGS ▸ GRAPHICS TO CHANGE)": "सहज खेलका लागि: रिजोल्युसन 50%  (बदल्न: सेटिङ ▸ ग्राफिक्स)",
+	"SMOOTHER PLAY: GRAPHICS SET TO %s  (SETTINGS ▸ GRAPHICS TO CHANGE)": "सहज खेलका लागि: ग्राफिक्स %s मा राखियो  (बदल्न: सेटिङ ▸ ग्राफिक्स)",
+	"WELL FOUGHT, %s!": "शाबास, %s!",
 	"P%d CALL ENEMY [%s]": "खेलाडी %d ललकार [%s]",
 	"P1  A/D move  W/S sidestep  |  F 1  V 2  G 3  B 4  E guard     |     P2  Left/Right move  Up/Down sidestep  |  K 1  , 2  L 3  . 4  O guard\nSpace / Enter jump   |   F1 combos     |     Esc pause": "खेलाडी १  A/D चल्ने  W/S छेउ सर्ने  |  F 1  V 2  G 3  B 4  E बचाउ     |     खेलाडी २  ←/→ चल्ने  ↑/↓ छेउ सर्ने  |  K 1  , 2  L 3  . 4  O बचाउ
 Space / Enter उफ्रिने   |   F1 कम्बो     |     Esc रोक्ने",

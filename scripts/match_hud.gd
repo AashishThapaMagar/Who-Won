@@ -591,7 +591,7 @@ func _process(_delta: float) -> void:
 	for player in call_buttons.size():
 		var wait: float = bank.call_time_left(player)
 		call_buttons[player].disabled = not _can_call() or not bank.can_call_enemy(player)
-		call_buttons[player].text = "P%d CALL ENEMY [%s]" % [player + 1, "T" if player == 0 else "U"] if wait <= 0.0 else "P%d CALL / %.1f s" % [player + 1, wait]
+		call_buttons[player].text = Settings.fmt("P%d CALL ENEMY [%s]", [player + 1, "T" if player == 0 else "U"]) if wait <= 0.0 else Settings.fmt("P%d CALL / %.1f s", [player + 1, wait])
 		call_buttons[player].tooltip_text = "Play your recorded challenge" if bank.has_cry(player, "call_enemy") else "Record a Call Enemy line in Voice Studio on character select"
 	# Name plates: the fighter's name alone, the title and player tag below.
 	for i in 2:
@@ -692,6 +692,8 @@ func _process(_delta: float) -> void:
 	_update_intro_hud(_delta)
 
 func _update_intro_hud(delta: float) -> void:
+	# ROUND n / FIGHT! plays over a clean screen; the HUD comes up with the
+	# fight.
 	var ceremony: bool = is_instance_valid(arena.announcer) and arena.intro_timer > 0.65
 	intro_hud_alpha = move_toward(intro_hud_alpha, 0.0 if ceremony else 1.0, delta * 6.0)
 	var chrome: Array = [gauges, arena.get_node("UI/P1Label"), arena.get_node("UI/P2Label"), arena.timer_label, arena.round_label]

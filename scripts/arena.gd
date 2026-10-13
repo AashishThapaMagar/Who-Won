@@ -29,12 +29,6 @@ const ROSTER := preload("res://scripts/fighter_roster.gd")
 
 const ROUND_TIME := 99.0
 const INTRO_TIME := 2.2
-## With Aamai on stage the intro is a short scene: she walks up and calls
-## the round, then (at HOST_LEAVE of the way through) walks on toward the
-## camera and out of view before FIGHT!. Later rounds are shorter.
-const HOST_INTRO := 4.4
-const HOST_REPEAT := 3.4
-const HOST_LEAVE := 0.6
 ## This round's intro length (INTRO_TIME, or Aamai's).
 var intro_length := INTRO_TIME
 
@@ -205,13 +199,6 @@ func _process(delta: float) -> void:
 
 	if intro_timer > 0.0:
 		intro_timer -= delta
-		if announcer != null and intro_length != INTRO_TIME:
-			# Any punch or kick skips her scene straight to FIGHT!.
-			for action in ["p1_3d_punch", "p1_3d_kick", "p2_3d_punch", "p2_3d_kick"]:
-				if InputMap.has_action(action) and Input.is_action_just_pressed(action):
-					intro_timer = minf(intro_timer, 0.05)
-			if intro_timer < intro_length * (1.0 - HOST_LEAVE):
-				announcer.leave()
 		if intro_timer <= 0.0:
 			_hide_banner()
 		return
@@ -317,7 +304,9 @@ func _end_round(winner: int) -> void:
 		advance_timer = ROUND_PAUSE + (KO_PAUSE if knockout else 0.0)
 
 	result_label.visible = true
-	# The announcer only opens rounds; the win belongs to the fighters.
+	# The host watching from the side cheers the round.
+	if announcer != null and winner != 0:
+		announcer.react()
 
 ## Aamai's winner call; the 3D arena holds it for the victory moment.
 func _host_winner(host: Node, winner_name: String, match_won: bool) -> void:
@@ -515,25 +504,21 @@ func _show_banner(index: int, fight_style: FightStyle) -> void:
 	entrance.tween_property(banner, "position:x", 130.0, 0.3).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	entrance.tween_property(banner_round, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	preload("res://scripts/sfx.gd").fire("round")
+	# ROUND n then FIGHT! on screen; the arena's host watches from the side.
 	var host := _announcer()
-	intro_length = INTRO_TIME
-	for part in [banner_round, banner_name, banner_tagline]:
-		part.visible = true
 	if host != null:
-		host.round_call(banner_round.text)
-		# She calls the round herself: the banner keeps out of her way.
-		intro_length = HOST_INTRO if index == 0 else HOST_REPEAT
-		for part in [banner_round, banner_name, banner_tagline]:
-			part.visible = false
+		host.spectate(player1.body.global_position, player2.body.global_position, get_viewport().get_camera_3d())
+	intro_length = INTRO_TIME
+	# Just the round and the place: the names are on the VS card and HUD.
+	for part in [banner_round, banner_tagline]:
+		part.visible = true
+	banner_name.visible = false
 	intro_timer = intro_length
 
 func _hide_banner() -> void:
 	if banner.visible:
 		_flash_fight()
 	banner.visible = false
-	if announcer != null:
-		# Clear of the fight: gone if she hasn't walked out of view yet.
-		announcer.vanish()
 	player1.set_physics_process(true)
 	player2.set_physics_process(true)
 	round_active = true

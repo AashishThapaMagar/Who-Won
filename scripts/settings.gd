@@ -144,13 +144,13 @@ func _adapt(delta: float) -> void:
 			notify("SMOOTHER PLAY: RESOLUTION 50%  (SETTINGS ▸ GRAPHICS TO CHANGE)")
 		else:
 			set_quality(quality - 1)
-			notify("SMOOTHER PLAY: GRAPHICS SET TO %s  (SETTINGS ▸ GRAPHICS TO CHANGE)" % ["LOW", "MEDIUM", "HIGH", "CUSTOM"][quality])
+			notify(TranslationServer.translate("SMOOTHER PLAY: GRAPHICS SET TO %s  (SETTINGS ▸ GRAPHICS TO CHANGE)") % TranslationServer.translate(["LOW", "MEDIUM", "HIGH", "CUSTOM"][quality]))
 		adaptive_adjusting = false
 		_adaptive_time = 0.0
 
 ## A short line of gold text over the top of the screen.
 func notify(text: String) -> void:
-	notice_label.text = text
+	notice_label.text = digits(TranslationServer.translate(text))
 	if _notice_tween != null:
 		_notice_tween.kill()
 	notice_label.modulate.a = 1.0
