@@ -121,6 +121,14 @@ static func _numerals() -> Font:
 			(_numerals_font as FontFile).set_script_support_override("Deva", true)
 	return _numerals_font
 
+## True when the text holds any Devanagari letter.
+static func is_devanagari(text: String) -> bool:
+	for i in text.length():
+		var code := text.unicode_at(i)
+		if code >= 0x0900 and code <= 0x097F:
+			return true
+	return false
+
 ## Bold Saira for buttons and option labels.
 static func strong_font() -> Font:
 	if _strong == null:
@@ -242,8 +250,8 @@ static func eyebrow(parent: Node, text: String, pos: Vector2, dimensions: Vector
 	# Latin is letter-spaced by hand; Devanagari never is, since spacing
 	# breaks the headline that joins its letters.
 	var shown := TranslationServer.translate(text)
-	if shown == text:
-		shown = " ".join(text.split("")).replace("   ", "  ")
+	if not is_devanagari(shown):
+		shown = " ".join(shown.split("")).replace("   ", "  ")
 	var node := label(parent, shown, pos, dimensions, 11, color)
 	node.add_theme_font_override("font", strong_font())
 	return node

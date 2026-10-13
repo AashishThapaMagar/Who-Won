@@ -334,7 +334,8 @@ F1 in a fight: every move and combo.": "1 2 मुक्का, 3 4 लात।
 	"GET UP. THE ROAD IS STILL THERE.": "उठ्नुहोस्। बाटो अझै बाँकी छ।",
 	"FINALE": "अन्त्य",
 	"THE FINAL WORD": "अन्तिम शब्द",
-	"CONTINUE": "जारी राख्नुहोस्",
+	"CONTINUE": "अगाडि बढ्नुहोस्",
+	"SKIP": "छोड्नुहोस्",
 	"REVEAL": "हेर्नुहोस्",
 	"NEXT": "अर्को",
 }

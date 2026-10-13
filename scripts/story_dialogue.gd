@@ -238,18 +238,18 @@ func _open_beat() -> void:
 			_card("PROLOGUE", route.get("title", "THE ROAD TO " + ROSTER.profile(6).name), route.get("subtitle", place), UI.GOLD)
 		StoryDirector.Phase.INTRO:
 			var boss: bool = MatchSetup.is_final_boss()
-			_card("FINAL CHAPTER" if boss else Settings.fmt("CHAPTER %02d", [chapter]), rival.name, rival.title.to_upper() + ("   /   " + place if place != "" else ""), UI.CRIMSON if boss else UI.GOLD)
+			_card("FINAL CHAPTER" if boss else Settings.fmt("CHAPTER %02d", [chapter]), _name(rival), tr(rival.title.to_upper()) + ("   /   " + tr(place) if place != "" else ""), UI.CRIMSON if boss else UI.GOLD)
 		StoryDirector.Phase.VICTORY:
 			_pose("rival", "ko")
 			_pose("player", "victory")
-			_card("CHAPTER CLEARED", "VICTORY", rival.name + " FALLS", UI.GOLD)
+			_card("CHAPTER CLEARED", "VICTORY", Settings.fmt("%s FALLS", [_name(rival)]), UI.GOLD)
 		StoryDirector.Phase.DEFEAT:
 			_pose("player", "ko")
 			_pose("rival", "victory")
 			_card(Settings.fmt("CHAPTER %02d", [chapter]), "DEFEATED", "GET UP. THE ROAD IS STILL THERE.", UI.RED)
 		StoryDirector.Phase.FINALE:
 			_pose("player", "victory")
-			_card("FINALE", route.get("finale_title", "THE FINAL WORD"), hero.name + "   /   CHAMPION", UI.GOLD)
+			_card("FINALE", route.get("finale_title", "THE FINAL WORD"), Settings.fmt("%s   /   CHAMPION", [_name(hero)]), UI.GOLD)
 	# Opening move while the card is up: a slow establishing crane.
 	_cut({"kind": "wide", "duration": 6.0})
 
@@ -600,6 +600,11 @@ func _film_move(eye: Vector3, target: Vector3, t: float) -> Array:
 
 ## A crimson slash with the chapter name slides across, holds, and leaves.
 func _card(eyebrow: String, title: String, subtitle: String, accent: Color, bars := true) -> void:
+	# The card and the storybook's chapter heading both get the reader's
+	# language.
+	eyebrow = tr(eyebrow)
+	title = tr(title)
+	subtitle = tr(subtitle)
 	if is_instance_valid(card):
 		card.queue_free()
 	card = Control.new()
@@ -704,12 +709,14 @@ func _show_line() -> void:
 		name_label.text = ""
 	else:
 		var profile := _profile_for(speaker_id)
-		name_label.text = " ".join(String(profile.get("name", speaker_id.to_upper())).split(""))
+		# Latin names are letter-spaced; Devanagari never is (it would
+		# break the headline joining the letters).
+		name_label.text = _name(profile) if Settings.is_nepali() else " ".join(String(profile.get("name", speaker_id.to_upper())).split(""))
 		tint = (profile.get("accent", UI.GOLD) as Color).lerp(UI.WHITE, 0.15)
 	name_label.add_theme_color_override("font_color", tint)
 	# Narration reads in italics-free muted white; speech in full white.
 	text_label.add_theme_color_override("font_color", UI.WHITE if not speaker_id.is_empty() else Color("d9dcea"))
-	text_label.text = line.get("text", "")
+	text_label.text = tr(String(line.get("text", "")))
 	if storybook != null:
 		storybook.line(name_label.text, text_label.text, tint)
 		storybook.show_plate(_plate_path())
@@ -720,6 +727,12 @@ func _show_line() -> void:
 	typing.tween_property(text_label, "visible_ratio", 1.0, maxf(0.2, text_label.text.length() / TYPE_SPEED))
 	_cut(_shot_for(line, line_index))
 	_play_voice(line.get("voice", _voice_path()))
+
+## A fighter's name in the reader's language.
+func _name(profile: Dictionary) -> String:
+	if Settings.is_nepali():
+		return ROSTER.NEPALI_NAMES.get(str(profile.get("id", "")), str(profile.get("name", "")))
+	return str(profile.get("name", ""))
 
 ## Where a narrated line's recording lives by default:
 ## audio/story/<chosen fighter>/<beat>_<line number>.ogg (or .wav / .mp3),
@@ -881,8 +894,8 @@ func _process(delta: float) -> void:
 	if next_button != null:
 		var key := "A" if Settings.using_pad else "ENTER"
 		var label := "CONTINUE" if carding else ("REVEAL" if text_label.visible_ratio < 1.0 else "NEXT")
-		next_button.text = "%s / %s" % [label, key]
-		skip_button.text = "SKIP / " + ("B" if Settings.using_pad else "ESC")
+		next_button.text = "%s / %s" % [tr(label), key]
+		skip_button.text = tr("SKIP") + " / " + ("B" if Settings.using_pad else "ESC")
 	elapsed += delta
 	_update_book(delta)
 	if storybook != null:

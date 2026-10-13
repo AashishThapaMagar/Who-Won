@@ -69,14 +69,16 @@ var language := "en"
 var language_chosen := false
 signal language_changed
 const NEPALI := preload("res://scripts/lang_ne.gd")
+const NEPALI_STORY := preload("res://scripts/lang_story_ne.gd")
 const NEPALI_DIGITS := "०१२३४५६७८९"
 
 func _ready() -> void:
 	_load()
 	var nepali := Translation.new()
 	nepali.locale = "ne"
-	for key: String in NEPALI.STRINGS:
-		nepali.add_message(key, NEPALI.STRINGS[key])
+	for strings: Dictionary in [NEPALI.STRINGS, NEPALI_STORY.STRINGS]:
+		for key: String in strings:
+			nepali.add_message(key, strings[key])
 	TranslationServer.add_translation(nepali)
 	TranslationServer.set_locale(language)
 	var layer := CanvasLayer.new()
