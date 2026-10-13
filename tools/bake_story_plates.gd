@@ -222,6 +222,22 @@ const PLATES := [
 	{"key": "finale_08", "fighter": "abhi", "phase": "finale", "line": 7, "mood": DUSK,
 		# "Lock in": Kri's face as he says it, his master beside him.
 		"eye": [1.6, 1.5, 1.4], "look": [0.9, 1.45, -0.7], "fov": 32},
+	# ── Kurosawa trials (bake with PLATE_STYLE=kurosawa) ──
+	{"key": "k_ring", "fighter": "anant", "phase": "prologue", "line": 2, "sky": "arena", "haze": 0.012,
+		"sun_at": [0.6, 0.12, 0.06], "horizon_y": 0.25,
+		# Low on the canvas, looking up: he stands alone, doubled over, in
+		# the white haze of the spotlights.
+		"eye": [2.4, 0.3, 1.6], "look": [0.0, 1.5, 0.0], "fov": 40, "poses": {"player": ["hit_heavy", 0.35]}},
+	{"key": "k_ridge", "fighter": "sup", "phase": "finale", "line": 14, "sky": "dusk", "haze": 0.02,
+		"sun_at": [0.5, 0.6, 0.06], "horizon_y": 0.68,
+		"eye": [0.0, 0.45, 4.6], "look": [0.0, 1.6, -8.0], "fov": 40,
+		"place": {"player": [-0.5, 0.2, 0.0, -1.0], "anant": [0.5, 0.2, 0.0, -1.0]},
+		"poses": {"player": ["bow", 0.2], "anant": ["taunt", 1.0]}},
+	{"key": "k_lamp", "fighter": "abhi", "phase": "prologue", "line": 0, "sky": "night", "haze": 0.015,
+		"sun_at": [0.3, 0.24, 0.03], "horizon_y": 0.72,
+		# Low and close: the lone figure punching under the lamp.
+		"eye": [2.6, 0.3, 0.9], "look": [-8.0, 1.6, 0.4], "fov": 32,
+		"place": {"player": [-0.4, 0.5, -1.0, 0.0]}, "poses": {"player": ["jab", 0.4]}},
 ]
 
 const S_OUT := "res://assets/story/%s/plates/"
@@ -351,7 +367,10 @@ func _bake(plate: Dictionary) -> void:
 	var style: String = OS.get_environment("PLATE_STYLE") if OS.has_environment("PLATE_STYLE") else plate.get("style", STYLE)
 	_compose(d, plate)
 	viewport.size = SIZE
-	LOOK.apply(viewport, "mithila" if style == "mithila" else "wash")
+	if style == "kurosawa":
+		_ink_world(viewport, plate)
+	else:
+		LOOK.apply(viewport, "mithila" if style == "mithila" else "wash")
 	if style == "mithila":
 		# Mithila paintings sit on bare paper: no sky, fog or film curve.
 		for world: WorldEnvironment in viewport.find_children("*", "WorldEnvironment", true, false):
@@ -502,6 +521,133 @@ func _vary_camera(d: Node, index: int) -> void:
 	camera.global_position = eye
 	camera.look_at(subject)
 
+## ── Kurosawa style ─────────────────────────────────────────────────────
+## Every shape becomes black ink and the air between them white haze, so
+## the render is pure depth: near things black, far things fading into the
+## sky. The finish then paints that sky (a deep top, a glowing horizon,
+## a low sun or moon) through the haze, leaving the figures as silhouettes
+## against it, with film grain and a heavy vignette.
+const SKIES := {
+	"dusk": [Color("2a1626"), Color("e8823a"), Color("ffd08a")],
+	"dawn": [Color("2c3550"), Color("f2b07a"), Color("fff0c8")],
+	"night": [Color("070a18"), Color("7d8cb8"), Color("ffd59a")],
+	"storm": [Color("10141c"), Color("8c96a3"), Color("e8ecf2")],
+	"arena": [Color("1c2230"), Color("e2e8f2"), Color("ffffff")],
+}
+const INK := Color("0b0807")
+
+func _ink_world(viewport: SubViewport, plate: Dictionary) -> void:
+	var ink := StandardMaterial3D.new()
+	ink.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	ink.albedo_color = Color.BLACK
+	var cutouts := {}
+	for mesh: MeshInstance3D in viewport.find_children("*", "MeshInstance3D", true, false):
+		var count := mesh.mesh.get_surface_count() if mesh.mesh != null else 0
+		for s in count:
+			var source := mesh.get_active_material(s)
+			var material: Material = ink
+			# Leaves, flags and kites keep their cut-out edges.
+			if source is BaseMaterial3D and source.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED and source.albedo_texture != null:
+				if not cutouts.has(source):
+					var cut := ink.duplicate() as StandardMaterial3D
+					cut.albedo_texture = source.albedo_texture
+					cut.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+					cut.cull_mode = BaseMaterial3D.CULL_DISABLED
+					cutouts[source] = cut
+				material = cutouts[source]
+			mesh.set_surface_override_material(s, material)
+		if mesh.material_override != null:
+			mesh.material_override = ink
+		# The fighters' hit-flash and rim overlays would paint the ink white.
+		mesh.material_overlay = null
+		mesh.transparency = 0.0
+	for label: Label3D in viewport.find_children("*", "Label3D", true, false):
+		label.visible = false
+	for light: Light3D in viewport.find_children("*", "Light3D", true, false):
+		light.visible = false
+	# The camera's own environment outranks any set's (night sets keep a
+	# sky of their own): white air, white haze thickening with distance.
+	var env := Environment.new()
+	env.background_mode = Environment.BG_COLOR
+	env.background_color = Color.WHITE
+	env.tonemap_mode = Environment.TONE_MAPPER_LINEAR
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_DISABLED
+	env.fog_enabled = true
+	env.fog_light_color = Color.WHITE
+	env.fog_light_energy = 1.0
+	env.fog_density = float(plate.get("haze", 0.03))
+	env.fog_sky_affect = 0.0
+	(viewport.get_camera_3d() as Camera3D).environment = env
+
+const KUROSAWA_SHADER := """shader_type canvas_item;
+uniform vec3 top : source_color;
+uniform vec3 horizon : source_color;
+uniform vec3 sun_color : source_color;
+uniform vec3 ink : source_color;
+uniform vec2 sun = vec2(0.5, 0.62);
+uniform float sun_size = 0.07;
+uniform float horizon_y = 0.66;
+uniform float seed = 1.0;
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7)) + seed) * 43758.5453); }
+float noise(vec2 p) {
+	vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y);
+}
+void fragment() {
+	vec2 res = 1.0 / TEXTURE_PIXEL_SIZE;
+	float depth = dot(texture(TEXTURE, UV).rgb, vec3(0.333));
+	// The sky: deep at the top, burning at the horizon, a low sun with a
+	// halo, and long torn bands of cloud.
+	float h = clamp(UV.y / horizon_y, 0.0, 1.0);
+	vec3 sky = mix(top, horizon, pow(h, 1.6));
+	vec2 d = (UV - sun) * vec2(res.x / res.y, 1.0);
+	float r = length(d);
+	sky = mix(sky, sun_color, smoothstep(sun_size * 4.0, 0.0, r) * 0.55);
+	sky = mix(sky, sun_color, smoothstep(sun_size, sun_size * 0.92, r));
+	float band = noise(vec2(UV.x * 3.0, UV.y * 26.0) + seed) * noise(vec2(UV.x * 7.0, UV.y * 40.0));
+	sky = mix(sky, mix(top, horizon, 0.35), smoothstep(0.35, 0.6, band) * (1.0 - h) * 0.6);
+	// Through the haze: far shapes melt into the sky, near ones are ink.
+	float air = smoothstep(0.3, 0.98, depth);
+	vec3 col = mix(ink, sky, air);
+	// A whisper of warm rim where the ink meets the haze.
+	col += sun_color * 0.05 * smoothstep(0.3, 0.45, depth) * (1.0 - smoothstep(0.45, 0.6, depth));
+	// Film: grain and a heavy vignette.
+	col *= 0.92 + 0.12 * hash(floor(UV * res / 1.5) + seed);
+	vec2 v = UV - 0.5;
+	col *= 1.0 - smoothstep(0.35, 0.85, length(v * vec2(1.1, 1.3))) * 0.55;
+	COLOR = vec4(col, 1.0);
+}
+"""
+
+func _kurosawa(render: Image, plate: Dictionary) -> Image:
+	var canvas := SubViewport.new()
+	canvas.size = SIZE
+	canvas.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	root.add_child(canvas)
+	var rect := TextureRect.new()
+	rect.texture = ImageTexture.create_from_image(render)
+	rect.size = Vector2(SIZE)
+	var material := ShaderMaterial.new()
+	material.shader = Shader.new()
+	material.shader.code = KUROSAWA_SHADER
+	var sky: Array = SKIES.get(plate.get("sky", "dusk"), SKIES.dusk)
+	material.set_shader_parameter("top", sky[0])
+	material.set_shader_parameter("horizon", sky[1])
+	material.set_shader_parameter("sun_color", sky[2])
+	material.set_shader_parameter("ink", INK)
+	var sun: Array = plate.get("sun_at", [0.5, 0.62, 0.07])
+	material.set_shader_parameter("sun", Vector2(sun[0], sun[1]))
+	material.set_shader_parameter("sun_size", sun[2])
+	material.set_shader_parameter("horizon_y", float(plate.get("horizon_y", 0.66)))
+	material.set_shader_parameter("seed", float(hash(plate.key) % 1000) / 100.0)
+	rect.material = material
+	canvas.add_child(rect)
+	for i in 3:
+		await RenderingServer.frame_post_draw
+	var image := canvas.get_texture().get_image()
+	canvas.queue_free()
+	return image
+
 ## The sealed letter on the doorstep: a cream envelope with a red seal.
 func _lay_letter(d: Node, spec: Dictionary) -> void:
 	var page := Image.create(260, 180, false, Image.FORMAT_RGB8)
@@ -634,6 +780,8 @@ func _print_newspaper(paper: MeshInstance3D) -> void:
 func _finish(render: Image, plate: Dictionary, style: String) -> Image:
 	if style == "frame_only":
 		return await _frame(render, plate)
+	if style == "kurosawa":
+		return await _kurosawa(render, plate)
 	var canvas := SubViewport.new()
 	canvas.size = SIZE
 	canvas.transparent_bg = false
