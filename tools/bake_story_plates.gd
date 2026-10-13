@@ -552,7 +552,7 @@ func _vary_camera(d: Node, index: int) -> void:
 ## Sky, weather and haze for a page that names none, from where it
 ## happens: the story set, or the tournament arena by its time of day.
 const SET_MOODS := {
-	"street": ["night", "rain", 0.02], "tea_stall": ["night", "rain", 0.02],
+	"street": ["night", "rain", 0.02], "tea_stall": ["night", "rain", 0.05],
 	"gym": ["night", "rain", 0.02], "rooftop": ["dawn", "clear", 0.012],
 	"hill_road": ["dawn", "dust", 0.012], "village_tree": ["dawn", "dust", 0.012],
 	"pitch": ["dusk", "dust", 0.012], "academy": ["night", "clear", 0.02],
@@ -652,6 +652,13 @@ func _low_camera(d: Node) -> void:
 	# Walled sets (the city street, the hall): look down the open street,
 	# where the sky is, not into the walls.
 	if str(d.get("set_name")) in ["street", "tea_stall", "gym"]:
+		if str(d.get("set_name")) == "tea_stall":
+			# Out in the street, well clear of the stall: his whole figure
+			# stands in the left third against the open, rain-lit sky.
+			camera.global_position = subject + Vector3(-2.9, 0.16, 1.5)
+			camera.look_at(subject + Vector3(9.0, 4.6, -0.6))
+			camera.fov = 46.0
+			return
 		# Behind and below him, looking past his shoulder down the street.
 		camera.global_position = subject + Vector3(3.0, 0.42, 0.45)
 		camera.look_at(subject + Vector3(-9.0, 1.9, -0.6))
