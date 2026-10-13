@@ -215,6 +215,13 @@ const PLATES := [
 		"eye": [-1.75, 1.62, 1.0], "look": [1.15, 1.5, 0.0], "fov": 32},
 	{"key": "finale_02", "fighter": "abhi", "phase": "finale", "line": 1, "mood": DUSK},
 	{"key": "finale_07", "fighter": "abhi", "phase": "finale", "line": 6, "mood": DUSK},
+	# Hand framings where the automatic ones failed.
+	{"key": "prologue_02", "fighter": "anant", "phase": "prologue", "line": 1, "mood": COLD,
+		# Winning: in the ring under the lights, seen from the ropes.
+		"eye": [-3.6, 1.4, 0.3], "look": [0.0, 1.2, 0.0], "fov": 38, "poses": {"player": ["victory", 1.6]}},
+	{"key": "finale_08", "fighter": "abhi", "phase": "finale", "line": 7, "mood": DUSK,
+		# "Lock in": Kri's face as he says it, his master beside him.
+		"eye": [1.6, 1.5, 1.4], "look": [0.9, 1.45, -0.7], "fov": 32},
 ]
 
 const S_OUT := "res://assets/story/%s/plates/"
@@ -224,12 +231,65 @@ func _initialize() -> void:
 
 func run() -> void:
 	var only := OS.get_cmdline_user_args()
+	# "--fill <fighter> ...": bake the moments a fighter's book still lacks,
+	# up to BOOK_SIZE pictures, in the story's own shots.
+	if "--fill" in only:
+		for id in only:
+			if id != "--fill":
+				for plate in _auto_plates(id):
+					await _bake(plate)
+		quit()
+		return
 	for plate: Dictionary in PLATES:
 		# Arguments pick plates by key or by fighter id (e.g. -- ish).
 		if not only.is_empty() and not only.has(plate.key) and not only.has(plate.fighter):
 			continue
 		await _bake(plate)
 	quit()
+
+## Pictures per storybook.
+const BOOK_SIZE := 21
+
+## The moments of a fighter's story still without a picture: every
+## prologue and finale line, then the first and last line of each rival's
+## chapter intro and the first of its victory, in that order, until the
+## book has BOOK_SIZE pictures (composed plates in PLATES count first).
+func _auto_plates(fighter: String) -> Array:
+	var route: Dictionary = preload("res://scripts/story_script.gd").ROUTES.get(fighter, {})
+	var have := {}
+	for plate: Dictionary in PLATES:
+		if plate.fighter == fighter:
+			have[plate.key] = true
+	var wanted: Array = []
+	var add := func(phase: String, line: int, chapter: int, lines: Array) -> void:
+		if line < 0 or line >= lines.size():
+			return
+		var key := "%s_%02d" % [phase, line + 1]
+		if have.has(key):
+			return
+		have[key] = true
+		var mood: Color = DUSK if phase.begins_with("anant") or phase == "finale" else MORNING
+		# Each page frames its moment differently (see _vary_camera).
+		wanted.append({"key": key, "fighter": fighter, "phase": phase, "line": line, "chapter": chapter, "mood": mood, "vary": wanted.size()})
+	var prologue: Array = route.get("prologue", [])
+	for i in prologue.size():
+		add.call("prologue", i, 0, prologue)
+	var finale: Array = route.get("finale", [])
+	for i in finale.size():
+		add.call("finale", i, 0, finale)
+	var ladder: Array = route.get("ladder", [])
+	var chapters: Dictionary = route.get("chapters", {})
+	for pass_index in 3:
+		for c in ladder.size():
+			var beats: Dictionary = chapters.get(ladder[c], {})
+			var intro: Array = beats.get("intro", [])
+			var victory: Array = beats.get("victory", [])
+			match pass_index:
+				0: add.call(ladder[c] + "_intro", 0, c, intro)
+				1: add.call(ladder[c] + "_intro", intro.size() - 1, c, intro)
+				2: add.call(ladder[c] + "_victory", 0, c, victory)
+	var room := maxi(0, BOOK_SIZE - (have.size() - wanted.size()))
+	return wanted.slice(0, room)
 
 func _bake(plate: Dictionary) -> void:
 	var setup: Node = root.get_node("MatchSetup")
@@ -330,6 +390,8 @@ func _compose(d: Node, plate: Dictionary) -> void:
 		camera.global_position = Vector3(eye[0], eye[1], eye[2])
 		camera.look_at(Vector3(look[0], look[1], look[2]))
 		camera.fov = float(plate.get("fov", 36))
+	if plate.has("vary") and not plate.has("eye"):
+		_vary_camera(d, int(plate.vary))
 	var sun_spec: Array = plate.get("sun", [])
 	for sun: DirectionalLight3D in d.viewport.find_children("*", "DirectionalLight3D", true, false):
 		if sun_spec.size() == 4:
@@ -398,6 +460,47 @@ func _compose(d: Node, plate: Dictionary) -> void:
 			visual._process(minf(left, 0.1))
 			left -= 0.1
 		animated.player.pause()
+
+## A different framing for each automatic page, so neighbouring pictures
+## of one scene don't repeat: the story's shot, a wide establishing view,
+## a low heroic angle, an over-the-shoulder two-shot and a close portrait,
+## all centred on whoever the line is about.
+func _vary_camera(d: Node, index: int) -> void:
+	var camera: Camera3D = d.camera
+	var subject := Vector3.ZERO
+	var count := 0
+	for key in d.actors:
+		var rig: Node3D = d.actors[key].rig
+		if rig.visible:
+			subject += rig.global_position
+			count += 1
+	if count == 0:
+		return
+	subject = subject / count + Vector3(0, 1.3, 0)
+	var flat := camera.global_position - subject
+	flat.y = 0.0
+	if flat.length() < 0.1:
+		flat = Vector3(0, 0, 3)
+	var distance := flat.length()
+	var dir := flat.normalized()
+	var eye := camera.global_position
+	match index % 5:
+		1: # Wide: pulled back and a little higher, the place around them.
+			eye = subject + dir.rotated(Vector3.UP, deg_to_rad(18)) * (distance * 1.9 + 2.0) + Vector3(0, 1.0, 0)
+			camera.fov = 44
+		2: # Low and heroic, from the other side.
+			eye = subject + dir.rotated(Vector3.UP, deg_to_rad(-38)) * maxf(2.2, distance * 0.9) + Vector3(0, -0.5, 0)
+			camera.fov = 40
+		3: # Over the shoulder, swung well round.
+			eye = subject + dir.rotated(Vector3.UP, deg_to_rad(62)) * (distance * 0.75) + Vector3(0, 0.25, 0)
+			camera.fov = 34
+		4: # Close portrait.
+			eye = subject + dir.rotated(Vector3.UP, deg_to_rad(-15)) * maxf(1.4, distance * 0.55) + Vector3(0, 0.25, 0)
+			camera.fov = 30
+		_:
+			return
+	camera.global_position = eye
+	camera.look_at(subject)
 
 ## The sealed letter on the doorstep: a cream envelope with a red seal.
 func _lay_letter(d: Node, spec: Dictionary) -> void:
