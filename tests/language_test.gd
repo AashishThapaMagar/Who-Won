@@ -5,7 +5,7 @@ const NEPALI := preload("res://scripts/lang_ne.gd")
 const NEPALI_STORY := preload("res://scripts/lang_story_ne.gd")
 const STORY := preload("res://scripts/story_script.gd")
 ## Books translated so far: every line in them must have its Nepali.
-const TRANSLATED_BOOKS := ["ish", "sab", "bib", "abhi", "anug", "anant"]
+const TRANSLATED_BOOKS := ["ish", "sab", "bib", "abhi", "anug", "anant", "sup"]
 var failures := 0
 
 func _initialize() -> void:
@@ -35,9 +35,14 @@ func _run() -> void:
 	for id: String in TRANSLATED_BOOKS:
 		var route: Dictionary = STORY.ROUTES[id]
 		var lines: Array = route.prologue + route.finale
-		for rival: String in route.chapters:
-			for beat: String in route.chapters[rival]:
-				lines += route.chapters[rival][beat]
+		# Every chapter as the game plays it: the shared beats, with any the
+		# route rewrites (story_director.gd chapter()).
+		for rival: String in route.get("ladder", route.chapters.keys()):
+			var beats: Dictionary = STORY.CHAPTERS.get(rival, {}).duplicate()
+			beats.merge(route.chapters.get(rival, {}), true)
+			for beat: String in beats:
+				if beat in ["intro", "victory", "defeat"]:
+					lines += beats[beat]
 		for line: Dictionary in lines:
 			_check(NEPALI_STORY.STRINGS.has(line.text), "%s book untranslated: %s" % [id, line.text])
 			if line.has("banner"):
