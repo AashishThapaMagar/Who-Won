@@ -5,7 +5,7 @@ const NEPALI := preload("res://scripts/lang_ne.gd")
 const NEPALI_STORY := preload("res://scripts/lang_story_ne.gd")
 const STORY := preload("res://scripts/story_script.gd")
 ## Books translated so far: every line in them must have its Nepali.
-const TRANSLATED_BOOKS := ["ish", "sab", "bib", "abhi", "anug"]
+const TRANSLATED_BOOKS := ["ish", "sab", "bib", "abhi", "anug", "anant"]
 var failures := 0
 
 func _initialize() -> void:
@@ -45,7 +45,7 @@ func _run() -> void:
 					var words: String = line.banner.get(part, "")
 					_check(words.is_empty() or NEPALI_STORY.STRINGS.has(words) or NEPALI.STRINGS.has(words), "%s banner untranslated: %s" % [id, words])
 		for part: String in ["title", "subtitle", "finale_title"]:
-			_check(NEPALI_STORY.STRINGS.has(route[part]), "%s %s untranslated" % [id, part])
+			_check(NEPALI_STORY.STRINGS.has(route[part]) or NEPALI.STRINGS.has(route[part]), "%s %s untranslated" % [id, part])
 	settings.language = "ne"
 	TranslationServer.set_locale("ne")
 	_check(TranslationServer.translate("SETTINGS") == "सेटिङ", "Settings translates")
