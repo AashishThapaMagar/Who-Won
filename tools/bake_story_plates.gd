@@ -13,7 +13,7 @@ extends SceneTree
 ## The finished images are ordinary pictures: they can be opened in Krita or
 ## Procreate and painted over by hand, and the book shows whatever is there.
 ##
-##   godot --path . --resolution 1280x720 -s res://tools/bake_story_plates.gd [-- <plate key> ...]
+##   godot --path . --resolution 1280x720 -s res://tools/bake_story_plates.gd [-- <plate key or fighter id> ...]
 
 const LOOK := preload("res://scripts/storybook_look.gd")
 const PLATE_SHADER := preload("res://shaders/storybook_plate.gdshader")
@@ -148,6 +148,63 @@ const PLATES := [
 		"eye": [0.0, 1.15, 3.6], "look": [0.0, 1.7, -8.0], "fov": 44, "mood": DUSK,
 		"place": {"player": [-0.45, 0.4, 0.0, -1.0], "anant": [0.45, 0.4, 0.0, -1.0]},
 		"poses": {"player": ["bow", 0.2], "anant": ["taunt", 1.0]}},
+	# ── Agasthya: "The Fastest Hands" (story shots unless composed) ──
+	{"key": "prologue_01", "fighter": "ish", "phase": "prologue", "line": 0,
+		"eye": [-0.4, 1.5, 3.4], "look": [-4.4, 1.3, -1.8], "fov": 40},
+	{"key": "prologue_04", "fighter": "ish", "phase": "prologue", "line": 3,
+		# His face, the lamplit stall behind him.
+		"eye": [-1.4, 1.6, 0.9], "look": [-3.6, 1.55, -1.0], "fov": 30},
+	{"key": "prologue_07", "fighter": "ish", "page": "letter"},
+	{"key": "prologue_08", "fighter": "ish", "phase": "prologue", "line": 7},
+	{"key": "anant_intro_02", "fighter": "ish", "phase": "anant_intro", "line": 1, "chapter": 5, "mood": DUSK,
+		# Over Agasthya's shoulder onto his Guruji.
+		"eye": [-1.75, 1.62, 1.0], "look": [1.15, 1.5, 0.0], "fov": 32},
+	{"key": "finale_01", "fighter": "ish", "phase": "finale", "line": 0, "mood": DUSK},
+	{"key": "finale_03", "fighter": "ish", "phase": "finale", "line": 2, "mood": DUSK},
+	# ── Vajraveer: "The Endless Rush" ──
+	{"key": "prologue_01", "fighter": "bib", "phase": "prologue", "line": 0, "mood": DAWN,
+		"eye": [-2.6, 1.3, 4.0], "look": [0.2, 1.5, -1.6], "fov": 40, "poses": {"player": ["kick", 0.7]}},
+	{"key": "prologue_03", "fighter": "bib", "phase": "prologue", "line": 2, "mood": DAWN,
+		# His face, the tank and the dawn range behind him.
+		"eye": [0.9, 1.55, -1.6], "look": [0.0, 1.5, 0.6], "fov": 32},
+	{"key": "prologue_06", "fighter": "bib", "page": "letter"},
+	{"key": "prologue_07", "fighter": "bib", "phase": "prologue", "line": 6, "mood": DAWN},
+	{"key": "anant_intro_02", "fighter": "bib", "phase": "anant_intro", "line": 1, "chapter": 5, "mood": DUSK,
+		"eye": [-1.75, 1.62, 1.0], "look": [1.15, 1.5, 0.0], "fov": 32},
+	{"key": "finale_01", "fighter": "bib", "phase": "finale", "line": 0, "mood": DUSK},
+	{"key": "finale_04", "fighter": "bib", "phase": "finale", "line": 3, "mood": DUSK},
+	# ── Mahabali: "The Lazy Giant" ──
+	{"key": "prologue_01", "fighter": "sab", "phase": "prologue", "line": 0, "mood": MORNING,
+		"eye": [6.8, 1.4, 4.6], "look": [2.8, 0.9, -1.4], "fov": 36},
+	{"key": "prologue_03", "fighter": "sab", "phase": "prologue", "line": 2, "mood": MORNING,
+		"eye": [5.0, 1.45, 2.2], "look": [2.4, 1.25, -0.9], "fov": 32, "poses": {"player": ["taunt", 0.8]}},
+	{"key": "prologue_06", "fighter": "sab", "page": "letter"},
+	{"key": "prologue_08", "fighter": "sab", "phase": "prologue", "line": 7, "mood": MORNING,
+		"eye": [0.6, 1.3, 2.6], "look": [2.4, 1.4, -0.9], "fov": 34},
+	{"key": "sup_intro_01", "fighter": "sab", "phase": "sup_intro", "line": 0, "chapter": 4, "mood": MORNING},
+	{"key": "anant_intro_02", "fighter": "sab", "phase": "anant_intro", "line": 1, "chapter": 5, "mood": DUSK,
+		"eye": [-1.75, 1.62, 1.0], "look": [1.15, 1.5, 0.0], "fov": 32},
+	{"key": "finale_01", "fighter": "sab", "phase": "finale", "line": 0, "mood": DUSK},
+	{"key": "finale_04", "fighter": "sab", "phase": "finale", "line": 3, "mood": DUSK},
+	# ── Ananta: "The Final Word" ──
+	{"key": "prologue_01", "fighter": "anant", "phase": "prologue", "line": 0, "mood": COLD,
+		# Low, looking up past the ropes into the dark stadium.
+		"eye": [-2.6, 0.7, 2.9], "look": [0.0, 1.5, 0.0], "fov": 40},
+	{"key": "prologue_03", "fighter": "anant", "phase": "prologue", "line": 2, "mood": COLD,
+		# Down on one knee in the ring, the dark crowd behind him.
+		"eye": [2.3, 0.75, 2.1], "look": [0.0, 0.75, 0.0], "fov": 38, "poses": {"player": ["getup", 1.2]}},
+	{"key": "prologue_05", "fighter": "anant", "phase": "prologue", "line": 4, "mood": DUSK,
+		"eye": [-1.0, 1.6, 4.0], "look": [-5.0, 1.3, -3.6], "fov": 40},
+	{"key": "prologue_08", "fighter": "anant", "page": "letter"},
+	{"key": "bib_intro_02", "fighter": "anant", "phase": "bib_intro", "line": 1, "chapter": 0},
+	{"key": "sup_intro_02", "fighter": "anant", "phase": "sup_intro", "line": 1, "chapter": 5, "mood": DUSK,
+		"eye": [1.75, 1.62, 1.0], "look": [-1.15, 1.5, 0.0], "fov": 32},
+	{"key": "finale_01", "fighter": "anant", "phase": "finale", "line": 0, "mood": DUSK},
+	{"key": "finale_06", "fighter": "anant", "phase": "finale", "line": 5, "mood": DUSK},
+	# ── Anug: the letter and his Guruji ──
+	{"key": "prologue_09", "fighter": "anug", "page": "letter"},
+	{"key": "anant_intro_02", "fighter": "anug", "phase": "anant_intro", "line": 1, "chapter": 5, "mood": DUSK,
+		"eye": [-1.75, 1.62, 1.0], "look": [1.15, 1.5, 0.0], "fov": 32},
 ]
 
 const S_OUT := "res://assets/story/%s/plates/"
@@ -158,7 +215,8 @@ func _initialize() -> void:
 func run() -> void:
 	var only := OS.get_cmdline_user_args()
 	for plate: Dictionary in PLATES:
-		if not only.is_empty() and not only.has(plate.key):
+		# Arguments pick plates by key or by fighter id (e.g. -- ish).
+		if not only.is_empty() and not only.has(plate.key) and not only.has(plate.fighter):
 			continue
 		await _bake(plate)
 	quit()
@@ -255,11 +313,13 @@ func _save_plate(image: Image, folder: String, plate: Dictionary) -> void:
 ## The plate's camera, light and props.
 func _compose(d: Node, plate: Dictionary) -> void:
 	var camera: Camera3D = d.camera
-	var eye: Array = plate.eye
-	var look: Array = plate.look
-	camera.global_position = Vector3(eye[0], eye[1], eye[2])
-	camera.look_at(Vector3(look[0], look[1], look[2]))
-	camera.fov = float(plate.get("fov", 36))
+	# Without "eye" the picture keeps the story's own shot for the line.
+	if plate.has("eye"):
+		var eye: Array = plate.eye
+		var look: Array = plate.look
+		camera.global_position = Vector3(eye[0], eye[1], eye[2])
+		camera.look_at(Vector3(look[0], look[1], look[2]))
+		camera.fov = float(plate.get("fov", 36))
 	var sun_spec: Array = plate.get("sun", [])
 	for sun: DirectionalLight3D in d.viewport.find_children("*", "DirectionalLight3D", true, false):
 		if sun_spec.size() == 4:

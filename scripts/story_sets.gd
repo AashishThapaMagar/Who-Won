@@ -182,11 +182,13 @@ func _street() -> void:
 func _poster(at: Vector3) -> void:
 	_box(Vector3(1.5, 2.0, 0.02), at, _glow(Color("8f1826"), 0.25))
 	_box(Vector3(1.36, 0.02, 0.025), at + Vector3(0, 0.62, 0.005), _flat(Color("ffc53d"), 0.5))
-	_text("OPEN TOURNAMENT", at + Vector3(0, 0.78, 0.02), 0.1, Color("ffc53d"))
-	_text("THE ROAD TO", at + Vector3(0, 0.42, 0.02), 0.13, Color("f6f3ec"), true)
+	# The tournament as the letters announce it: a tournament of masters
+	# named ANANTA (the master's identity stays hidden).
+	_text("AN INVITATION", at + Vector3(0, 0.78, 0.02), 0.1, Color("ffc53d"))
+	_text("A TOURNAMENT OF", at + Vector3(0, 0.42, 0.02), 0.11, Color("f6f3ec"), true)
 	_text("ANANTA", at + Vector3(0, 0.16, 0.02), 0.34, Color("f6f3ec"), true)
-	_text("BEAT ANANTA", at + Vector3(0, -0.22, 0.02), 0.12, Color("f6f3ec"))
-	_text("WIN RS", at + Vector3(0, -0.44, 0.02), 0.13, Color("ffc53d"), true)
+	_text("MASTERS", at + Vector3(0, -0.12, 0.02), 0.12, Color("f6f3ec"))
+	_text("PRIZE NPR", at + Vector3(0, -0.44, 0.02), 0.13, Color("ffc53d"), true)
 	_text("5 CRORE", at + Vector3(0, -0.72, 0.02), 0.3, Color("ffc53d"), true)
 
 func _pitch(academy: bool) -> void:
@@ -346,8 +348,8 @@ func _final_ring() -> void:
 		var light := SpotLight3D.new()
 		light.position = spot
 		light.look_at_from_position(spot, Vector3.ZERO)
-		light.light_color = Color("f2f4ff")
-		light.light_energy = 6.0
+		light.light_color = Color("ffe2b8")
+		light.light_energy = 1.0
 		light.spot_range = 20.0
 		light.spot_angle = 26.0
 		light.shadow_enabled = true

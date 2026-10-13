@@ -351,7 +351,7 @@ const ROUTES := {
 		"ladder": ["bib", "abhi", "anug", "sab", "sup", "anant"],
 		"prologue": [
 			{"speaker": "", "text": "Every evening, Agasthya drinks his tea at the same roadside stall in the city.",
-				"set": "tea_stall", "cast": {"player": {"at": "stall", "face": [-1, 0]}}, "shot": "wide"},
+				"set": "tea_stall", "cast": {"player": {"at": "stall", "face": [1, 0.6]}}, "shot": "wide"},
 			{"speaker": "", "text": "The boy who washes the glasses wants to be a doctor. The tea-maker's daughter paints on old newspapers."},
 			{"speaker": "", "text": "The porter on the next bench once ran for his district. Now he carries gas cylinders up four floors."},
 			{"speaker": "ish", "text": "Every one of them has a dream. And not one of them can afford it."},
