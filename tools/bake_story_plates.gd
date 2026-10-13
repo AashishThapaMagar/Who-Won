@@ -205,6 +205,16 @@ const PLATES := [
 	{"key": "prologue_09", "fighter": "anug", "page": "letter"},
 	{"key": "anant_intro_02", "fighter": "anug", "phase": "anant_intro", "line": 1, "chapter": 5, "mood": DUSK,
 		"eye": [-1.75, 1.62, 1.0], "look": [1.15, 1.5, 0.0], "fov": 32},
+	# ── Kri: "The Unknown" ──
+	{"key": "prologue_01", "fighter": "abhi", "phase": "prologue", "line": 0,
+		"eye": [-4.4, 1.3, 2.8], "look": [-1.2, 1.6, -1.4], "fov": 40, "poses": {"player": ["jab", 0.4]}},
+	{"key": "prologue_03", "fighter": "abhi", "page": "letter"},
+	{"key": "prologue_06", "fighter": "abhi", "phase": "prologue", "line": 5,
+		"poses": {"player": ["taunt", 0.8]}},
+	{"key": "anant_intro_03", "fighter": "abhi", "phase": "anant_intro", "line": 2, "chapter": 5, "mood": DUSK,
+		"eye": [-1.75, 1.62, 1.0], "look": [1.15, 1.5, 0.0], "fov": 32},
+	{"key": "finale_02", "fighter": "abhi", "phase": "finale", "line": 1, "mood": DUSK},
+	{"key": "finale_07", "fighter": "abhi", "phase": "finale", "line": 6, "mood": DUSK},
 ]
 
 const S_OUT := "res://assets/story/%s/plates/"

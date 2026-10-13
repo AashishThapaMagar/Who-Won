@@ -692,6 +692,95 @@ const ROUTES := {
 			{"speaker": "", "text": "THE END.", "shot": "wide"},
 		],
 	},
+	# Kri: the unknown newcomer nobody recognises, loud and fearless. Only
+	# after beating Ananta does he reveal who he was: the last student in
+	# Guruji's class, the one who knew nothing, whom the master never once
+	# made to feel ashamed. He trained alone for years, to show others that
+	# the past is not the whole journey.
+	"abhi": {
+		"title": "THE UNKNOWN",
+		"subtitle": "THE STORY OF KRI",
+		"finale_title": "LOCK IN",
+		"cinematic": true,
+		"still": true,
+		"ladder": ["anug", "ish", "bib", "sab", "sup", "anant"],
+		"prologue": [
+			{"speaker": "", "text": "Late at night, under a single street lamp, a fighter nobody knows trains alone.",
+				"set": "street", "cast": {"player": {"at": "lamp", "face": [1, 0.4]}},
+				"do": [{"who": "player", "pose": "jab", "repeat": 1.2, "delay": 0.2}], "shot": "wide"},
+			{"speaker": "", "text": "No coach. No crowd. The same strike, a thousand times, until it is right."},
+			{"speaker": "", "text": "A letter lies open on the bench. Six names. One of them is his.",
+				"banner": {"eyebrow": "AN INVITATION", "title": "ANANTA", "subtitle": "A TOURNAMENT OF MASTERS", "red": true}},
+			{"speaker": "abhi", "text": "They won't remember me. Good. Let them meet who I am now."},
+			{"speaker": "", "text": "And so, at the tournament, the loudest voice belongs to a stranger.", "shot": "hero"},
+			{"speaker": "abhi", "text": "The name's Kri. Remember it. You'll be hearing it a lot."},
+		],
+		"chapters": {
+			"anug": {
+				"intro": [
+					{"speaker": "anug", "text": "Kri? I don't know you. Were you even one of us?"},
+					{"speaker": "abhi", "text": "Keep your gloves up, keeper. You'll know me soon enough."},
+				],
+				"victory": [{"speaker": "anug", "text": "Where did you come from? Nobody fights like that out of nowhere."}],
+				"defeat": [{"speaker": "anug", "text": "Loud. Fast. Not enough. Who ARE you?"}],
+			},
+			"ish": {
+				"intro": [
+					{"speaker": "ish", "text": "You talk a lot for a man nobody's heard of."},
+					{"speaker": "abhi", "text": "I spent years being quiet. I'm making up for it."},
+				],
+				"victory": [{"speaker": "ish", "text": "...I feel like I've seen that guard before. Somewhere."}],
+				"defeat": [{"speaker": "ish", "text": "Talk less. Train more. Come back."}],
+			},
+			"bib": {
+				"intro": [
+					{"speaker": "bib", "text": "You're not scared at all, are you?"},
+					{"speaker": "abhi", "text": "I was scared for years. Then I got tired of it. Want to try?"},
+				],
+				"victory": [{"speaker": "bib", "text": "Tired of being scared... I'll remember that."}],
+				"defeat": [{"speaker": "bib", "text": "Sorry. I think you inspired me a little too much."}],
+			},
+			"sab": {
+				"intro": [
+					{"speaker": "sab", "text": "Finally, someone louder than me! I hate it. Who are you?"},
+					{"speaker": "abhi", "text": "Someone you used to tease, maybe. You wouldn't remember."},
+					{"speaker": "sab", "text": "Then I owe you an apology. After I win."},
+				],
+				"victory": [{"speaker": "sab", "text": "Fine. Apology first, then. Whoever you are, well fought."}],
+				"defeat": [{"speaker": "sab", "text": "You fight angry, stranger. Fight hungry instead."}],
+			},
+			"sup": {
+				"intro": [
+					{"speaker": "sup", "text": "You trained alone, didn't you? I can see it. Nobody ever corrected your stance."},
+					{"speaker": "abhi", "text": "Somebody did, once. A long time ago."},
+				],
+				"victory": [{"speaker": "sup", "text": "...You hold your left hand exactly like Guruji taught us."}],
+				"defeat": [{"speaker": "sup", "text": "Strong. But you still fight like you have something to prove."}],
+			},
+			"anant": {
+				"intro": [
+					{"speaker": "", "text": "The final opponent steps forward. Kri goes quiet for the first time in the whole tournament."},
+					{"speaker": "anant", "text": "Hands up. Chin down."},
+					{"speaker": "abhi", "text": "...Every day, Guruji. Every single day."},
+				],
+				"victory": [],
+				"defeat": [{"speaker": "anant", "text": "Again. You were never slow. Only unsure. Again."}],
+			},
+		},
+		"finale": [
+			{"speaker": "", "text": "Ananta looked at the stranger who had beaten him, and slowly, he understood.",
+				"set": "ananta_ground", "cast": {"player": {"at": "log_left", "face": "log_right"}, "anant": {"fighter": "anant", "at": "log_right", "face": "player"}}, "shot": "wide"},
+			{"speaker": "anant", "text": "...Kri. The boy at the back of the class."},
+			{"speaker": "abhi", "text": "The last one. Last to arrive, last to learn, last at everything. I didn't know anything, Guruji."},
+			{"speaker": "abhi", "text": "The others laughed. You never did. Not once. You just said: again."},
+			{"speaker": "abhi", "text": "When you left, I kept saying it to myself. Every night, alone. Again. Again."},
+			{"speaker": "anant", "text": "And I hid for years, because of one defeat."},
+			{"speaker": "abhi", "text": "Then hear what you taught me. Your past doesn't describe your whole journey."},
+			{"speaker": "abhi", "text": "It's just a time. A time when you lock in on what you want to be."},
+			{"speaker": "", "text": "Kri opened a small hall on that same street. Its first class was full, and nobody had to stand at the back.", "shot": "two"},
+			{"speaker": "", "text": "THE END.", "shot": "wide"},
+		],
+	},
 	# Sarvochcha: his master vanished at the height of his career. Years later,
 	# about to leave Nepal to work abroad, he finds a letter at his door: a
 	# tournament called ANANTA, five crore, and the whereabouts of the missing
