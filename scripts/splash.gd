@@ -79,7 +79,9 @@ func _advance() -> void:
 	if _advanced:
 		return
 	_advanced = true
-	get_tree().change_scene_to_file("res://scenes/MainMenu.tscn")
+	# The very first launch asks for a language before anything else.
+	var next := "res://scenes/MainMenu.tscn" if Settings.language_chosen else "res://scenes/LanguageSelect.tscn"
+	get_tree().change_scene_to_file(next)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:

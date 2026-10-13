@@ -62,9 +62,23 @@ var _adaptive_window := 0.0
 var notice_label: Label
 var _notice_tween: Tween
 var fps_label: Label
+## "en" or "ne". Labels follow it by themselves (Godot swaps any text with a
+## match in lang_ne.gd); text built with numbers goes through fmt().
+var language := "en"
+## False until the player has picked on the first-launch language screen.
+var language_chosen := false
+signal language_changed
+const NEPALI := preload("res://scripts/lang_ne.gd")
+const NEPALI_DIGITS := "०१२३४५६७८९"
 
 func _ready() -> void:
 	_load()
+	var nepali := Translation.new()
+	nepali.locale = "ne"
+	for key: String in NEPALI.STRINGS:
+		nepali.add_message(key, NEPALI.STRINGS[key])
+	TranslationServer.add_translation(nepali)
+	TranslationServer.set_locale(language)
 	var layer := CanvasLayer.new()
 	layer.layer = 100
 	add_child(layer)
@@ -248,6 +262,8 @@ func _load() -> void:
 		hit_effects = cfg.get_value("fight", "hit_effects", hit_effects)
 		input_display = cfg.get_value("fight", "input_display", input_display)
 		super_tip_seen = cfg.get_value("fight", "super_tip_seen", super_tip_seen)
+		language = cfg.get_value("language", "code", language)
+		language_chosen = cfg.get_value("language", "chosen", language_chosen)
 
 func _save() -> void:
 	var cfg := ConfigFile.new()
@@ -259,7 +275,42 @@ func _save() -> void:
 		cfg.set_value("graphics", key, get(key))
 	for key in ["hit_effects", "input_display", "super_tip_seen"]:
 		cfg.set_value("fight", key, get(key))
+	cfg.set_value("language", "code", language)
+	cfg.set_value("language", "chosen", language_chosen)
 	cfg.save(SAVE_PATH)
+
+func set_language(code: String) -> void:
+	language = code
+	language_chosen = true
+	TranslationServer.set_locale(code)
+	_save()
+	language_changed.emit()
+
+func is_nepali() -> bool:
+	return language == "ne"
+
+## Translates a line that carries numbers or names, fills it in, and in
+## Nepali writes its numbers in Devanagari digits: fmt("ROUND %d", [2])
+## gives "राउन्ड २".
+func fmt(text: String, values: Variant = []) -> String:
+	var out := TranslationServer.translate(text)
+	if values is Array:
+		if not values.is_empty():
+			out = out % values
+	else:
+		out = out % values
+	if language == "ne":
+		out = digits(out)
+	return out
+
+## ASCII digits as Devanagari ones (Nepali only).
+func digits(text: String) -> String:
+	if language != "ne":
+		return text
+	var out := ""
+	for c in text:
+		out += NEPALI_DIGITS[int(c)] if c >= "0" and c <= "9" else c
+	return out
 
 ## A named option that is neither a preset graphic nor audio: saved and,
 ## for post effects, pushed to the arena lighting straight away.

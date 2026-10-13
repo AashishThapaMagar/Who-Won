@@ -184,7 +184,7 @@ func _begin_round(index: int) -> void:
 	# arcade ladder position when there is one.
 	var place: String = nepal_stage.ROUNDS[stage].name
 	if MatchSetup.arcade:
-		place += "   /   " + ("FINAL BOSS" if MatchSetup.is_final_boss() else "RIVAL %d OF %d" % [MatchSetup.arcade_index + 1, MatchSetup.arcade_opponents.size()])
+		place += "   /   " + (tr("FINAL BOSS") if MatchSetup.is_final_boss() else Settings.fmt("RIVAL %d OF %d", [MatchSetup.arcade_index + 1, MatchSetup.arcade_opponents.size()]))
 	banner_tagline.text = place
 	$UI/ControlsHint.text = "P1  A/D move  W/S sidestep  |  F 1  V 2  G 3  B 4  E guard     |     P2  Left/Right move  Up/Down sidestep  |  K 1  , 2  L 3  . 4  O guard\nSpace / Enter jump   |   F1 combos     |     Esc pause"
 	guide_text.text = guide_text.text.replace("Down is S (P1) / Down arrow (P2).", "Hold E (P1) / O (P2) for the command's down input.")

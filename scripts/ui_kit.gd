@@ -96,10 +96,30 @@ static func saira(weight: int = 600, width: int = 100, italic := false) -> Font:
 		var font := FontVariation.new()
 		font.base_font = _saira_files[path]
 		font.variation_opentype = {ts.name_to_tag("wght"): weight, ts.name_to_tag("wdth"): width}
-		# Devanagari falls back to Teko inside the same label.
-		font.fallbacks = [teko(500)]
+		# Devanagari falls back to Teko inside the same label. Teko draws
+		# Devanagari numerals as Western ones, so the digits come first
+		# from a numerals-only cut of Mukta.
+		var numerals := _numerals()
+		font.fallbacks = [numerals, teko(500)] if numerals != null else [teko(500)]
 		_saira[key] = font
 	return _saira[key]
+
+## Devanagari digits only (WhoWonNumerals, cut from Mukta Bold, OFL).
+static var _numerals_font: Font
+static func _numerals() -> Font:
+	if _numerals_font == null:
+		var path := "res://assets/fonts/WhoWonNumerals-Bold.ttf"
+		if ResourceLoader.exists(path):
+			_numerals_font = load(path)
+		elif FileAccess.file_exists(path):
+			var file := FontFile.new()
+			file.load_dynamic_font(path)
+			_numerals_font = file
+		# The cut keeps no Devanagari shaping tables, so it must be told it
+		# serves the script, or Teko is chosen ahead of it.
+		if _numerals_font is FontFile:
+			(_numerals_font as FontFile).set_script_support_override("Deva", true)
+	return _numerals_font
 
 ## Bold Saira for buttons and option labels.
 static func strong_font() -> Font:
@@ -219,7 +239,12 @@ static func heading(parent: Node, text: String, pos: Vector2, dimensions: Vector
 
 ## Small spaced-out caption used above titles and option rows.
 static func eyebrow(parent: Node, text: String, pos: Vector2, dimensions: Vector2, color: Color = GOLD) -> Label:
-	var node := label(parent, " ".join(text.split("")).replace("   ", "  "), pos, dimensions, 11, color)
+	# Latin is letter-spaced by hand; Devanagari never is, since spacing
+	# breaks the headline that joins its letters.
+	var shown := TranslationServer.translate(text)
+	if shown == text:
+		shown = " ".join(text.split("")).replace("   ", "  ")
+	var node := label(parent, shown, pos, dimensions, 11, color)
 	node.add_theme_font_override("font", strong_font())
 	return node
 

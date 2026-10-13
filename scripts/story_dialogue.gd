@@ -238,7 +238,7 @@ func _open_beat() -> void:
 			_card("PROLOGUE", route.get("title", "THE ROAD TO " + ROSTER.profile(6).name), route.get("subtitle", place), UI.GOLD)
 		StoryDirector.Phase.INTRO:
 			var boss: bool = MatchSetup.is_final_boss()
-			_card("FINAL CHAPTER" if boss else "CHAPTER %02d" % chapter, rival.name, rival.title.to_upper() + ("   /   " + place if place != "" else ""), UI.CRIMSON if boss else UI.GOLD)
+			_card("FINAL CHAPTER" if boss else Settings.fmt("CHAPTER %02d", [chapter]), rival.name, rival.title.to_upper() + ("   /   " + place if place != "" else ""), UI.CRIMSON if boss else UI.GOLD)
 		StoryDirector.Phase.VICTORY:
 			_pose("rival", "ko")
 			_pose("player", "victory")
@@ -246,7 +246,7 @@ func _open_beat() -> void:
 		StoryDirector.Phase.DEFEAT:
 			_pose("player", "ko")
 			_pose("rival", "victory")
-			_card("CHAPTER %02d" % chapter, "DEFEATED", "GET UP. THE ROAD IS STILL THERE.", UI.RED)
+			_card(Settings.fmt("CHAPTER %02d", [chapter]), "DEFEATED", "GET UP. THE ROAD IS STILL THERE.", UI.RED)
 		StoryDirector.Phase.FINALE:
 			_pose("player", "victory")
 			_card("FINALE", route.get("finale_title", "THE FINAL WORD"), hero.name + "   /   CHAMPION", UI.GOLD)

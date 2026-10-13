@@ -412,7 +412,7 @@ func _show_clash() -> void:
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if i == 0 else HORIZONTAL_ALIGNMENT_LEFT
 		label.add_theme_constant_override("shadow_offset_x", 5)
 		label.add_theme_constant_override("shadow_offset_y", 5)
-		var eyebrow := UI.eyebrow(clash, "PLAYER %d" % (i + 1) if not (MatchSetup.vs_ai and i == 1) else "COMPUTER", Vector2(20 if i == 0 else 580, 290), Vector2(360, 16), color)
+		var eyebrow := UI.eyebrow(clash, Settings.fmt("PLAYER %d", [i + 1]) if not (MatchSetup.vs_ai and i == 1) else "COMPUTER", Vector2(20 if i == 0 else 580, 290), Vector2(360, 16), color)
 		eyebrow.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if i == 0 else HORIZONTAL_ALIGNMENT_LEFT
 		var fighter_title: String = str((arena.player1 if i == 0 else arena.player2).character_profile.get("title", ""))
 		var subtitle := UI.heading(clash, str(fighter_title).to_upper(), Vector2(20 if i == 0 else 580, 312), Vector2(360, 24), 16, UI.GOLD, UI.INK)
@@ -672,7 +672,7 @@ func _process(_delta: float) -> void:
 	result_panel.visible = show_result
 	if show_result:
 		next_button.text = "REMATCH / " + ("A" if Settings.using_pad else "R")
-		result_detail.text = "%s  /  SCORE %d : %d" % ["MATCH COMPLETE" if arena.match_over else "ROUND %d COMPLETE" % (arena.round_index + 1), arena.round_wins[0], arena.round_wins[1]]
+		result_detail.text = Settings.fmt("%s  /  SCORE %d : %d", [tr("MATCH COMPLETE") if arena.match_over else Settings.fmt("ROUND %d COMPLETE", [arena.round_index + 1]), arena.round_wins[0], arena.round_wins[1]])
 		for side in 2:
 			var fighter: Node = arena.player1 if side == 0 else arena.player2
 			result_panel.get_node("StatsName%d" % side).text = fighter.character_profile.name + (" / CPU" if MatchSetup.vs_ai and side == 1 else "")

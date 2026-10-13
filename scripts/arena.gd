@@ -402,7 +402,7 @@ func _begin_round(index: int) -> void:
 
 	time_remaining = float(MatchSetup.round_seconds)
 	timer_label.text = str(MatchSetup.round_seconds)
-	round_label.text = "ROUND %d" % (index + 1)
+	round_label.text = Settings.fmt("ROUND %d", [index + 1])
 	result_label.visible = false
 	round_active = false
 
@@ -498,12 +498,12 @@ func _update_combo_ui() -> void:
 
 func _show_banner(index: int, fight_style: FightStyle) -> void:
 	var deciding: bool = round_wins[0] == WINS_NEEDED - 1 and round_wins[1] == WINS_NEEDED - 1
-	banner_round.text = "FINAL ROUND" if deciding or index == round_styles.size() - 1 else "ROUND %d" % (index + 1)
+	banner_round.text = "FINAL ROUND" if deciding or index == round_styles.size() - 1 else Settings.fmt("ROUND %d", [index + 1])
 	banner_name.text = "%s  VS  %s" % [player1.character_profile.name, player2.character_profile.name]
 	banner_name.modulate = fight_style.accent_color
 	banner_tagline.text = fight_style.tagline
 	if MatchSetup.arcade:
-		banner_tagline.text = "FINAL BOSS / ANANTA" if MatchSetup.is_final_boss() else "ARCADE / RIVAL %d OF %d" % [MatchSetup.arcade_index + 1, MatchSetup.arcade_opponents.size()]
+		banner_tagline.text = "FINAL BOSS / ANANTA" if MatchSetup.is_final_boss() else Settings.fmt("ARCADE / RIVAL %d OF %d", [MatchSetup.arcade_index + 1, MatchSetup.arcade_opponents.size()])
 	banner.visible = true
 	banner.modulate.a = 0.0
 	banner.position.x = 106.0

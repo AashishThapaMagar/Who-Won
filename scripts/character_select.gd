@@ -202,7 +202,7 @@ func _refresh_cries() -> void:
 	for player in cry_rows.size():
 		var button: Button = cry_rows[player][0]
 		var takes: int = cries.total(player)
-		button.text = "VOICE STUDIO" if takes == 0 else "VOICE STUDIO  /  %d TAKE%s" % [takes, "" if takes == 1 else "S"]
+		button.text = tr("VOICE STUDIO") if takes == 0 else Settings.fmt("VOICE STUDIO  /  %d TAKE" if takes == 1 else "VOICE STUDIO  /  %d TAKES", [takes])
 
 func _open_voice_studio(player: int) -> void:
 	if transitioning or is_instance_valid(voice_studio):
@@ -524,6 +524,7 @@ func _build_footer() -> void:
 		hints = [["A / D", "CHOOSE"], ["R", "RANDOM"], ["ENTER", "FIGHT"], ["ESC", "BACK"]]
 	elif mode_id in ["ai", "story"]:
 		hints = [["A / D", "YOUR FIGHTER"], ["ARROWS", "RIVAL"], ["F", "LOCK IN"], ["ENTER", "FIGHT"], ["ESC", "BACK"]] if mode_id == "ai" else [["A / D", "CHOOSE"], ["F", "LOCK IN"], ["ENTER", "BEGIN"], ["ESC", "BACK"]]
+	hints = hints.map(func(hint: Array) -> Array: return [hint[0], tr(hint[1])])
 	var font := UI.saira(600, 104)
 	var widths: Array[float] = []
 	var total := 0.0
@@ -599,11 +600,11 @@ static func _dossier_text(profile: Dictionary) -> String:
 		line = line.substr(0, 1).to_upper() + line.substr(1)
 		var lower := line.to_lower() + " "
 		if WEAK_WORDS.any(func(word): return lower.begins_with(word) or lower.contains(" " + word)):
-			lines.append("[color=#ff6b6b]▼  %s[/color]" % line)
+			lines.append("[color=#ff6b6b]▼  %s[/color]" % TranslationServer.translate(line))
 		elif lower.begins_with("beat "):
-			lines.append("[color=#9aa3bd]◆  %s[/color]" % line)
+			lines.append("[color=#9aa3bd]◆  %s[/color]" % TranslationServer.translate(line))
 		else:
-			lines.append("[color=#ffd257]▲  %s[/color]" % line)
+			lines.append("[color=#ffd257]▲  %s[/color]" % TranslationServer.translate(line))
 	var data: Dictionary = SUPERS.get_super(str(profile.id))
 	if not data.is_empty():
 		lines.append("[color=#ffffff]★  SUPER  %s[/color]" % data.name)
@@ -731,7 +732,7 @@ func _show_stage() -> void:
 	arena_number.text = "%02d/%02d" % [stage_options().find(MatchSetup.stage_choice) + 1, stage_options().size()]
 	match MatchSetup.stage_choice:
 		MatchSetup.JOURNEY_STAGE:
-			arena_label.text = "ALL %d ARENAS" % rounds.size()
+			arena_label.text = Settings.fmt("ALL %d ARENAS", [rounds.size()])
 			arena_caption.text = "The full Nepal journey"
 			backdrop.show_stage(0)
 			_thumb(0)
@@ -854,20 +855,20 @@ func _refresh() -> void:
 		titles[player].text = String(profile.title).to_upper()
 		watermarks[player].text = ROSTER.NEPALI_NAMES.get(profile.id, "")
 		var summary: Array = SUMMARIES[profile.id]
-		dossiers[player].text = "[color=#ffd257]%s[/color]\n[color=#d2d8e8]%s[/color]" % summary
+		dossiers[player].text = "[color=#ffd257]%s[/color]\n[color=#d2d8e8]%s[/color]" % [tr(summary[0]), tr(summary[1])]
 		var super_data: Dictionary = SUPERS.get_super(str(profile.id))
 		if not super_data.is_empty():
-			dossiers[player].text += "\n\n[color=#8e98b4]SUPER[/color]\n%s" % super_data.name
-		var ledger := "NO RECORD YET"
+			dossiers[player].text += "\n\n[color=#8e98b4]%s[/color]\n%s" % [tr("SUPER"), super_data.name]
+		var ledger := tr("NO RECORD YET")
 		var records := get_node_or_null("/root/Records")
 		if records != null:
 			var record: Dictionary = records.fighter_record(profile.id)
 			if record.picks > 0:
-				ledger = "RECORD  %dW / %d" % [record.wins, record.picks]
+				ledger = Settings.fmt("RECORD  %dW / %d", [record.wins, record.picks])
 		details[player].text = ledger
 		var who := "P%d" % (player + 1)
 		var player_color := P1_COLOR if player == 0 else P2_COLOR
-		player_tabs[player].text = "%s  ·  %s" % [who, "LOCKED IN" if ready_players[player] else "SELECTING"]
+		player_tabs[player].text = "%s  ·  %s" % [who, tr("LOCKED IN") if ready_players[player] else tr("SELECTING")]
 		player_tabs[player].add_theme_color_override("font_color", player_color)
 		player_tabs[player].add_theme_stylebox_override("normal", UI.glass(Color(player_color, 0.12), player_color))
 		for state in ["hover", "pressed", "hover_pressed"]:
@@ -877,7 +878,7 @@ func _refresh() -> void:
 		if MatchSetup.vs_ai and player == 1:
 			player_tabs[player].text = "CPU  ·  READY"
 		if mode_id == "practice" and player == 1:
-			player_tabs[player].text = "DUMMY  ·  " + ("LOCKED IN" if ready_players[player] else "SELECTING")
+			player_tabs[player].text = tr("DUMMY") + "  ·  " + (tr("LOCKED IN") if ready_players[player] else tr("SELECTING"))
 		ready_buttons[player].text = "✓  LOCKED IN" if ready_players[player] else "LOCK IN"
 		ready_buttons[player].tooltip_text = "Change your selection" if ready_players[player] else "Confirm this fighter"
 		if ready_players[player]:

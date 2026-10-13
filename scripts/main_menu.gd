@@ -349,7 +349,7 @@ func _refresh_mode_summary() -> void:
 		backdrop.selected = maxi(0, BACKDROP.MODE_ORDER.find(key))
 	backdrop.frame(key)
 	var arena: Dictionary = backdrop.STAGE.ROUNDS[backdrop._round_shown]
-	arena_label.text = "%s   /   %s" % [arena.name, "KATHMANDU VALLEY"]
+	arena_label.text = "%s   /   %s" % [tr(arena.name), tr("KATHMANDU VALLEY")]
 	play_button.text = "START" if cursor_key.is_empty() or cursor_key == "practice" else ("QUIT" if cursor_key == "exit" else "OPEN")
 
 func _step_entries(step: int) -> void:
@@ -425,7 +425,7 @@ func _refresh_record_strip() -> void:
 	if records.totals.matches == 0:
 		record_strip.text = "NO FIGHTS ON RECORD YET"
 		return
-	record_strip.text = "%dW  %dL   /   STREAK %d   /   %d%%" % [records.totals.wins, records.totals.losses, records.totals.streak, records.win_rate()]
+	record_strip.text = Settings.fmt("%dW  %dL   /   STREAK %d   /   %d%%", [records.totals.wins, records.totals.losses, records.totals.streak, records.win_rate()])
 
 func _hero_index() -> int:
 	var records := get_node_or_null("/root/Records")
@@ -515,7 +515,7 @@ func _show_fight_options() -> void:
 	_option_label("ROUND TIMER", 158)
 	var timer := OptionButton.new()
 	for seconds in [60, 99, 120]:
-		timer.add_item("%d SECONDS" % seconds, seconds)
+		timer.add_item(Settings.fmt("%d SECONDS", [seconds]), seconds)
 	timer.select([60, 99, 120].find(MatchSetup.round_seconds))
 	timer.position = Vector2(306, 150)
 	timer.size = Vector2(282, 36)
@@ -620,7 +620,7 @@ func _show_settings() -> void:
 	_volume_row("SOUND EFFECTS", 176, Settings.sfx_volume, Settings.set_sfx_volume)
 	_toggle_row("TOUCH CONTROLS", "ON-SCREEN BUTTONS", 214, Settings.touch_controls, Settings.set_touch_controls)
 	_option_label("GRAPHICS", 250)
-	var graphics := UI.button(modal_content, "%s  ▶" % QUALITY_NAMES[Settings.quality], Vector2(306, 242), Vector2(282, 34))
+	var graphics := UI.button(modal_content, "%s  ▶" % tr(QUALITY_NAMES[Settings.quality]), Vector2(306, 242), Vector2(282, 34))
 	graphics.pressed.connect(func():
 		_close_modal()
 		_show_graphics())
@@ -630,13 +630,22 @@ func _show_settings() -> void:
 		open.pressed.connect(func():
 			_close_modal()
 			page[3].call())
-	var reset := UI.button(modal_content, "RESET DEFAULTS", Vector2(28, 326), Vector2(170, 30))
+	_option_label("LANGUAGE", 334)
+	# Written in both scripts so either reader can find their way back.
+	var language := UI.button(modal_content, "नेपाली  ▶" if Settings.is_nepali() else "ENGLISH  ▶", Vector2(306, 326), Vector2(282, 34))
+	language.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	language.tooltip_text = "भाषा / LANGUAGE"
+	language.pressed.connect(func():
+		Settings.set_language("en" if Settings.is_nepali() else "ne")
+		_close_modal()
+		_show_settings())
+	var reset := UI.button(modal_content, "RESET DEFAULTS", Vector2(28, 374), Vector2(200, 32))
 	reset.pressed.connect(func():
 		Settings.reset_defaults()
 		MatchSetup.camera_shake = true
 		_close_modal()
 		_show_settings())
-	UI.label(modal_content, "Saved automatically.", Vector2(206, 332), Vector2(220, 20), 11, UI.MUTED)
+	UI.label(modal_content, "Saved automatically.", Vector2(238, 380), Vector2(196, 20), 11, UI.MUTED)
 
 ## Every key for both players, as chips.
 func _show_controls() -> void:
@@ -647,7 +656,7 @@ func _show_controls() -> void:
 		var x := 28.0 + player * 294
 		var color := UI.GOLD if player == 0 else UI.VIOLET
 		UI.panel(modal_content, Vector2(x, 96), Vector2(270, 212), Color(color, 0.08), Color(color, 0.6), 0.06)
-		UI.heading(modal_content, "PLAYER %d" % (player + 1), Vector2(x + 14, 100), Vector2(240, 28), 20, color, Color(0, 0, 0, 0.6))
+		UI.heading(modal_content, Settings.fmt("PLAYER %d", [player + 1]), Vector2(x + 14, 100), Vector2(240, 28), 20, color, Color(0, 0, 0, 0.6))
 		var keys := [["A / D", "APPROACH / RETREAT"], ["W / S", "SIDESTEP"], ["SPACE", "JUMP"], ["E", "GUARD"], ["F", "1  LEFT PUNCH"], ["V", "2  RIGHT PUNCH"], ["G", "3  LEFT KICK"], ["B", "4  RIGHT KICK"], ["H", "GRAPPLE"], ["SHIFT", "RUN"]] if player == 0 \
 			else [["← / →", "APPROACH / RETREAT"], ["↑ / ↓", "SIDESTEP"], ["ENTER", "JUMP"], ["O", "GUARD"], ["K", "1  LEFT PUNCH"], [",", "2  RIGHT PUNCH"], ["L", "3  LEFT KICK"], [".", "4  RIGHT KICK"], ["J", "GRAPPLE"], ["CTRL", "RUN"]]
 		for k in keys.size():
