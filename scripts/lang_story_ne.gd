@@ -176,4 +176,56 @@ const STRINGS := {
 	"For years. You stopped running today. Which of us is the master now?": "वर्षौँसम्म। तिमीले आज भाग्न छोड्यौ। अब भन, हामीमध्ये गुरु को हो?",
 	"Then let's stop together. Come back with me, Guruji.": "त्यसो भए सँगै रोकिऔँ। मसँगै फर्किनुहोस्, गुरुजी।",
 	"That Saturday, Vajraveer walked into a crowded birthday party. And stayed until the very end.": "त्यो शनिबार वज्रवीर भीडले भरिएको जन्मदिनको भोजमा पुग्यो। अनि अन्तिमसम्मै बस्यो।",
+
+	# ── Kri: The Unknown ──
+	"THE UNKNOWN": "अनचिनारु",
+	"THE STORY OF KRI": "क्रिको कथा",
+	"TIME TO LOCK IN": "मन बाँध्ने बेला",
+	"Late at night, under a single street lamp, a fighter nobody knows trains alone.": "राति अबेर, एउटै बत्तीको उज्यालोमुनि, कसैले नचिनेको एउटा लडाकु एक्लै अभ्यास गर्छ।",
+	"No coach. No crowd. The same strike, a thousand times, until it is right.": "न प्रशिक्षक, न दर्शक। ठीक नभएसम्म उही प्रहार, हजार पटक।",
+	"A letter lies open on the bench. Six names. One of them is his.": "बेन्चमा एउटा चिठी खुला छ। छ वटा नाम। तीमध्ये एउटा उसको।",
+	"They won't remember me. Good. Let them meet who I am now.": "उनीहरूले मलाई सम्झिँदैनन्। राम्रै भयो। म अहिले जो हुँ, त्यसैलाई भेटून्।",
+	"And so, at the tournament, the loudest voice belongs to a stranger.": "अनि प्रतियोगितामा सबैभन्दा ठूलो स्वर एउटा अपरिचितको हुन्छ।",
+	"The name's Kri. Remember it. You'll be hearing it a lot.": "नाम हो क्रि। सम्झिराख। यो नाम धेरै सुन्नेछौ।",
+	# Anug
+	"Kri? I don't know you. Were you even one of us?": "क्रि? म त तिमीलाई चिन्दिनँ। तिमी हामीमध्येकै एक थियौ र?",
+	"Keep your gloves up, keeper. You'll know me soon enough.": "पन्जा माथि राख, गोलकिपर। चाँडै चिनिहाल्छौ।",
+	"Where did you come from? Nobody fights like that out of nowhere.": "तिमी कहाँबाट आयौ? कोही पनि अचानक यसरी लड्न सक्दैन।",
+	"Loud. Fast. Not enough. Who ARE you?": "ठूलो स्वर। छिटो। तर पुगेन। आखिर तिमी हौ को?",
+	# Agasthya
+	"You talk a lot for a man nobody's heard of.": "कसैले नसुनेको मान्छेका हिसाबले तिमी धेरै बोल्छौ।",
+	"I spent years being quiet. I'm making up for it.": "वर्षौँ चुप बसेँ। अहिले त्यसको हिसाब पूरा गर्दै छु।",
+	"...I feel like I've seen that guard before. Somewhere.": "...त्यो बचाउ पहिले कतै देखे जस्तो लाग्छ। कतै।",
+	"Talk less. Train more. Come back.": "कम बोल। धेरै अभ्यास गर। फेरि आऊ।",
+	# Vajraveer
+	"You're not scared at all, are you?": "तिमीलाई अलिकति पनि डर लाग्दैन, होइन?",
+	"I was scared for years. Then I got tired of it. Want to try?": "वर्षौँ डराएँ। पछि डराउँदा डराउँदा थाकेँ। तिमी पनि कोसिस गर्छौ?",
+	"Tired of being scared... I'll remember that.": "डराउँदा डराउँदा थाक्नु... म यो सम्झिराख्छु।",
+	"Sorry. I think you inspired me a little too much.": "माफ गर। तिमीले मलाई अलि बढी नै प्रेरित गर्‍यौ जस्तो छ।",
+	# Mahabali
+	"Finally, someone louder than me! I hate it. Who are you?": "आखिर मभन्दा ठूलो स्वर भएको कोही आयो! मलाई मन परेन। को हौ तिमी?",
+	"Someone you used to tease, maybe. You wouldn't remember.": "सायद तिमीले जिस्क्याउने कोही। तिमीलाई सम्झना नहोला।",
+	"Then I owe you an apology. After I win.": "त्यसो भए म तिमीसँग माफी माग्नुपर्छ। जितेपछि।",
+	"Fine. Apology first, then. Whoever you are, well fought.": "ठिकै छ, पहिले माफी नै। जो भए पनि, राम्रो लड्यौ।",
+	"You fight angry, stranger. Fight hungry instead.": "तिमी रिसले लड्छौ, अपरिचित। रिसले होइन, लगनले लड।",
+	# Sarvochcha
+	"You trained alone, didn't you? I can see it. Nobody ever corrected your stance.": "तिमीले एक्लै अभ्यास गर्‍यौ, होइन? देखिन्छ। तिम्रो अडान कसैले कहिल्यै सच्याएन।",
+	"Somebody did, once. A long time ago.": "एक जनाले सच्याउनुभएको थियो, धेरै पहिले।",
+	"...You hold your left hand exactly like Guruji taught us.": "...तिमी देब्रे हात ठ्याक्कै गुरुजीले सिकाउनुभए जस्तै राख्छौ।",
+	"Strong. But you still fight like you have something to prove.": "बलियो छौ। तर अझै केही प्रमाणित गर्नुपर्ने जस्तो गरी लड्छौ।",
+	# Ananta
+	"The final opponent steps forward. Kri goes quiet for the first time in the whole tournament.": "अन्तिम प्रतिद्वन्द्वी अगाडि आउनुहुन्छ। पूरै प्रतियोगितामा पहिलो पटक क्रि चुप लाग्छ।",
+	"Hands up. Chin down.": "हात माथि। चिउँडो तल।",
+	"...Every day, Guruji. Every single day.": "...हरेक दिन, गुरुजी। एक दिन पनि नछुटाई।",
+	"Again. You were never slow. Only unsure. Again.": "फेरि। तिमी कहिल्यै सुस्त थिएनौ, केवल दुविधामा थियौ। फेरि।",
+	# Finale
+	"Ananta looked at the stranger who had beaten him, and slowly, he understood.": "आफूलाई हराउने त्यो अपरिचितलाई अनन्तले हेर्नुभयो, अनि बिस्तारै बुझ्नुभयो।",
+	"...Kri. The boy at the back of the class.": "...क्रि। कक्षाको पछाडि बस्ने त्यो केटो।",
+	"The last one. Last to arrive, last to learn, last at everything. I didn't know anything, Guruji.": "सबैभन्दा पछाडिको। आउनमा पनि अन्तिम, सिक्नमा पनि अन्तिम, सबैमा अन्तिम। मलाई केही आउँदैनथ्यो, गुरुजी।",
+	"The others laughed. You never did. Not once. You just said: again.": "अरू हाँस्थे। हजुर कहिल्यै हाँस्नुभएन, एक पटक पनि। हजुर केवल भन्नुहुन्थ्यो: फेरि।",
+	"When you left, I kept saying it to myself. Every night, alone. Again. Again.": "हजुर जानुभएपछि म आफैँलाई त्यही भनिरहेँ। हरेक रात, एक्लै। फेरि। फेरि।",
+	"And I hid for years, because of one defeat.": "अनि म चाहिँ एउटा हारका कारण वर्षौँ लुकेर बसेँ।",
+	"Then hear what you taught me. Your past doesn't describe your whole journey.": "त्यसो भए हजुरले नै सिकाउनुभएको कुरा सुन्नुहोस्। विगतले कसैको पूरा यात्रा बताउँदैन।",
+	"It's just a time. A time when you lock in on what you want to be.": "त्यो त केवल एउटा समय हो। आफू जे बन्न चाहन्छ, त्यसमै मन बाँध्ने समय।",
+	"Kri opened a small hall on that same street. Its first class was full, and nobody had to stand at the back.": "क्रिले त्यही सडकमा एउटा सानो तालिमशाला खोल्यो। पहिलो कक्षा नै भरिभराउ भयो, र कसैले पनि पछाडि उभिनु परेन।",
 }

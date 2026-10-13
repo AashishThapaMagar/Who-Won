@@ -700,7 +700,7 @@ const ROUTES := {
 	"abhi": {
 		"title": "THE UNKNOWN",
 		"subtitle": "THE STORY OF KRI",
-		"finale_title": "LOCK IN",
+		"finale_title": "TIME TO LOCK IN",
 		"cinematic": true,
 		"still": true,
 		"ladder": ["anug", "ish", "bib", "sab", "sup", "anant"],
