@@ -393,7 +393,7 @@ func _bake(plate: Dictionary) -> void:
 	if style == "kurosawa":
 		plate = _kuro_defaults(d, plate)
 		if not plate.get("keep_camera", false):
-			_low_camera(d)
+			_low_camera(d, plate)
 		_ink_world(viewport, plate)
 		if not plate.get("keep_camera", false) and not str(d.get("set_name")) in ["street", "tea_stall", "gym"]:
 			await _open_sky_angle(d, viewport)
@@ -586,8 +586,11 @@ func _kuro_defaults(d: Node, plate: Dictionary) -> Dictionary:
 	if not out.has("haze"):
 		out["haze"] = mood[2]
 	if not out.has("sun_at"):
-		# A low sun or moon off to one side, never behind a head.
-		var side := 0.3 if hash(str(out.key)) % 2 == 0 else 0.72
+		# A low sun or moon off to one side, never behind a head. The side
+		# belongs to the scene, not the page, so it holds still while the
+		# pages of one scene turn.
+		var scene := str(out.fighter) + str(out.get("phase", "")) + set_name
+		var side := 0.3 if hash(scene) % 2 == 0 else 0.72
 		out["sun_at"] = [side, 0.5, 0.05]
 	return out
 
@@ -635,7 +638,7 @@ func _open_sky_angle(d: Node, viewport: SubViewport) -> void:
 
 ## The Kurosawa camera: brought down near the ground and tilted up, so the
 ## figures stand against the sky instead of a wall.
-func _low_camera(d: Node) -> void:
+func _low_camera(d: Node, plate: Dictionary = {}) -> void:
 	var camera: Camera3D = d.camera
 	var subject := Vector3.ZERO
 	var floor_y := 0.0
@@ -655,9 +658,23 @@ func _low_camera(d: Node) -> void:
 		if str(d.get("set_name")) == "tea_stall":
 			# Out in the street, well clear of the stall: his whole figure
 			# stands in the left third against the open, rain-lit sky.
-			camera.global_position = subject + Vector3(-2.9, 0.16, 1.5)
-			camera.look_at(subject + Vector3(9.0, 4.6, -0.6))
-			camera.fov = 46.0
+			# Pages turn through three shots, the way Kurosawa cut between
+			# long lenses: a small figure lost in the rain, the low shot
+			# looking up at him, and a tight long-lens profile.
+			var page := int(str(plate.get("key", "_0")).get_slice("_", 1))
+			match page % 3:
+				1:
+					camera.global_position = subject + Vector3(-9.5, 0.35, 3.2)
+					camera.look_at(subject + Vector3(2.5, 1.9, -0.4))
+					camera.fov = 26.0
+				2:
+					camera.global_position = subject + Vector3(-2.9, 0.16, 1.5)
+					camera.look_at(subject + Vector3(9.0, 4.6, -0.6))
+					camera.fov = 46.0
+				_:
+					camera.global_position = subject + Vector3(-3.4, 1.05, 1.6)
+					camera.look_at(subject + Vector3(1.2, 1.75, -0.35))
+					camera.fov = 20.0
 			return
 		# Behind and below him, looking past his shoulder down the street.
 		camera.global_position = subject + Vector3(3.0, 0.42, 0.45)
@@ -739,6 +756,8 @@ uniform vec3 sun_color : source_color;
 uniform vec3 ink : source_color;
 uniform vec2 sun = vec2(0.5, 0.62);
 uniform float sun_size = 0.07;
+// 0: the light only glows through cloud (rain), with no hard disc.
+uniform float disc = 1.0;
 uniform float horizon_y = 0.66;
 uniform float seed = 1.0;
 // Kurosawa's weather: 0 clear, 1 driving rain, 2 wind-blown dust, 3 low mist.
@@ -763,7 +782,7 @@ void fragment() {
 	sky = mix(sky, sun_color, smoothstep(sun_size * 4.0, 0.0, r) * 0.55);
 	// Halation: old film blooms around a bright light.
 	sky += sun_color * exp(-r / (sun_size * 3.5)) * 0.18;
-	sky = mix(sky, sun_color, smoothstep(sun_size, sun_size * 0.92, r));
+	sky = mix(sky, sun_color, smoothstep(sun_size, sun_size * 0.92, r) * disc);
 	float band = noise(vec2(UV.x * 3.0, UV.y * 26.0) + seed) * noise(vec2(UV.x * 7.0, UV.y * 40.0));
 	sky = mix(sky, mix(top, horizon, 0.35), smoothstep(0.35, 0.6, band) * (1.0 - h) * 0.6);
 	// Through the haze: far shapes melt into the sky, near ones are ink.
@@ -822,6 +841,7 @@ func _kurosawa(render: Image, plate: Dictionary) -> Image:
 	var sun: Array = plate.get("sun_at", [0.5, 0.62, 0.07])
 	material.set_shader_parameter("sun", Vector2(sun[0], sun[1]))
 	material.set_shader_parameter("sun_size", sun[2])
+	material.set_shader_parameter("disc", 0.0 if str(plate.get("weather", "")) == "rain" else 1.0)
 	material.set_shader_parameter("horizon_y", float(plate.get("horizon_y", 0.66)))
 	material.set_shader_parameter("weather", ["clear", "rain", "dust", "mist"].find(str(plate.get("weather", "clear"))))
 	material.set_shader_parameter("weather_amount", float(plate.get("weather_amount", 1.0)))
