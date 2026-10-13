@@ -161,6 +161,8 @@ const PLATES := [
 		"eye": [-1.75, 1.62, 1.0], "look": [1.15, 1.5, 0.0], "fov": 32},
 	{"key": "finale_01", "fighter": "ish", "phase": "finale", "line": 0, "mood": DUSK},
 	{"key": "finale_03", "fighter": "ish", "phase": "finale", "line": 2, "mood": DUSK},
+	# THE END: Agasthya alone under the tree; the money has gone to others.
+	{"key": "finale_06", "fighter": "ish", "phase": "finale", "line": 5, "mood": DUSK, "hide": ["anant"]},
 	# ── Vajraveer: "The Endless Rush" ──
 	{"key": "prologue_01", "fighter": "bib", "phase": "prologue", "line": 0, "mood": DAWN,
 		"eye": [-2.6, 1.3, 4.0], "look": [0.2, 1.5, -1.6], "fov": 40, "poses": {"player": ["kick", 0.7]}},
