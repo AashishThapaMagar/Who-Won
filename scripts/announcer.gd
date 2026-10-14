@@ -20,6 +20,9 @@ const MODEL := "res://assets/announcer/hajurama.glb"
 const HOSTS := {
 	# Heritage Square: a Newar hajurbuwa.
 	0: {"model": "res://assets/announcer/hajurbuwa.glb", "height": 1.64,
+		# The pagoda at the back of the square: the foot and top of its front
+		# steps and a point just inside its door (world positions).
+		"temple": {"foot": Vector3(0, -0.12, -19.2), "top": Vector3(0, 1.0, -20.9), "door": Vector3(0, 1.0, -22.6)},
 		"hello": {"ne": "ज्वजलपा!", "en": "JWAJALAPA!"},
 		"match": {"ne": "खेल जित्यो!", "en": "THE MATCH IS WON!"}},
 	# Terai Plains: a Tharu didi.
@@ -269,7 +272,9 @@ const CROSS_DEPTH := [2.6, 4.8]
 const CROSS_WAIT := [6.0, 18.0]
 var spectating := false
 var _crossing := false
-var _cross_to := Vector3.ZERO
+var _path: Array[Vector3] = []
+## Heritage Square: whether he went into the temple last time.
+var _inside := false
 var _next_cross := 0.0
 var _centre := Vector3.ZERO
 
@@ -294,27 +299,50 @@ func _cross_tick(delta: float) -> void:
 	if not _crossing:
 		if _clock < _next_cross:
 			return
-		var side := _to_camera.cross(Vector3.UP).normalized() * (1.0 if randf() < 0.5 else -1.0)
-		var depth := randf_range(CROSS_DEPTH[0], CROSS_DEPTH[1])
-		var lane := _centre - _to_camera * depth
-		global_position = lane + side * CROSS_HALF
-		_cross_to = lane - side * CROSS_HALF
-		_face(-side)
+		_path = _temple_path() if _host.has("temple") else _side_path()
+		global_position = _path.pop_front()
 		_crossing = true
 		_shown = true
 		visible = true
 		_play("walk")
 		return
-	var step := _cross_to - global_position
-	step.y = 0.0
-	var travel := WALK_SPEED * delta
-	if step.length() <= travel:
+	if _path.is_empty():
 		_crossing = false
 		_shown = false
 		visible = false
 		_next_cross = _clock + randf_range(CROSS_WAIT[0], CROSS_WAIT[1])
 		return
+	# Along the path at walking pace (the height follows the steps); facing
+	# where he is going.
+	var step: Vector3 = _path[0] - global_position
+	var flat := Vector3(step.x, 0.0, step.z)
+	if flat.length() > 0.01:
+		_face(flat.normalized())
+	var travel := WALK_SPEED * delta
+	if step.length() <= travel:
+		global_position = _path.pop_front()
+		return
 	global_position += step.normalized() * travel
+
+## Side to side behind the fight, a little nearer or further each time.
+func _side_path() -> Array[Vector3]:
+	var side := _to_camera.cross(Vector3.UP).normalized() * (1.0 if randf() < 0.5 else -1.0)
+	var lane := _centre - _to_camera * randf_range(CROSS_DEPTH[0], CROSS_DEPTH[1])
+	return [lane + side * CROSS_HALF, lane - side * CROSS_HALF]
+
+## Heritage Square: across the square, up the pagoda steps and in through
+## its door; the next time, out of the door, down the steps and away.
+func _temple_path() -> Array[Vector3]:
+	var temple: Dictionary = _host.temple
+	var side := _to_camera.cross(Vector3.UP).normalized() * (1.0 if randf() < 0.5 else -1.0)
+	var start := _centre - _to_camera * randf_range(CROSS_DEPTH[0], CROSS_DEPTH[1]) + side * CROSS_HALF
+	var into: Array[Vector3] = [start, temple.foot, temple.top, temple.door]
+	_inside = not _inside
+	if _inside:
+		return into
+	into[0] = _centre - _to_camera * randf_range(CROSS_DEPTH[0], CROSS_DEPTH[1]) - side * CROSS_HALF
+	into.reverse()
+	return into
 
 ## Where the camera looks when it frames her: her spot at head height, so
 ## her call fits in the shot. Fixed while she walks.
