@@ -75,26 +75,14 @@ func _ready() -> void:
 
 func world_input() -> Vector3:
 	if ai_controlled:
+		# Along the fight line only, as for a player (no sidestep).
 		var direction := forward * Input.get_axis(input_prefix + "left", input_prefix + "right")
-		direction.z *= SIDESTEP_RATIO
-		# Sidesteps use the same screen axes as a player's (see below).
-		var side := Input.get_axis(input_prefix + "far", input_prefix + "near")
-		if side != 0.0:
-			var along := fight_axis()
-			direction += Vector3(-along.z, 0.0, along.x) * side * SIDESTEP_RATIO
+		direction.z = 0.0
 		return direction
-	var axes := Input.get_vector(input_prefix + "left", input_prefix + "right", input_prefix + "far", input_prefix + "near")
-	# Tekken-style: left/right run along the fight axis as seen on screen, and
-	# up/down step into or out of the background at right angles to it. The
-	# camera stays square-on to that axis, so this is always screen-relative.
-	var along := fight_axis()
-	var toward_camera := Vector3(-along.z, 0.0, along.x)
-	var sidestep := toward_camera * axes.y * SIDESTEP_RATIO
-	# At the edge of the fighting strip a held sidestep simply stops, instead
-	# of its sideways share sliding the fighter along the lane.
-	if body != null and absf(body.position.z) >= LANE_HALF_DEPTH - 0.01 and signf(sidestep.z) == signf(body.position.z):
-		sidestep = Vector3.ZERO
-	return along * axes.x + sidestep
+	# Street Fighter style: left/right move along the fight line as seen on
+	# screen; up jumps and down guards (their own actions), so nobody ever
+	# steps into or out of the background.
+	return fight_axis() * Input.get_axis(input_prefix + "left", input_prefix + "right")
 
 ## The line between the fighters, pointing screen-right (+x side). The fight
 ## camera (arena_3d.gd) turns to stay square-on to it.

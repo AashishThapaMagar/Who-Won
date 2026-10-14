@@ -56,8 +56,12 @@ func is_final_boss() -> bool:
 func _ready() -> void:
 	var bindings_3d := [
 		["left", KEY_A, KEY_LEFT], ["right", KEY_D, KEY_RIGHT],
-		["far", KEY_W, KEY_UP], ["near", KEY_S, KEY_DOWN],
+		# Street Fighter layout: up jumps, down guards. Space/Enter and E/O
+		# still work as second keys. There is no sidestep: the fight stays
+		# on one line ("far"/"near" are kept, unbound, for old callers).
+		["jump", KEY_W, KEY_UP], ["block", KEY_S, KEY_DOWN],
 		["jump", KEY_SPACE, KEY_ENTER], ["block", KEY_E, KEY_O],
+		["far", KEY_NONE, KEY_NONE], ["near", KEY_NONE, KEY_NONE],
 		["punch", KEY_F, KEY_K], ["kick", KEY_G, KEY_L],
 		# Tekken's four limbs: punch/kick above are 1 and 3 (left punch,
 		# left kick); these are 2 and 4 (right punch, right kick).
@@ -69,8 +73,11 @@ func _ready() -> void:
 			var action := "p%d_3d_%s" % [player + 1, binding[0]]
 			if not InputMap.has_action(action):
 				InputMap.add_action(action)
-				var event := InputEventKey.new()
-				event.physical_keycode = binding[player + 1]
+			if binding[player + 1] == KEY_NONE:
+				continue
+			var event := InputEventKey.new()
+			event.physical_keycode = binding[player + 1]
+			if not InputMap.action_has_event(action, event):
 				InputMap.action_add_event(action, event)
 	for binding in [["p1_run", KEY_SHIFT], ["p2_run", KEY_CTRL]]:
 		if not InputMap.has_action(binding[0]):
@@ -88,12 +95,11 @@ func _ready() -> void:
 ## Gamepads: pad 1 drives player one, pad 2 player two, on every action a
 ## key already drives (fight, select screen and the legacy 2D arena). A =
 ## punch, X = kick, Y = jump, right shoulder = guard, left shoulder = run,
-## right trigger = grapple, stick or d-pad = move and sidestep, Start or B =
+## right trigger = grapple, stick or d-pad = move (up jumps, down guards), Start or B =
 ## pause, Back = movebook. Menus use Godot's own ui_* pad bindings.
 const PAD := {
 	"left": [JOY_AXIS_LEFT_X, -1.0, JOY_BUTTON_DPAD_LEFT], "right": [JOY_AXIS_LEFT_X, 1.0, JOY_BUTTON_DPAD_RIGHT],
-	"far": [JOY_AXIS_LEFT_Y, -1.0, JOY_BUTTON_DPAD_UP], "near": [JOY_AXIS_LEFT_Y, 1.0, JOY_BUTTON_DPAD_DOWN],
-	"jump": [JOY_BUTTON_Y], "block": [JOY_BUTTON_RIGHT_SHOULDER], "punch": [JOY_BUTTON_A], "kick": [JOY_BUTTON_X],
+	"jump": [JOY_AXIS_LEFT_Y, -1.0, JOY_BUTTON_DPAD_UP], "block": [JOY_AXIS_LEFT_Y, 1.0, JOY_BUTTON_DPAD_DOWN], "punch": [JOY_BUTTON_A], "kick": [JOY_BUTTON_X],
 	"grapple": [JOY_AXIS_TRIGGER_RIGHT, 1.0], "run": [JOY_BUTTON_LEFT_SHOULDER],
 	"rpunch": [JOY_AXIS_TRIGGER_LEFT, 1.0], "rkick": [JOY_BUTTON_RIGHT_STICK],
 }
@@ -104,6 +110,15 @@ static func _map_gamepads() -> void:
 			for action in ["p%d_3d_%s" % [player + 1, key], "p%d_%s" % [player + 1, key]]:
 				if InputMap.has_action(action):
 					_pad_bind(action, player, PAD[key])
+	# Y and the right shoulder still jump and guard, beside the stick.
+	for player in 2:
+		for pair in [["p%d_3d_jump", JOY_BUTTON_Y], ["p%d_3d_block", JOY_BUTTON_RIGHT_SHOULDER]]:
+			var action: String = pair[0] % (player + 1)
+			if InputMap.has_action(action):
+				var extra := InputEventJoypadButton.new()
+				extra.device = player
+				extra.button_index = pair[1]
+				InputMap.action_add_event(action, extra)
 	for pair in [["ui_cancel", [JOY_BUTTON_START]], ["move_list", [JOY_BUTTON_BACK]]]:
 		if InputMap.has_action(pair[0]):
 			for player in 2:

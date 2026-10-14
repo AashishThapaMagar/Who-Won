@@ -14,7 +14,7 @@ var hint: Label
 ## The fight's keyboard legend, and which one is showing.
 var key_legend := ""
 var hint_for_pad := false
-const PAD_LEGEND := "STICK  move + sidestep   |   A 1   LT 2   X 3   R3 4   |   RB guard   RT grab   Y jump
+const PAD_LEGEND := "STICK  move, up jump, down guard   |   A 1   LT 2   X 3   R3 4   |   RB guard   RT grab   Y jump
 LB run   |   BACK moves   |   START pause"
 var hint_clock := 0.0
 var last_round := -1

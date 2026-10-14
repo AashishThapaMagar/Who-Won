@@ -14,6 +14,8 @@ func _opponent_distance() -> float:
 ## Sidesteps a committed heavy strike (a kick or a heavy punch) instead of
 ## guarding it, holding the step just long enough to clear the blow.
 func _try_evade(attacking: bool, abs_distance: float) -> bool:
+	# The fight stays on one line now: no sidestep to evade with.
+	return false
 	if _evade_time > 0.0:
 		_evade_time -= get_physics_process_delta_time()
 		if _evade_time <= 0.0:

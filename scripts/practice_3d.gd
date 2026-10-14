@@ -29,7 +29,7 @@ func _ready() -> void:
 	MatchSetup.vs_ai = previous_ai
 	player2.input_prefix = DUMMY_PREFIX
 	$UI/P2Label.text = player2.character_profile.name + " / PRACTICE DUMMY"
-	$UI/ControlsHint.text = "A/D WALK   W/S SIDESTEP   SHIFT + FORWARD RUN   DOUBLE-TAP + HOLD FORWARD TO RUN\nF 1   V 2   G 3   B 4   H THROW   E GUARD   SPACE JUMP   R RESET   F2 DUMMY   F1 MOVES   ESC PAUSE"
+	$UI/ControlsHint.text = "A/D WALK   W JUMP   S GUARD   SHIFT + FORWARD RUN   DOUBLE-TAP + HOLD FORWARD TO RUN\nF 1   V 2   G 3   B 4   H THROW   R RESET   F2 DUMMY   F1 MOVES   ESC PAUSE"
 	training_card = UI.panel($UI, Vector2(360, 112), Vector2(584, 42), Color(0.025, 0.03, 0.055, 0.92), Color(UI.GOLD, 0.5))
 	training_card.process_mode = Node.PROCESS_MODE_ALWAYS
 	training_card.process_mode = Node.PROCESS_MODE_ALWAYS

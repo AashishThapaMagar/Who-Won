@@ -280,8 +280,8 @@ F1 in a fight: every move and combo.": "1 2 मुक्का, 3 4 लात।
 	"SMOOTHER PLAY: GRAPHICS SET TO %s  (SETTINGS ▸ GRAPHICS TO CHANGE)": "सहज खेलका लागि: ग्राफिक्स %s मा राखियो  (बदल्न: सेटिङ ▸ ग्राफिक्स)",
 	"WELL FOUGHT, %s!": "शाबास, %s!",
 	"P%d CALL ENEMY [%s]": "खेलाडी %d ललकार [%s]",
-	"P1  A/D move  W/S sidestep  |  F 1  V 2  G 3  B 4  E guard     |     P2  Left/Right move  Up/Down sidestep  |  K 1  , 2  L 3  . 4  O guard\nSpace / Enter jump   |   F1 combos     |     Esc pause": "खेलाडी १  A/D चल्ने  W/S छेउ सर्ने  |  F 1  V 2  G 3  B 4  E बचाउ     |     खेलाडी २  ←/→ चल्ने  ↑/↓ छेउ सर्ने  |  K 1  , 2  L 3  . 4  O बचाउ
-Space / Enter उफ्रिने   |   F1 कम्बो     |     Esc रोक्ने",
+	"P1  A/D move  W jump  S guard  |  F 1  V 2  G 3  B 4     |     P2  Left/Right move  Up jump  Down guard  |  K 1  , 2  L 3  . 4\nF1 combos     |     Esc pause": "खेलाडी १  A/D चल्ने  W उफ्रिने  S बचाउ  |  F 1  V 2  G 3  B 4     |     खेलाडी २  ←/→ चल्ने  ↑ उफ्रिने  ↓ बचाउ  |  K 1  , 2  L 3  . 4\nF1 कम्बो     |     Esc रोक्ने",
+	"A/D WALK   W JUMP   S GUARD   SHIFT + FORWARD RUN   DOUBLE-TAP + HOLD FORWARD TO RUN\nF 1   V 2   G 3   B 4   H THROW   R RESET   F2 DUMMY   F1 MOVES   ESC PAUSE": "A/D हिँड्ने   W उफ्रिने   S बचाउ   SHIFT + अगाडि दौडिने   दुई पटक थिचेर अगाडि थिचिराखे दौडिने\nF 1   V 2   G 3   B 4   H पछार्ने   R रिसेट   F2 डमी   F1 चाल   ESC रोक्ने",
 	"ROUND %d": "राउन्ड %d",
 	"FINAL ROUND": "अन्तिम राउन्ड",
 	"FIGHT!": "लडाइँ सुरु!",

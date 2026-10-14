@@ -36,8 +36,6 @@ func _build_player(prefix: String, move_anchor: float, action_anchor: float, tin
 	var action_prefix := prefix + "3d_"
 	_button(action_prefix + "left", move_anchor - 38, 425, "L", tint)
 	_button(action_prefix + "right", move_anchor + 38, 425, "R", tint)
-	_button(action_prefix + "far", move_anchor, 362, "UP", tint)
-	_button(action_prefix + "near", move_anchor, 488, "DOWN", tint)
 	_button(action_prefix + "run", move_anchor, 292, "RUN", tint)
 	_tap(action_anchor + 35, 327, "CALL", tint, func():
 		for child in arena.get_children():

@@ -227,8 +227,8 @@ func _show_guide() -> void:
 		var x := 26.0 + player * 212
 		var color := UI.GOLD if player == 0 else UI.VIOLET
 		UI.heading(to, Settings.fmt("PLAYER %d", [player + 1]), Vector2(x, 96), Vector2(200, 28), 20, color, Color(0, 0, 0, 0.6))
-		var keys := [["A / D", "MOVE"], ["W / S", "SIDESTEP"], ["SPACE", "JUMP"], ["E", "GUARD"], ["F", "1  L PUNCH"], ["V", "2  R PUNCH"], ["G", "3  L KICK"], ["B", "4  R KICK"], ["H", "THROW"], ["SHIFT", "RUN"]] if player == 0 \
-			else [["← / →", "MOVE"], ["↑ / ↓", "SIDESTEP"], ["ENTER", "JUMP"], ["O", "GUARD"], ["K", "1  L PUNCH"], [",", "2  R PUNCH"], ["L", "3  L KICK"], [".", "4  R KICK"], ["J", "THROW"], ["CTRL", "RUN"]]
+		var keys := [["A / D", "MOVE"], ["W", "JUMP"], ["S", "GUARD"], ["F", "1  L PUNCH"], ["V", "2  R PUNCH"], ["G", "3  L KICK"], ["B", "4  R KICK"], ["H", "THROW"], ["SHIFT", "RUN"]] if player == 0 \
+			else [["← / →", "MOVE"], ["↑", "JUMP"], ["↓", "GUARD"], ["K", "1  L PUNCH"], [",", "2  R PUNCH"], ["L", "3  L KICK"], [".", "4  R KICK"], ["J", "THROW"], ["CTRL", "RUN"]]
 		for k in keys.size():
 			UI.key_hint(to, keys[k][0], keys[k][1], Vector2(x, 126 + k * 18))
 	var tip := UI.label(to, "Double-tap to dash or backdash.  F1 in a fight shows every move and combo.", Vector2(26, 312), Vector2(400, 40), 12, Color(UI.WHITE, 0.7))

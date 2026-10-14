@@ -3,7 +3,7 @@ extends Control
 ## key chips low on their side of the screen, newest nearest the middle.
 ## Reads the fighters' input prefixes so it works for the 3D and 2D arenas.
 const UI := preload("res://scripts/ui_kit.gd")
-const ACTIONS := [["left", "◀"], ["right", "▶"], ["far", "▲"], ["near", "▼"], ["jump", "J"], ["block", "G"], ["punch", "P"], ["kick", "K"], ["run", "R"]]
+const ACTIONS := [["left", "◀"], ["right", "▶"], ["jump", "J"], ["block", "G"], ["punch", "P"], ["kick", "K"], ["run", "R"]]
 const KEEP := 9
 var hud: Node
 var history: Array = [[], []]

@@ -63,7 +63,7 @@ func run() -> void:
 	Input.action_press("p1_3d_far")
 	await frames(25)
 	Input.action_release("p1_3d_far")
-	check(p1.body.position.z < start.z - 0.15, "Sidestep moves a short distance along the fighting strip")
+	check(absf(p1.body.position.z - start.z) < 0.01, "No sidestep: the old step input leaves the fighter on the line")
 	Input.action_press("p1_3d_far")
 	await frames(120)
 	check(absf(p1.body.position.z) <= 0.651 and p1._is_grounded(), "Holding sidestep stays grounded inside the narrow lane")
@@ -92,17 +92,13 @@ func run() -> void:
 	var first_health: int = p2.health
 	await frames(6)
 	check(p2.health == first_health, "Active frames cannot hit the same rival twice")
-	# A held sidestep: the rival keeps stepping (letting go drifts both back
-	# onto the fight line), each at the edge of the dodge.
-	var edge: float = p1.LANE_HALF_DEPTH
-	await reset_fighters(Vector3(-0.44, 0.02, -edge), Vector3(0.44, 0.02, edge))
+	# Street Fighter style: no sidestep. Even the old sidestep input (and a
+	# fighter knocked off the line) ends up back on the one fight line.
+	await reset_fighters(Vector3(-0.8, 0.02, 0.3), Vector3(0.8, 0.02, 0))
 	Input.action_press("p2_3d_near")
-	# Commit the strike to +X while the rival is offset along Z.
-	p1.forward = Vector3.RIGHT
-	p1._start_style_move("jab")
-	await frames(18)
+	await frames(40)
 	Input.action_release("p2_3d_near")
-	check(p2.health == 100, "A strike misses a sidestepping rival outside its 3D volume")
+	check(absf(p2.body.position.z) < 0.01 and absf(p1.body.position.z) < 0.05, "Fighters stay face to face on one fight line")
 	await reset_fighters(Vector3(-0.44, 0.02, 0), Vector3(0.44, 0.02, 0))
 	Input.action_press("p2_3d_block")
 	await frames(12)
