@@ -179,6 +179,10 @@ func _begin_round(index: int) -> void:
 	var stage: int = fixed_stage if fixed_stage >= 0 else MatchSetup.journey_stage % nepal_stage.ROUNDS.size()
 	stage_index = stage
 	nepal_stage.show_round(stage)
+	# The arena's own music, if it has one (Heritage Square's sarangi).
+	var music := get_node_or_null("/root/Music")
+	if music != null:
+		music.play_arena(stage)
 	super._begin_round(index)
 	# One short comment under the round call: where the fight is, plus the
 	# arcade ladder position when there is one.
@@ -654,6 +658,9 @@ func _footwork_dust() -> void:
 ## Never leave the game in slow motion when the scene is left mid-knockout.
 func _exit_tree() -> void:
 	Engine.time_scale = 1.0
+	var music := get_node_or_null("/root/Music")
+	if music != null:
+		music.play_main()
 
 func _ko_3d(fighter: Node) -> void:
 	if ko_replay != null:
