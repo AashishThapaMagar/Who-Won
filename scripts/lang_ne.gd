@@ -331,6 +331,9 @@ F1 in a fight: every move and combo.": "1 2 मुक्का, 3 4 लात।
 
 	# ── Practice ──
 	"DUMMY BEHAVIOUR": "डमीको व्यवहार",
+	"TRAINING DUMMY": "अभ्यास डमी",
+	"PAUSED  /  PRACTICE": "रोकिएको  /  अभ्यास",
+	"DUMMY: %s": "डमी: %s",
 	"Stands still and takes every hit.": "चुपचाप उभिन्छ र हरेक प्रहार खान्छ।",
 	"Blocks everything it can.": "सक्ने जति सबै प्रहार रोक्छ।",
 	"Takes the first hit, then guards.": "पहिलो प्रहार खान्छ, त्यसपछि बचाउ गर्छ।",

@@ -15,10 +15,7 @@ var dummy_ai: Node
 ## What each behaviour does, one line under its name.
 const DUMMY_NOTES := ["Stands still and takes every hit.", "Blocks everything it can.",
 	"Takes the first hit, then guards.", "Breaks out of your grabs.", "Fights back like a real rival."]
-var training_card: Control
-var _mode_name: Label
-var _mode_note: Label
-var _mode_dots: Array[Panel] = []
+
 var _guard_hold := 0.0
 var _f2_was_down := false
 
@@ -34,7 +31,6 @@ func _ready() -> void:
 	player2.input_prefix = DUMMY_PREFIX
 	$UI/P2Label.text = player2.character_profile.name + " / PRACTICE DUMMY"
 	$UI/ControlsHint.text = "A/D WALK   W JUMP   S GUARD   SHIFT + FORWARD RUN   DOUBLE-TAP + HOLD FORWARD TO RUN\nF 1   V 2   G 3   B 4   H THROW   R RESET   F2 DUMMY   F1 MOVES   ESC PAUSE"
-	_build_dummy_card()
 	set_dummy_mode(0)
 
 func _begin_round(index: int) -> void:
@@ -48,8 +44,6 @@ func _begin_round(index: int) -> void:
 	pips2.hide()
 
 func _process(delta: float) -> void:
-	if training_card != null:
-		training_card.visible = not move_guide.visible and not is_paused()
 	time_remaining = 9999.0
 	if not move_guide.visible and not is_paused() and Input.is_action_just_pressed("restart"):
 		_reset_practice()
@@ -62,72 +56,6 @@ func _process(delta: float) -> void:
 	super._process(delta)
 	timer_label.text = "--"
 
-## The dummy card: a slim band under the timer, in the fight's own style.
-## The behaviour's name large between arrows, what it does beneath, a pip
-## for each of the five, and the keys that change it and reset the round.
-func _build_dummy_card() -> void:
-	training_card = Control.new()
-	training_card.position = Vector2(250, 106)
-	training_card.size = Vector2(460, 66)
-	training_card.process_mode = Node.PROCESS_MODE_ALWAYS
-	training_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	$UI.add_child(training_card)
-	var band := Panel.new()
-	band.size = Vector2(460, 62)
-	band.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var face := UI.box(Color(0.02, 0.025, 0.045, 0.84), Color(UI.GOLD, 0.55), 0, UI.SLANT)
-	face.border_width_top = 1
-	face.border_width_bottom = 1
-	band.add_theme_stylebox_override("panel", face)
-	training_card.add_child(band)
-	var eyebrow := UI.eyebrow(training_card, "DUMMY BEHAVIOUR", Vector2(0, 4), Vector2(460, 14), Color(UI.GOLD, 0.85))
-	eyebrow.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_mode_name = UI.label(training_card, "", Vector2(60, 16), Vector2(340, 24), 20, UI.WHITE)
-	_mode_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_mode_name.add_theme_font_override("font", UI.display_font())
-	_mode_note = UI.label(training_card, "", Vector2(60, 37), Vector2(340, 16), 11, UI.MUTED)
-	_mode_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	for side in [-1, 1]:
-		var arrow := Button.new()
-		arrow.text = "‹" if side < 0 else "›"
-		arrow.flat = true
-		arrow.focus_mode = Control.FOCUS_NONE
-		arrow.position = Vector2(14 if side < 0 else 402, 12)
-		arrow.size = Vector2(44, 34)
-		arrow.add_theme_font_size_override("font_size", 30)
-		arrow.add_theme_color_override("font_color", Color(UI.GOLD, 0.8))
-		arrow.add_theme_color_override("font_hover_color", UI.GOLD)
-		arrow.add_theme_color_override("font_pressed_color", UI.WHITE)
-		for state in ["normal", "hover", "pressed", "focus"]:
-			arrow.add_theme_stylebox_override(state, StyleBoxEmpty.new())
-		arrow.pressed.connect(func(): step_dummy(side))
-		training_card.add_child(arrow)
-	# One pip per behaviour, along the band's bottom edge.
-	for k in DUMMY_MODES.size():
-		var pip := Panel.new()
-		pip.size = Vector2(14, 3)
-		pip.position = Vector2(230 - DUMMY_MODES.size() * 9 + k * 18 + 2, 56)
-		pip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		training_card.add_child(pip)
-		_mode_dots.append(pip)
-	# The keys, beneath the band: F2 changes it, R (or a click) resets.
-	var keys := Control.new()
-	keys.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	training_card.add_child(keys)
-	var x := UI.key_hint(keys, "F2", "CHANGE", Vector2(0, 68))
-	var reset_width := UI.key_hint(keys, "R", "RESET", Vector2(x, 68))
-	keys.position.x = 230.0 - (x + reset_width - 16.0) * 0.5
-	var reset := Button.new()
-	reset.flat = true
-	reset.focus_mode = Control.FOCUS_NONE
-	reset.position = Vector2(keys.position.x + x - 4, 64)
-	reset.size = Vector2(reset_width, 24)
-	for state in ["normal", "hover", "pressed", "focus"]:
-		reset.add_theme_stylebox_override(state, StyleBoxEmpty.new())
-	reset.tooltip_text = "Reset the round"
-	reset.pressed.connect(_reset_practice)
-	training_card.add_child(reset)
-
 ## The next (+1) or previous (-1) behaviour: the arrows and F2.
 func step_dummy(direction: int) -> void:
 	_slide = direction
@@ -135,23 +63,11 @@ func step_dummy(direction: int) -> void:
 
 var _slide := 0
 
+## F2 from the fight: a short notice says which behaviour is on (the full
+## list is in the pause menu, TRAINING DUMMY).
 func _show_dummy_mode(mode: int) -> void:
-	if _mode_name == null:
-		return
-	_mode_name.text = DUMMY_MODES[mode]
-	_mode_note.text = DUMMY_NOTES[mode]
-	for k in _mode_dots.size():
-		var lit := k == mode
-		_mode_dots[k].add_theme_stylebox_override("panel", UI.box(UI.GOLD if lit else Color(1, 1, 1, 0.22), Color.TRANSPARENT, 0))
-	# The new name slides in from the side it was asked for.
-	if _slide != 0:
-		for node: Label in [_mode_name, _mode_note]:
-			var home := node.position.x
-			node.position.x = home + 18.0 * _slide
-			node.modulate.a = 0.0
-			var tween := node.create_tween().set_parallel(true).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
-			tween.tween_property(node, "position:x", home, 0.28)
-			tween.tween_property(node, "modulate:a", 1.0, 0.2)
+	if _slide != 0 and is_inside_tree():
+		Settings.notify(TranslationServer.translate("DUMMY: %s") % TranslationServer.translate(DUMMY_MODES[mode]))
 	_slide = 0
 
 ## Switches the dummy's behaviour; FIGHT BACK hands it to the computer.

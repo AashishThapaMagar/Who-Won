@@ -79,13 +79,19 @@ func _show_main() -> void:
 	var entries := [
 		["RESUME", func(): resume_requested.emit()],
 		["MOVE LIST", func(): move_list_requested.emit()],
+	]
+	# Practice: the dummy's behaviour lives here, off the fight screen.
+	if arena.has_method("step_dummy"):
+		entries.append(["TRAINING DUMMY", _show_dummy])
+	entries.append_array([
 		["SETTINGS", _show_settings],
 		["HOW TO PLAY", _show_guide],
 		["RESTART MATCH", _confirm_restart],
 		["QUIT TO MENU", _confirm_quit],
-	]
+	])
+	var gap := 48 if entries.size() <= 6 else 44
 	for i in entries.size():
-		var row := _row(entries[i][0], Vector2(56, 170 + i * 48), i >= entries.size() - 2)
+		var row := _row(entries[i][0], Vector2(56, 170 + i * gap), i >= entries.size() - 2)
 		row.pressed.connect(entries[i][1])
 		row.mouse_entered.connect(func(): _focus(i))
 		rows.append(row)
@@ -204,6 +210,34 @@ func _show_settings() -> void:
 		box.toggled.connect(toggles[i][2])
 		box.toggled.connect(func(on: bool): box.text = "ON" if on else "OFF")
 		to.add_child(box)
+	_back_button(to, 388)
+
+## Practice: the five dummy behaviours, each with what it does; the one in
+## use is lit, and picking one sets it straight away.
+func _show_dummy() -> void:
+	var to := _open_page("TRAINING DUMMY", "PAUSED  /  PRACTICE")
+	for k in arena.DUMMY_MODES.size():
+		var current: bool = k == arena.dummy_mode
+		var choice := Button.new()
+		choice.position = Vector2(26, 96 + k * 56)
+		choice.size = Vector2(398, 48)
+		choice.focus_mode = Control.FOCUS_ALL
+		choice.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		choice.text = "   " + tr(arena.DUMMY_MODES[k])
+		choice.add_theme_font_override("font", UI.strong_font())
+		choice.add_theme_font_size_override("font_size", 15)
+		var face := UI.blade(Color(UI.GOLD, 0.26) if current else Color(0.03, 0.03, 0.06, 0.7), UI.GOLD, 6 if current else 2)
+		for state in ["normal", "hover", "pressed"]:
+			choice.add_theme_stylebox_override(state, face)
+		choice.add_theme_stylebox_override("focus", UI.box(Color(0, 0, 0, 0), UI.GOLD, 2, UI.SLANT))
+		choice.set_meta("initial_focus", current)
+		var note := UI.label(choice, arena.DUMMY_NOTES[k], Vector2(16, 26), Vector2(370, 16), 11, Color(UI.WHITE, 0.6))
+		note.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		choice.pressed.connect(func():
+			arena.set_dummy_mode(k)
+			preload("res://scripts/sfx.gd").fire("menu_confirm")
+			_show_dummy())
+		to.add_child(choice)
 	_back_button(to, 388)
 
 func _slider(to: Control, text: String, y: float, level: float, apply: Callable) -> void:

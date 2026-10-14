@@ -19,14 +19,14 @@ const MODEL := "res://assets/announcer/hajurama.glb"
 ## its own script.
 const HOSTS := {
 	# Heritage Square: a Newar hajurbuwa.
-	0: {"model": "res://assets/announcer/hajurbuwa.glb", "height": 1.64, "stride": 0.53,
+	0: {"model": "res://assets/announcer/hajurbuwa.glb", "height": 1.64, "stride": 0.95,
 		# Into the pagoda: the foot and top of its front steps, then just
 		# inside its door.
 		"route": [Vector3(0, -0.14, -19.2), Vector3(0, 0.98, -20.9), Vector3(0, 0.98, -22.6)],
 		"hello": {"ne": "ज्वजलपा!", "en": "JWAJALAPA!"},
 		"match": {"ne": "खेल जित्यो!", "en": "THE MATCH IS WON!"}},
 	# Terai Plains: a Tharu didi.
-	1: {"model": "res://assets/announcer/tharu_didi.glb", "height": 1.58, "stride": 0.64,
+	1: {"model": "res://assets/announcer/tharu_didi.glb", "height": 1.58, "stride": 1.1,
 		# Home: round the side of her stilt house and in behind it.
 		"route": [Vector3(-6.8, 0, -13.5), Vector3(-7.0, 0, -19.0), Vector3(-11.9, 0, -19.5)],
 		"hello": {"ne": "राम राम!", "en": "RAM RAM!"},
@@ -38,13 +38,13 @@ const HOSTS := {
 		"hello": {"ne": "नमस्ते!", "en": "NAMASTE!"},
 		"match": {"ne": "खेल जित्यो!", "en": "THE MATCH IS WON!"}},
 	# Gompa Courtyard: a lama.
-	3: {"model": "res://assets/announcer/lama.glb", "height": 1.68, "stride": 0.55,
+	3: {"model": "res://assets/announcer/lama.glb", "height": 1.68, "stride": 1.1,
 		# Out between the monks' quarters on the left of the courtyard.
 		"route": [Vector3(-11.5, 0, -17.5), Vector3(-20.0, 0, -17.5)],
 		"hello": {"ne": "टासी देलेक!", "en": "TASHI DELEK!"},
 		"match": {"ne": "टासी देलेक!", "en": "TASHI DELEK!"}},
 	# Himalayan Pass: a Sherpa dai.
-	4: {"model": "res://assets/announcer/sherpa_dai.glb", "height": 1.72, "stride": 0.54,
+	4: {"model": "res://assets/announcer/sherpa_dai.glb", "height": 1.72, "stride": 1.1,
 		# Up the trail, round the chorten and on behind it.
 		"route": [Vector3(1.5, 0, -26.0), Vector3(5.5, 0, -30.5), Vector3(5.6, 0, -33.5), Vector3(3.3, 0, -35.5)],
 		"hello": {"ne": "कि कि सो सो!", "en": "KI KI SO SO!"},
@@ -73,10 +73,10 @@ const CAMERA_CLEAR := 1.6
 ## feet don't skate.
 const WALK_SPEED := 0.85
 const LEAVE_SPEED := 1.6
-const CLIP_SPEED := 1.07
+const CLIP_SPEED := 0.9
 ## "stride" in HOSTS overrides it per model: metres a second the walk clip
-## covers at 1x (twice the planted foot's sweep per cycle). Aamai's clip is
-## the 1.07 m/s one; the others' slower clips cover about half that.
+## covers at 1x, found by trying speeds in game until the planted foot
+## stopped sliding (Aamai 0.9, the hajurbuwa 0.95, the others 1.1).
 ## Gone once she has walked this far away, or out of the camera's view.
 const FADE_AFTER := 5.0
 ## When her round call waits (round one: the VS card plays first).
@@ -109,10 +109,10 @@ var _hip := -1
 
 func _ready() -> void:
 	visible = false
-	_host = HOSTS.get(stage, HOSTS[2])
+	_host = HOSTS.get(stage, HOSTS[2]).duplicate(true)
 	var path: String = _host.model if ResourceLoader.exists(_host.model) else MODEL
 	if path == MODEL and not stage in [2, 5]:
-		_host = HOSTS[2]
+		_host = HOSTS[2].duplicate(true)
 	if not ResourceLoader.exists(path):
 		return
 	_model = (load(path) as PackedScene).instantiate()
@@ -147,6 +147,8 @@ func _ready() -> void:
 ## Holds the hip over her spot: some clips (the greeting) carry her most
 ## of a metre across the floor, and the game moves her itself. Only the
 ## up-down bob is kept.
+const BOB_KEEP := 0.5
+
 func _pin_hip() -> void:
 	if _skeleton == null or _hip < 0:
 		return
@@ -156,7 +158,10 @@ func _pin_hip() -> void:
 	var to_skeleton := _skeleton.get_bone_global_pose(parent).basis if parent >= 0 else Basis()
 	var rest := to_skeleton * _skeleton.get_bone_rest(_hip).origin
 	var at := to_skeleton * _skeleton.get_bone_pose_position(_hip)
-	_skeleton.set_bone_pose_position(_hip, to_skeleton.inverse() * Vector3(rest.x, at.y, rest.z))
+	# Half the clip's rise and fall: the walk clips bounce the hips 4 to 10
+	# cm a step, which read as the host bobbing up and down.
+	var y := lerpf(rest.y, at.y, BOB_KEEP)
+	_skeleton.set_bone_pose_position(_hip, to_skeleton.inverse() * Vector3(rest.x, y, rest.z))
 
 func _label(at: Vector3, size: int, color: Color) -> Label3D:
 	var label := Label3D.new()
