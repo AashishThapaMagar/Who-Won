@@ -20,29 +20,39 @@ const MODEL := "res://assets/announcer/hajurama.glb"
 const HOSTS := {
 	# Heritage Square: a Newar hajurbuwa.
 	0: {"model": "res://assets/announcer/hajurbuwa.glb", "height": 1.64,
-		# The pagoda at the back of the square: the foot and top of its front
-		# steps and a point just inside its door (world positions).
-		"temple": {"foot": Vector3(0, -0.12, -19.2), "top": Vector3(0, 1.0, -20.9), "door": Vector3(0, 1.0, -22.6)},
+		# Into the pagoda: the foot and top of its front steps, then just
+		# inside its door.
+		"route": [Vector3(0, -0.14, -19.2), Vector3(0, 0.98, -20.9), Vector3(0, 0.98, -22.6)],
 		"hello": {"ne": "ज्वजलपा!", "en": "JWAJALAPA!"},
 		"match": {"ne": "खेल जित्यो!", "en": "THE MATCH IS WON!"}},
 	# Terai Plains: a Tharu didi.
 	1: {"model": "res://assets/announcer/tharu_didi.glb", "height": 1.58,
+		# Home: round the side of her stilt house and in behind it.
+		"route": [Vector3(-6.8, 0, -13.5), Vector3(-7.0, 0, -19.0), Vector3(-11.9, 0, -19.5)],
 		"hello": {"ne": "राम राम!", "en": "RAM RAM!"},
 		"match": {"ne": "खेल जित्यो!", "en": "THE MATCH IS WON!"}},
 	# Hill Village: Aamai, a village hajuramaa.
 	2: {"model": MODEL,
+		# Home: round the hill house and in behind it.
+		"route": [Vector3(-7.6, 0, -12.5), Vector3(-7.8, 0, -18.0), Vector3(-12.8, 0, -18.5)],
 		"hello": {"ne": "नमस्ते!", "en": "NAMASTE!"},
 		"match": {"ne": "खेल जित्यो!", "en": "THE MATCH IS WON!"}},
 	# Gompa Courtyard: a lama.
 	3: {"model": "res://assets/announcer/lama.glb", "height": 1.68,
+		# Out between the monks' quarters on the left of the courtyard.
+		"route": [Vector3(-11.5, 0, -17.5), Vector3(-20.0, 0, -17.5)],
 		"hello": {"ne": "टासी देलेक!", "en": "TASHI DELEK!"},
 		"match": {"ne": "टासी देलेक!", "en": "TASHI DELEK!"}},
 	# Himalayan Pass: a Sherpa dai.
 	4: {"model": "res://assets/announcer/sherpa_dai.glb", "height": 1.72,
+		# Up the trail, round the chorten and on behind it.
+		"route": [Vector3(1.5, 0, -26.0), Vector3(5.5, 0, -30.5), Vector3(5.6, 0, -33.5), Vector3(3.3, 0, -35.5)],
 		"hello": {"ne": "कि कि सो सो!", "en": "KI KI SO SO!"},
 		"match": {"ne": "ल्हा ग्यालो!", "en": "LHA GYALO!"}},
 	# Dashain Ground: Aamai again, under the kites.
 	5: {"model": MODEL,
+		# By the bamboo swing, then home behind the house.
+		"route": [Vector3(-2.5, 0, -8.6), Vector3(-7.6, 0, -12.5), Vector3(-7.8, 0, -18.0), Vector3(-12.8, 0, -18.5)],
 		"hello": {"ne": "जय होस्!", "en": "VICTORY TO THE BRAVE!"},
 		"match": {"ne": "जय होस्!", "en": "VICTORY TO THE BRAVE!"}},
 }
@@ -273,7 +283,7 @@ const CROSS_WAIT := [6.0, 18.0]
 var spectating := false
 var _crossing := false
 var _path: Array[Vector3] = []
-## Heritage Square: whether he went into the temple last time.
+## Whether the host went home (into the pagoda, behind a house) last time.
 var _inside := false
 var _next_cross := 0.0
 var _centre := Vector3.ZERO
@@ -299,8 +309,11 @@ func _cross_tick(delta: float) -> void:
 	if not _crossing:
 		if _clock < _next_cross:
 			return
-		_path = _temple_path() if _host.has("temple") else _side_path()
+		_path = _route_path() if _host.has("route") else _side_path()
 		global_position = _path.pop_front()
+		# Coming back out of a house or temple: fade in from the doorway.
+		_fade = 1.0 if _inside == false and _host.has("route") else 0.0
+		_set_fade(_fade)
 		_crossing = true
 		_shown = true
 		visible = true
@@ -310,6 +323,7 @@ func _cross_tick(delta: float) -> void:
 		_crossing = false
 		_shown = false
 		visible = false
+		_set_fade(0.0)
 		_next_cross = _clock + randf_range(CROSS_WAIT[0], CROSS_WAIT[1])
 		return
 	# Along the path at walking pace (the height follows the steps); facing
@@ -319,10 +333,31 @@ func _cross_tick(delta: float) -> void:
 	if flat.length() > 0.01:
 		_face(flat.normalized())
 	var travel := WALK_SPEED * delta
+	# Going home: fade into the doorway's shade over the last stretch;
+	# coming out: fade in over the first.
+	if _host.has("route"):
+		var left := step.length()
+		for i in range(1, _path.size()):
+			left += (_path[i] - _path[i - 1]).length()
+		var target := 0.0
+		if _inside and left < FADE_DISTANCE:
+			target = 1.0 - left / FADE_DISTANCE
+		_fade = move_toward(_fade, target, delta / 0.8)
+		_set_fade(_fade)
 	if step.length() <= travel:
 		global_position = _path.pop_front()
 		return
 	global_position += step.normalized() * travel
+
+## How far from home a host starts to fade (metres), and how faded they are.
+const FADE_DISTANCE := 1.4
+var _fade := 0.0
+
+func _set_fade(amount: float) -> void:
+	if _model == null:
+		return
+	for mesh: GeometryInstance3D in _model.find_children("*", "GeometryInstance3D", true, false):
+		mesh.transparency = clampf(amount, 0.0, 1.0)
 
 ## Side to side behind the fight, a little nearer or further each time.
 func _side_path() -> Array[Vector3]:
@@ -330,13 +365,16 @@ func _side_path() -> Array[Vector3]:
 	var lane := _centre - _to_camera * randf_range(CROSS_DEPTH[0], CROSS_DEPTH[1])
 	return [lane + side * CROSS_HALF, lane - side * CROSS_HALF]
 
-## Heritage Square: across the square, up the pagoda steps and in through
-## its door; the next time, out of the door, down the steps and away.
-func _temple_path() -> Array[Vector3]:
-	var temple: Dictionary = _host.temple
+## Home: from the side of the stage along the host's route (into the
+## pagoda, behind a house, up a trail) and out of sight; the next time, back
+## out the same way and off the other side. Route heights are above the
+## fight floor.
+func _route_path() -> Array[Vector3]:
 	var side := _to_camera.cross(Vector3.UP).normalized() * (1.0 if randf() < 0.5 else -1.0)
 	var start := _centre - _to_camera * randf_range(CROSS_DEPTH[0], CROSS_DEPTH[1]) + side * CROSS_HALF
-	var into: Array[Vector3] = [start, temple.foot, temple.top, temple.door]
+	var into: Array[Vector3] = [start]
+	for point: Vector3 in _host.route:
+		into.append(Vector3(point.x, _centre.y + point.y, point.z))
 	_inside = not _inside
 	if _inside:
 		return into
