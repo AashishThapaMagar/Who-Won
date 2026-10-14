@@ -2,7 +2,11 @@ extends "res://scripts/player.gd"
 ## Combat controller in legacy pose units; CharacterBody3D owns all movement.
 ## Keeping combat in one implementation preserves hit confirms and frame data.
 const UNITS := 64.0
-const LANE_HALF_DEPTH := 0.65
+## How far a sidestep can take a fighter off the fight line (metres), and
+## how fast they drift back onto it once the step is let go: a dodge, never
+## a new line, so the fighters stay face to face and the camera square-on.
+const LANE_HALF_DEPTH := 0.5
+const LANE_RECENTER := 1.4
 const LANE_HALF_WIDTH := 4.25
 const SIDESTEP_RATIO := 0.35
 var body: CharacterBody3D
@@ -198,6 +202,11 @@ func _move_combat_body(delta: float) -> void:
 	if absf(body.position.z) >= LANE_HALF_DEPTH:
 		body.velocity.z = 0.0
 		lateral_speed = 0.0
+	# Face to face: once a sidestep is let go, back onto the one fight line,
+	# so the pair never ends up side by side.
+	var stepping: bool = can_move and absf(input.dot(lateral)) > 0.1
+	if not stepping and state != State.KO:
+		body.position.z = move_toward(body.position.z, 0.0, LANE_RECENTER * delta)
 	velocity.y = -body.velocity.y * UNITS
 	var displacement := body.position - previous
 	var signed_distance := Vector2(displacement.x, displacement.z).length() * (-1.0 if planar.dot(forward) < -0.1 else 1.0)

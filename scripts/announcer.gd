@@ -5,8 +5,8 @@ extends Node3D
 ## walk).
 ##
 ## The rounds are called on screen (ROUND n, then FIGHT!); the host is part
-## of the scenery, watching from the edge of the stage behind the fighters
-## (spectate()), reacting now and then and cheering each round won. The
+## of the scenery (spectate()): a local walking past behind the fight now
+## and then. The
 ## walk-up call (call_out, round_call, leave) is kept for cutscenes.
 const MODEL := "res://assets/announcer/hajurama.glb"
 ## Each arena has its own announcer (stage index as in nepal_stage_3d
@@ -259,48 +259,62 @@ func winner_call(winner_name: String, match_won: bool) -> void:
 	else:
 		call_out(tr("WELL FOUGHT, %s!") % shown, "", ["clap", "cheer"][randi() % 2], 3.0)
 
-## ── Spectator ──────────────────────────────────────────────────────────
-## The host no longer calls the rounds (ROUND 1 / FIGHT! is on screen); they
-## watch from the edge of the stage instead, behind the fighters and off to
-## one side, facing the fight: shifting their weight, clapping, cheering or
-## waving now and then, and cheering when a round is won.
-const SPECTATE_SIDE := 3.6
-const SPECTATE_BACK := 2.4
-const MOODS := ["idle", "idle", "clap", "cheer", "greet"]
+## ── Passer-by ──────────────────────────────────────────────────────────
+## The host no longer calls the rounds (ROUND 1 / FIGHT! is on screen) and
+## never claps or cheers: they are just a local walking past behind the
+## fight now and then, side to side at an unhurried pace, a little nearer
+## or further each time, then gone for a while.
+const CROSS_HALF := 7.0
+const CROSS_DEPTH := [2.6, 4.8]
+const CROSS_WAIT := [6.0, 18.0]
 var spectating := false
-var _next_mood := 0.0
+var _crossing := false
+var _cross_to := Vector3.ZERO
+var _next_cross := 0.0
+var _centre := Vector3.ZERO
 
 func spectate(a: Vector3, b: Vector3, camera: Camera3D) -> void:
 	if spectating:
 		return
 	place(a, b, camera)
-	var centre := _spot + _to_camera * BACK
-	var side := _to_camera.cross(Vector3.UP).normalized() * (1.0 if randf() < 0.5 else -1.0)
-	global_position = centre + side * SPECTATE_SIDE - _to_camera * SPECTATE_BACK
-	var look := centre - global_position
-	look.y = 0.0
-	_face(look.normalized())
+	_centre = _spot + _to_camera * BACK
 	spectating = true
-	_shown = true
-	visible = true
 	_title.visible = false
 	_call.visible = false
-	_play("idle")
-	_next_mood = _clock + randf_range(2.0, 5.0)
+	visible = false
+	_next_cross = _clock + randf_range(1.5, 5.0)
 
-## A round has been won: the crowd's favourite moment.
+## Kept for callers: a passer-by doesn't react to the fight.
 func react() -> void:
+	pass
+
+func _cross_tick(delta: float) -> void:
 	if not spectating:
 		return
-	_play("cheer" if randf() < 0.6 else "clap")
-	_next_mood = _clock + randf_range(3.0, 4.5)
-
-func _spectate_tick() -> void:
-	if not spectating or _clock < _next_mood:
+	if not _crossing:
+		if _clock < _next_cross:
+			return
+		var side := _to_camera.cross(Vector3.UP).normalized() * (1.0 if randf() < 0.5 else -1.0)
+		var depth := randf_range(CROSS_DEPTH[0], CROSS_DEPTH[1])
+		var lane := _centre - _to_camera * depth
+		global_position = lane + side * CROSS_HALF
+		_cross_to = lane - side * CROSS_HALF
+		_face(-side)
+		_crossing = true
+		_shown = true
+		visible = true
+		_play("walk")
 		return
-	var mood: String = MOODS[randi() % MOODS.size()]
-	_play(mood, mood == "greet")
-	_next_mood = _clock + randf_range(4.0, 8.0)
+	var step := _cross_to - global_position
+	step.y = 0.0
+	var travel := WALK_SPEED * delta
+	if step.length() <= travel:
+		_crossing = false
+		_shown = false
+		visible = false
+		_next_cross = _clock + randf_range(CROSS_WAIT[0], CROSS_WAIT[1])
+		return
+	global_position += step.normalized() * travel
 
 ## Where the camera looks when it frames her: her spot at head height, so
 ## her call fits in the shot. Fixed while she walks.
@@ -358,11 +372,11 @@ func _process(delta: float) -> void:
 		call.call()
 	if _player != null and visible:
 		var rate := 1.0
-		if _walking:
+		if _walking or _crossing:
 			rate = (LEAVE_SPEED if _leaving else WALK_SPEED) / CLIP_SPEED
 		_player.advance(delta * rate)
 		_pin_hip()
-	_spectate_tick()
+	_cross_tick(delta)
 	if _hide_at > 0.0 and _clock >= _hide_at:
 		leave()
 	if not _walking:

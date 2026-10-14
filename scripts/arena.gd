@@ -304,9 +304,6 @@ func _end_round(winner: int) -> void:
 		advance_timer = ROUND_PAUSE + (KO_PAUSE if knockout else 0.0)
 
 	result_label.visible = true
-	# The host watching from the side cheers the round.
-	if announcer != null and winner != 0:
-		announcer.react()
 
 ## Aamai's winner call; the 3D arena holds it for the victory moment.
 func _host_winner(host: Node, winner_name: String, match_won: bool) -> void:

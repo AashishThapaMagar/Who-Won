@@ -92,11 +92,16 @@ func run() -> void:
 	var first_health: int = p2.health
 	await frames(6)
 	check(p2.health == first_health, "Active frames cannot hit the same rival twice")
-	await reset_fighters(Vector3(-0.44, 0.02, -0.65), Vector3(0.44, 0.02, 0.65))
+	# A held sidestep: the rival keeps stepping (letting go drifts both back
+	# onto the fight line), each at the edge of the dodge.
+	var edge: float = p1.LANE_HALF_DEPTH
+	await reset_fighters(Vector3(-0.44, 0.02, -edge), Vector3(0.44, 0.02, edge))
+	Input.action_press("p2_3d_near")
 	# Commit the strike to +X while the rival is offset along Z.
 	p1.forward = Vector3.RIGHT
 	p1._start_style_move("jab")
 	await frames(18)
+	Input.action_release("p2_3d_near")
 	check(p2.health == 100, "A strike misses a sidestepping rival outside its 3D volume")
 	await reset_fighters(Vector3(-0.44, 0.02, 0), Vector3(0.44, 0.02, 0))
 	Input.action_press("p2_3d_block")
