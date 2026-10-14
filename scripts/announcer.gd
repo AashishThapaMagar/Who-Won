@@ -19,14 +19,14 @@ const MODEL := "res://assets/announcer/hajurama.glb"
 ## its own script.
 const HOSTS := {
 	# Heritage Square: a Newar hajurbuwa.
-	0: {"model": "res://assets/announcer/hajurbuwa.glb", "height": 1.64,
+	0: {"model": "res://assets/announcer/hajurbuwa.glb", "height": 1.64, "stride": 0.53,
 		# Into the pagoda: the foot and top of its front steps, then just
 		# inside its door.
 		"route": [Vector3(0, -0.14, -19.2), Vector3(0, 0.98, -20.9), Vector3(0, 0.98, -22.6)],
 		"hello": {"ne": "ज्वजलपा!", "en": "JWAJALAPA!"},
 		"match": {"ne": "खेल जित्यो!", "en": "THE MATCH IS WON!"}},
 	# Terai Plains: a Tharu didi.
-	1: {"model": "res://assets/announcer/tharu_didi.glb", "height": 1.58,
+	1: {"model": "res://assets/announcer/tharu_didi.glb", "height": 1.58, "stride": 0.64,
 		# Home: round the side of her stilt house and in behind it.
 		"route": [Vector3(-6.8, 0, -13.5), Vector3(-7.0, 0, -19.0), Vector3(-11.9, 0, -19.5)],
 		"hello": {"ne": "राम राम!", "en": "RAM RAM!"},
@@ -38,13 +38,13 @@ const HOSTS := {
 		"hello": {"ne": "नमस्ते!", "en": "NAMASTE!"},
 		"match": {"ne": "खेल जित्यो!", "en": "THE MATCH IS WON!"}},
 	# Gompa Courtyard: a lama.
-	3: {"model": "res://assets/announcer/lama.glb", "height": 1.68,
+	3: {"model": "res://assets/announcer/lama.glb", "height": 1.68, "stride": 0.55,
 		# Out between the monks' quarters on the left of the courtyard.
 		"route": [Vector3(-11.5, 0, -17.5), Vector3(-20.0, 0, -17.5)],
 		"hello": {"ne": "टासी देलेक!", "en": "TASHI DELEK!"},
 		"match": {"ne": "टासी देलेक!", "en": "TASHI DELEK!"}},
 	# Himalayan Pass: a Sherpa dai.
-	4: {"model": "res://assets/announcer/sherpa_dai.glb", "height": 1.72,
+	4: {"model": "res://assets/announcer/sherpa_dai.glb", "height": 1.72, "stride": 0.54,
 		# Up the trail, round the chorten and on behind it.
 		"route": [Vector3(1.5, 0, -26.0), Vector3(5.5, 0, -30.5), Vector3(5.6, 0, -33.5), Vector3(3.3, 0, -35.5)],
 		"hello": {"ne": "कि कि सो सो!", "en": "KI KI SO SO!"},
@@ -71,9 +71,12 @@ const CAMERA_CLEAR := 1.6
 ## on the way out. CLIP_SPEED is how far her walk clip carries her per
 ## second at 1x, so the steps play at the speed she really moves and her
 ## feet don't skate.
-const WALK_SPEED := 0.95
+const WALK_SPEED := 0.85
 const LEAVE_SPEED := 1.6
 const CLIP_SPEED := 1.07
+## "stride" in HOSTS overrides it per model: metres a second the walk clip
+## covers at 1x (twice the planted foot's sweep per cycle). Aamai's clip is
+## the 1.07 m/s one; the others' slower clips cover about half that.
 ## Gone once she has walked this far away, or out of the camera's view.
 const FADE_AFTER := 5.0
 ## When her round call waits (round one: the VS card plays first).
@@ -439,7 +442,9 @@ func _process(delta: float) -> void:
 	if _player != null and visible:
 		var rate := 1.0
 		if _walking or _crossing:
-			rate = (LEAVE_SPEED if _leaving else WALK_SPEED) / CLIP_SPEED
+			# Steps played at the speed the host really moves, measured from
+			# each model's own walk (feet planted, no gliding).
+			rate = (LEAVE_SPEED if _leaving else WALK_SPEED) / float(_host.get("stride", CLIP_SPEED))
 		_player.advance(delta * rate)
 		_pin_hip()
 	_cross_tick(delta)

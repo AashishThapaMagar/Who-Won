@@ -30,30 +30,28 @@ func _ready() -> void:
 	player2.input_prefix = DUMMY_PREFIX
 	$UI/P2Label.text = player2.character_profile.name + " / PRACTICE DUMMY"
 	$UI/ControlsHint.text = "A/D WALK   W JUMP   S GUARD   SHIFT + FORWARD RUN   DOUBLE-TAP + HOLD FORWARD TO RUN\nF 1   V 2   G 3   B 4   H THROW   R RESET   F2 DUMMY   F1 MOVES   ESC PAUSE"
-	training_card = UI.panel($UI, Vector2(360, 112), Vector2(584, 42), Color(0.025, 0.03, 0.055, 0.92), Color(UI.GOLD, 0.5))
+	# Centred under the timer, clear of both fighters' names and bars.
+	training_card = UI.panel($UI, Vector2(230, 112), Vector2(500, 40), Color(0.025, 0.03, 0.055, 0.92), Color(UI.GOLD, 0.5))
 	training_card.process_mode = Node.PROCESS_MODE_ALWAYS
-	training_card.process_mode = Node.PROCESS_MODE_ALWAYS
-	mode_label = UI.label(training_card, "DUMMY", Vector2(14, 12), Vector2(90, 18), 12, UI.GOLD)
+	mode_label = UI.label(training_card, "DUMMY", Vector2(14, 11), Vector2(66, 18), 12, UI.GOLD)
 	mode_label.add_theme_font_override("font", UI.strong_font())
 	mode_label.add_theme_constant_override("outline_size", 4)
 	mode_label.add_theme_color_override("font_outline_color", UI.INK)
 	dummy_picker = OptionButton.new()
-	dummy_picker.position = Vector2(104, 7)
-	dummy_picker.size = Vector2(280, 28)
+	dummy_picker.position = Vector2(80, 6)
+	dummy_picker.size = Vector2(240, 28)
 	dummy_picker.fit_to_longest_item = false
 	for mode in DUMMY_MODES:
 		dummy_picker.add_item(mode)
 	dummy_picker.item_selected.connect(set_dummy_mode)
 	dummy_picker.get_popup().about_to_popup.connect(func(): get_tree().paused = true)
 	dummy_picker.get_popup().popup_hide.connect(func(): get_tree().paused = false)
-	dummy_picker.get_popup().about_to_popup.connect(func(): get_tree().paused = true)
-	dummy_picker.get_popup().popup_hide.connect(func(): get_tree().paused = false)
 	training_card.add_child(dummy_picker)
-	var reset := UI.button(training_card, "RESET [R]", Vector2(398, 7), Vector2(112, 28))
+	var reset := UI.button(training_card, "RESET [R]", Vector2(330, 6), Vector2(110, 28))
 	reset.add_theme_font_size_override("font_size", 11)
 	reset.focus_mode = Control.FOCUS_NONE
 	reset.pressed.connect(_reset_practice)
-	UI.label(training_card, "F2", Vector2(528, 12), Vector2(40, 18), 11, UI.MUTED).tooltip_text = "Cycle dummy behaviour"
+	UI.label(training_card, "F2", Vector2(450, 11), Vector2(40, 18), 11, UI.MUTED).tooltip_text = "Cycle dummy behaviour"
 	set_dummy_mode(0)
 
 func _begin_round(index: int) -> void:
