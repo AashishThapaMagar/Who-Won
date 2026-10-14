@@ -330,6 +330,15 @@ F1 in a fight: every move and combo.": "1 2 मुक्का, 3 4 लात।
 	"ENTER  SKIP": "ENTER  छोड्नुहोस्",
 
 	# ── Practice ──
+	"DUMMY BEHAVIOUR": "डमीको व्यवहार",
+	"Stands still and takes every hit.": "चुपचाप उभिन्छ र हरेक प्रहार खान्छ।",
+	"Blocks everything it can.": "सक्ने जति सबै प्रहार रोक्छ।",
+	"Takes the first hit, then guards.": "पहिलो प्रहार खान्छ, त्यसपछि बचाउ गर्छ।",
+	"Breaks out of your grabs.": "तपाईंको समाताइबाट उम्किन्छ।",
+	"Fights back like a real rival.": "साँच्चैको प्रतिद्वन्द्वीझैँ जवाफ फर्काउँछ।",
+	"CHANGE": "बदल्ने",
+	"RESET": "रिसेट",
+	"Reset the round": "राउन्ड रिसेट गर्नुहोस्",
 	"STAND": "उभिने",
 	"GUARD ALL": "सबै रोक्ने",
 	"GUARD AFTER FIRST HIT": "पहिलो प्रहारपछि रोक्ने",

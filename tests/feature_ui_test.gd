@@ -25,8 +25,12 @@ func run() -> void:
 	var arena: Node = load("res://scenes/Practice3D.tscn").instantiate()
 	root.add_child(arena)
 	current_scene = arena
-	arena.dummy_picker.item_selected.emit(1)
-	assert(arena.dummy_mode == 1, "Training dropdown changes the dummy")
+	arena.step_dummy(1)
+	assert(arena.dummy_mode == 1, "The training card's arrows change the dummy")
+	arena.step_dummy(-1)
+	arena.step_dummy(-1)
+	assert(arena.dummy_mode == arena.DUMMY_MODES.size() - 1, "The arrows wrap round the behaviours")
+	arena.set_dummy_mode(1)
 	arena.player1.health = 25
 	arena._reset_practice()
 	assert(arena.player1.health == arena.player1.max_health)
