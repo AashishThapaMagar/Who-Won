@@ -653,6 +653,14 @@ static func _load_arena_model(index: int) -> PackedScene:
 	var path: String = ARENA_MODELS[index]
 	if arena_cache.has(path):
 		return arena_cache[path]
+	# The raw .glb is decoded on the spot (see below); an export that left it
+	# out (a phone build without the include filter) falls back to the
+	# editor's imported scene instead of the old procedural square.
+	if not FileAccess.file_exists(path) and ResourceLoader.exists(path):
+		var imported := load(path) as PackedScene
+		if imported != null:
+			arena_cache[path] = imported
+			return imported
 	var document := GLTFDocument.new()
 	var state := GLTFState.new()
 	var result := document.append_from_file(path, state)
