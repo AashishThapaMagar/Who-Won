@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bwe047ohaj0q8"
-path="res://.godot/imported/tika_thali_ORM_fd2ec251-9274-48dd-89cd-72b54c90d324.jpg-1041f810bec45e14a36e89c760719b7a.ctex"
+path.s3tc="res://.godot/imported/tika_thali_ORM_fd2ec251-9274-48dd-89cd-72b54c90d324.jpg-1041f810bec45e14a36e89c760719b7a.s3tc.ctex"
+path.etc2="res://.godot/imported/tika_thali_ORM_fd2ec251-9274-48dd-89cd-72b54c90d324.jpg-1041f810bec45e14a36e89c760719b7a.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "e77feef39ff8e1041d6902356f3bb895"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/teaser/tika_thali_ORM_fd2ec251-9274-48dd-89cd-72b54c90d324.jpg"
-dest_files=["res://.godot/imported/tika_thali_ORM_fd2ec251-9274-48dd-89cd-72b54c90d324.jpg-1041f810bec45e14a36e89c760719b7a.ctex"]
+dest_files=["res://.godot/imported/tika_thali_ORM_fd2ec251-9274-48dd-89cd-72b54c90d324.jpg-1041f810bec45e14a36e89c760719b7a.s3tc.ctex", "res://.godot/imported/tika_thali_ORM_fd2ec251-9274-48dd-89cd-72b54c90d324.jpg-1041f810bec45e14a36e89c760719b7a.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=2048
 detect_3d/compress_to=1

@@ -15,9 +15,9 @@ dest_files=["res://.godot/imported/finale_05.jpg-f2f4e8c3dd2c259d2c4bfa12f2d5995
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
-compress/lossy_quality=0.7
+compress/lossy_quality=0.82
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0
 compress/hdr_compression=1

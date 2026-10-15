@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://d02ijrw8x5aoh"
-path="res://.godot/imported/eagle_Color_5033b85e-d1e7-4dbe-8245-b27eddb3aa89.jpg-6cc0198a12f086d080baab2c26996feb.ctex"
+path.s3tc="res://.godot/imported/eagle_Color_5033b85e-d1e7-4dbe-8245-b27eddb3aa89.jpg-6cc0198a12f086d080baab2c26996feb.s3tc.ctex"
+path.etc2="res://.godot/imported/eagle_Color_5033b85e-d1e7-4dbe-8245-b27eddb3aa89.jpg-6cc0198a12f086d080baab2c26996feb.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "12fb7a03a0ad9540524e6514a8d8f026"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/teaser/eagle_Color_5033b85e-d1e7-4dbe-8245-b27eddb3aa89.jpg"
-dest_files=["res://.godot/imported/eagle_Color_5033b85e-d1e7-4dbe-8245-b27eddb3aa89.jpg-6cc0198a12f086d080baab2c26996feb.ctex"]
+dest_files=["res://.godot/imported/eagle_Color_5033b85e-d1e7-4dbe-8245-b27eddb3aa89.jpg-6cc0198a12f086d080baab2c26996feb.s3tc.ctex", "res://.godot/imported/eagle_Color_5033b85e-d1e7-4dbe-8245-b27eddb3aa89.jpg-6cc0198a12f086d080baab2c26996feb.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=2048
 detect_3d/compress_to=1

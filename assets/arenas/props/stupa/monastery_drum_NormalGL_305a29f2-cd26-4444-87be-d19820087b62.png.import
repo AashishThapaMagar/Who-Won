@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cq2w0461rmaqc"
-path="res://.godot/imported/monastery_drum_NormalGL_305a29f2-cd26-4444-87be-d19820087b62.png-192e342c5061dc55274a39b6af47ca2d.ctex"
+path.s3tc="res://.godot/imported/monastery_drum_NormalGL_305a29f2-cd26-4444-87be-d19820087b62.png-192e342c5061dc55274a39b6af47ca2d.s3tc.ctex"
+path.etc2="res://.godot/imported/monastery_drum_NormalGL_305a29f2-cd26-4444-87be-d19820087b62.png-192e342c5061dc55274a39b6af47ca2d.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "df9f71263bcc8ad702ec11b5dd04144a"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/arenas/props/stupa/monastery_drum_NormalGL_305a29f2-cd26-4444-87be-d19820087b62.png"
-dest_files=["res://.godot/imported/monastery_drum_NormalGL_305a29f2-cd26-4444-87be-d19820087b62.png-192e342c5061dc55274a39b6af47ca2d.ctex"]
+dest_files=["res://.godot/imported/monastery_drum_NormalGL_305a29f2-cd26-4444-87be-d19820087b62.png-192e342c5061dc55274a39b6af47ca2d.s3tc.ctex", "res://.godot/imported/monastery_drum_NormalGL_305a29f2-cd26-4444-87be-d19820087b62.png-192e342c5061dc55274a39b6af47ca2d.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=2048
 detect_3d/compress_to=1

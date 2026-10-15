@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://ca657j75rxv4y"
-path="res://.godot/imported/butter_lamps_Image_0.jpg-fe84c95cc3e228eb788e5dd73446a28a.ctex"
+path.s3tc="res://.godot/imported/butter_lamps_Image_0.jpg-fe84c95cc3e228eb788e5dd73446a28a.s3tc.ctex"
+path.etc2="res://.godot/imported/butter_lamps_Image_0.jpg-fe84c95cc3e228eb788e5dd73446a28a.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "adae5d13bf1da1774ecf473912a9d0c9"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/arenas/props/stupa/butter_lamps_Image_0.jpg"
-dest_files=["res://.godot/imported/butter_lamps_Image_0.jpg-fe84c95cc3e228eb788e5dd73446a28a.ctex"]
+dest_files=["res://.godot/imported/butter_lamps_Image_0.jpg-fe84c95cc3e228eb788e5dd73446a28a.s3tc.ctex", "res://.godot/imported/butter_lamps_Image_0.jpg-fe84c95cc3e228eb788e5dd73446a28a.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=2048
 detect_3d/compress_to=1

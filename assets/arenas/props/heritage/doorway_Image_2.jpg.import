@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dawjdntfxvi4t"
-path="res://.godot/imported/doorway_Image_2.jpg-42e4c022d0c125db6bee5c1dbc84a03a.ctex"
+path.s3tc="res://.godot/imported/doorway_Image_2.jpg-42e4c022d0c125db6bee5c1dbc84a03a.s3tc.ctex"
+path.etc2="res://.godot/imported/doorway_Image_2.jpg-42e4c022d0c125db6bee5c1dbc84a03a.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "908ff5243a29d232731cb7d378f8803f"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/arenas/props/heritage/doorway_Image_2.jpg"
-dest_files=["res://.godot/imported/doorway_Image_2.jpg-42e4c022d0c125db6bee5c1dbc84a03a.ctex"]
+dest_files=["res://.godot/imported/doorway_Image_2.jpg-42e4c022d0c125db6bee5c1dbc84a03a.s3tc.ctex", "res://.godot/imported/doorway_Image_2.jpg-42e4c022d0c125db6bee5c1dbc84a03a.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=2048
 detect_3d/compress_to=1

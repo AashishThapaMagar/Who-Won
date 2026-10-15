@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cemxbtros0f2p"
-path="res://.godot/imported/monastery_hall_35k_texture_0.png-4065c6b4fb54bed2a1492533d02c8708.ctex"
+path.s3tc="res://.godot/imported/monastery_hall_35k_texture_0.png-4065c6b4fb54bed2a1492533d02c8708.s3tc.ctex"
+path.etc2="res://.godot/imported/monastery_hall_35k_texture_0.png-4065c6b4fb54bed2a1492533d02c8708.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "751c0cf900ddbd57cc9141f77da11ee4"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/arenas/props/stupa/monastery_hall_35k_texture_0.png"
-dest_files=["res://.godot/imported/monastery_hall_35k_texture_0.png-4065c6b4fb54bed2a1492533d02c8708.ctex"]
+dest_files=["res://.godot/imported/monastery_hall_35k_texture_0.png-4065c6b4fb54bed2a1492533d02c8708.s3tc.ctex", "res://.godot/imported/monastery_hall_35k_texture_0.png-4065c6b4fb54bed2a1492533d02c8708.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=2048
 detect_3d/compress_to=1

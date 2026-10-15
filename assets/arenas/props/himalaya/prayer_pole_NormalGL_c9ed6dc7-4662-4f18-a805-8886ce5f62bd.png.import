@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://xkxf57dhbcxu"
-path="res://.godot/imported/prayer_pole_NormalGL_c9ed6dc7-4662-4f18-a805-8886ce5f62bd.png-73ce617198b929adefba682423cd190a.ctex"
+path.s3tc="res://.godot/imported/prayer_pole_NormalGL_c9ed6dc7-4662-4f18-a805-8886ce5f62bd.png-73ce617198b929adefba682423cd190a.s3tc.ctex"
+path.etc2="res://.godot/imported/prayer_pole_NormalGL_c9ed6dc7-4662-4f18-a805-8886ce5f62bd.png-73ce617198b929adefba682423cd190a.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "b145a885ccf65b69f91a8ee9de6c0c1a"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/arenas/props/himalaya/prayer_pole_NormalGL_c9ed6dc7-4662-4f18-a805-8886ce5f62bd.png"
-dest_files=["res://.godot/imported/prayer_pole_NormalGL_c9ed6dc7-4662-4f18-a805-8886ce5f62bd.png-73ce617198b929adefba682423cd190a.ctex"]
+dest_files=["res://.godot/imported/prayer_pole_NormalGL_c9ed6dc7-4662-4f18-a805-8886ce5f62bd.png-73ce617198b929adefba682423cd190a.s3tc.ctex", "res://.godot/imported/prayer_pole_NormalGL_c9ed6dc7-4662-4f18-a805-8886ce5f62bd.png-73ce617198b929adefba682423cd190a.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=2048
 detect_3d/compress_to=1

@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dv5g8sqro4hgq"
-path="res://.godot/imported/chautara_Color_a33d2ff5-53db-4f94-a1fd-a503350040da.jpg-7da9a53c0a9eca4120bd28cff9bec9e1.ctex"
+path.s3tc="res://.godot/imported/chautara_Color_a33d2ff5-53db-4f94-a1fd-a503350040da.jpg-7da9a53c0a9eca4120bd28cff9bec9e1.s3tc.ctex"
+path.etc2="res://.godot/imported/chautara_Color_a33d2ff5-53db-4f94-a1fd-a503350040da.jpg-7da9a53c0a9eca4120bd28cff9bec9e1.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "661d5b4da513b2e97ec9c46a33f35512"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/arenas/props/hill/chautara_Color_a33d2ff5-53db-4f94-a1fd-a503350040da.jpg"
-dest_files=["res://.godot/imported/chautara_Color_a33d2ff5-53db-4f94-a1fd-a503350040da.jpg-7da9a53c0a9eca4120bd28cff9bec9e1.ctex"]
+dest_files=["res://.godot/imported/chautara_Color_a33d2ff5-53db-4f94-a1fd-a503350040da.jpg-7da9a53c0a9eca4120bd28cff9bec9e1.s3tc.ctex", "res://.godot/imported/chautara_Color_a33d2ff5-53db-4f94-a1fd-a503350040da.jpg-7da9a53c0a9eca4120bd28cff9bec9e1.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=2048
 detect_3d/compress_to=1

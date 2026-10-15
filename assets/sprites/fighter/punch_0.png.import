@@ -15,9 +15,9 @@ dest_files=["res://.godot/imported/punch_0.png-2dc4d200f2f761e57d8ad536b3a3cbda.
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
-compress/lossy_quality=0.7
+compress/lossy_quality=0.82
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0
 compress/hdr_compression=1

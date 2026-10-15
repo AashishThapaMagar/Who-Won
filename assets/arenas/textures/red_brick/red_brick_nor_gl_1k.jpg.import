@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://m6ufl0kh8cku"
 path.s3tc="res://.godot/imported/red_brick_nor_gl_1k.jpg-2abd3fba2970fc9d9560982ee2bf64e7.s3tc.ctex"
+path.etc2="res://.godot/imported/red_brick_nor_gl_1k.jpg-2abd3fba2970fc9d9560982ee2bf64e7.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/arenas/textures/red_brick/red_brick_nor_gl_1k.jpg"
-dest_files=["res://.godot/imported/red_brick_nor_gl_1k.jpg-2abd3fba2970fc9d9560982ee2bf64e7.s3tc.ctex"]
+dest_files=["res://.godot/imported/red_brick_nor_gl_1k.jpg-2abd3fba2970fc9d9560982ee2bf64e7.s3tc.ctex", "res://.godot/imported/red_brick_nor_gl_1k.jpg-2abd3fba2970fc9d9560982ee2bf64e7.etc2.ctex"]
 
 [params]
 

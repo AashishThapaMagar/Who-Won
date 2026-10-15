@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://clu8bpe7d8cuo"
-path="res://.godot/imported/lama_NormalGL_f7352aac-0fb0-4df4-a8bc-5423aeb229ba.jpg-c5d44e27192161f8eca8682a6f3fa5bf.ctex"
+path.s3tc="res://.godot/imported/lama_NormalGL_f7352aac-0fb0-4df4-a8bc-5423aeb229ba.jpg-c5d44e27192161f8eca8682a6f3fa5bf.s3tc.ctex"
+path.etc2="res://.godot/imported/lama_NormalGL_f7352aac-0fb0-4df4-a8bc-5423aeb229ba.jpg-c5d44e27192161f8eca8682a6f3fa5bf.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "aa65a785f7259e99aacb6722d7993a33"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/announcer/lama_NormalGL_f7352aac-0fb0-4df4-a8bc-5423aeb229ba.jpg"
-dest_files=["res://.godot/imported/lama_NormalGL_f7352aac-0fb0-4df4-a8bc-5423aeb229ba.jpg-c5d44e27192161f8eca8682a6f3fa5bf.ctex"]
+dest_files=["res://.godot/imported/lama_NormalGL_f7352aac-0fb0-4df4-a8bc-5423aeb229ba.jpg-c5d44e27192161f8eca8682a6f3fa5bf.s3tc.ctex", "res://.godot/imported/lama_NormalGL_f7352aac-0fb0-4df4-a8bc-5423aeb229ba.jpg-c5d44e27192161f8eca8682a6f3fa5bf.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=2048
 detect_3d/compress_to=1

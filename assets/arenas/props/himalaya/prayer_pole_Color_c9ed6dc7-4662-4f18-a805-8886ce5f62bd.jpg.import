@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://1f0icdsn7rhc"
-path="res://.godot/imported/prayer_pole_Color_c9ed6dc7-4662-4f18-a805-8886ce5f62bd.jpg-25f01d7c0c9ca14aec73fbb6c86ae202.ctex"
+path.s3tc="res://.godot/imported/prayer_pole_Color_c9ed6dc7-4662-4f18-a805-8886ce5f62bd.jpg-25f01d7c0c9ca14aec73fbb6c86ae202.s3tc.ctex"
+path.etc2="res://.godot/imported/prayer_pole_Color_c9ed6dc7-4662-4f18-a805-8886ce5f62bd.jpg-25f01d7c0c9ca14aec73fbb6c86ae202.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "1d032e9d7b013a0e493790ff1143f21d"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/arenas/props/himalaya/prayer_pole_Color_c9ed6dc7-4662-4f18-a805-8886ce5f62bd.jpg"
-dest_files=["res://.godot/imported/prayer_pole_Color_c9ed6dc7-4662-4f18-a805-8886ce5f62bd.jpg-25f01d7c0c9ca14aec73fbb6c86ae202.ctex"]
+dest_files=["res://.godot/imported/prayer_pole_Color_c9ed6dc7-4662-4f18-a805-8886ce5f62bd.jpg-25f01d7c0c9ca14aec73fbb6c86ae202.s3tc.ctex", "res://.godot/imported/prayer_pole_Color_c9ed6dc7-4662-4f18-a805-8886ce5f62bd.jpg-25f01d7c0c9ca14aec73fbb6c86ae202.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=2048
 detect_3d/compress_to=1

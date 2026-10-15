@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dxicextedee8y"
-path="res://.godot/imported/rhododendron_NormalGL_cad2fdb5-df9b-4665-b43a-01def247e87b.png-68441ca6c06c8031a0a5763c1e9e23a7.ctex"
+path.s3tc="res://.godot/imported/rhododendron_NormalGL_cad2fdb5-df9b-4665-b43a-01def247e87b.png-68441ca6c06c8031a0a5763c1e9e23a7.s3tc.ctex"
+path.etc2="res://.godot/imported/rhododendron_NormalGL_cad2fdb5-df9b-4665-b43a-01def247e87b.png-68441ca6c06c8031a0a5763c1e9e23a7.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "c925c951a0794aa53187122fd10d5d7b"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/arenas/props/hill/rhododendron_NormalGL_cad2fdb5-df9b-4665-b43a-01def247e87b.png"
-dest_files=["res://.godot/imported/rhododendron_NormalGL_cad2fdb5-df9b-4665-b43a-01def247e87b.png-68441ca6c06c8031a0a5763c1e9e23a7.ctex"]
+dest_files=["res://.godot/imported/rhododendron_NormalGL_cad2fdb5-df9b-4665-b43a-01def247e87b.png-68441ca6c06c8031a0a5763c1e9e23a7.s3tc.ctex", "res://.godot/imported/rhododendron_NormalGL_cad2fdb5-df9b-4665-b43a-01def247e87b.png-68441ca6c06c8031a0a5763c1e9e23a7.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=2048
 detect_3d/compress_to=1

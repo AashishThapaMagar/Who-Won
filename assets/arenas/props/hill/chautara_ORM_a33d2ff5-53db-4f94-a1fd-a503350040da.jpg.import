@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cpugjr4qnrlhj"
-path="res://.godot/imported/chautara_ORM_a33d2ff5-53db-4f94-a1fd-a503350040da.jpg-5f57613172260a0dec0984f5f5cf2fff.ctex"
+path.s3tc="res://.godot/imported/chautara_ORM_a33d2ff5-53db-4f94-a1fd-a503350040da.jpg-5f57613172260a0dec0984f5f5cf2fff.s3tc.ctex"
+path.etc2="res://.godot/imported/chautara_ORM_a33d2ff5-53db-4f94-a1fd-a503350040da.jpg-5f57613172260a0dec0984f5f5cf2fff.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "e51dedb92182a330cc7faf60b0a95992"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/arenas/props/hill/chautara_ORM_a33d2ff5-53db-4f94-a1fd-a503350040da.jpg"
-dest_files=["res://.godot/imported/chautara_ORM_a33d2ff5-53db-4f94-a1fd-a503350040da.jpg-5f57613172260a0dec0984f5f5cf2fff.ctex"]
+dest_files=["res://.godot/imported/chautara_ORM_a33d2ff5-53db-4f94-a1fd-a503350040da.jpg-5f57613172260a0dec0984f5f5cf2fff.s3tc.ctex", "res://.godot/imported/chautara_ORM_a33d2ff5-53db-4f94-a1fd-a503350040da.jpg-5f57613172260a0dec0984f5f5cf2fff.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=2048
 detect_3d/compress_to=1

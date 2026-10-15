@@ -59,3 +59,6 @@ assets/arenas/props/stupa/monk_quarters_src.glb.import
 
 # Development captures (tools/ui_gallery.gd)
 screenshots/
+
+# Phone builds
+build/

@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dbfe5mye2m52m"
-path="res://.godot/imported/chiya_pasal_ORM_35672091-fbea-4075-a35e-cea87c64a542.jpg-a40175f6f11c6fe94a5b938e4c911742.ctex"
+path.s3tc="res://.godot/imported/chiya_pasal_ORM_35672091-fbea-4075-a35e-cea87c64a542.jpg-a40175f6f11c6fe94a5b938e4c911742.s3tc.ctex"
+path.etc2="res://.godot/imported/chiya_pasal_ORM_35672091-fbea-4075-a35e-cea87c64a542.jpg-a40175f6f11c6fe94a5b938e4c911742.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "220a53dbeca4238a579a3ee3e600ed3f"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/arenas/props/story_places/chiya_pasal_ORM_35672091-fbea-4075-a35e-cea87c64a542.jpg"
-dest_files=["res://.godot/imported/chiya_pasal_ORM_35672091-fbea-4075-a35e-cea87c64a542.jpg-a40175f6f11c6fe94a5b938e4c911742.ctex"]
+dest_files=["res://.godot/imported/chiya_pasal_ORM_35672091-fbea-4075-a35e-cea87c64a542.jpg-a40175f6f11c6fe94a5b938e4c911742.s3tc.ctex", "res://.godot/imported/chiya_pasal_ORM_35672091-fbea-4075-a35e-cea87c64a542.jpg-a40175f6f11c6fe94a5b938e4c911742.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=2048
 detect_3d/compress_to=1

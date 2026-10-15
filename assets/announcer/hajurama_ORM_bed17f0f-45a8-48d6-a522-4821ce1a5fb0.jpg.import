@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://v0nq3k7y74o0"
 path.s3tc="res://.godot/imported/hajurama_ORM_bed17f0f-45a8-48d6-a522-4821ce1a5fb0.jpg-bbb15f10cf57e32cf43479e05fcd9f7b.s3tc.ctex"
+path.etc2="res://.godot/imported/hajurama_ORM_bed17f0f-45a8-48d6-a522-4821ce1a5fb0.jpg-bbb15f10cf57e32cf43479e05fcd9f7b.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/announcer/hajurama_ORM_bed17f0f-45a8-48d6-a522-4821ce1a5fb0.jpg"
-dest_files=["res://.godot/imported/hajurama_ORM_bed17f0f-45a8-48d6-a522-4821ce1a5fb0.jpg-bbb15f10cf57e32cf43479e05fcd9f7b.s3tc.ctex"]
+dest_files=["res://.godot/imported/hajurama_ORM_bed17f0f-45a8-48d6-a522-4821ce1a5fb0.jpg-bbb15f10cf57e32cf43479e05fcd9f7b.s3tc.ctex", "res://.godot/imported/hajurama_ORM_bed17f0f-45a8-48d6-a522-4821ce1a5fb0.jpg-bbb15f10cf57e32cf43479e05fcd9f7b.etc2.ctex"]
 
 [params]
 

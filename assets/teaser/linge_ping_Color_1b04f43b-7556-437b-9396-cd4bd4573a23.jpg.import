@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bkg8ni8rdbqmd"
-path="res://.godot/imported/linge_ping_Color_1b04f43b-7556-437b-9396-cd4bd4573a23.jpg-dde28559571634c27acc6b891ccfe9af.ctex"
+path.s3tc="res://.godot/imported/linge_ping_Color_1b04f43b-7556-437b-9396-cd4bd4573a23.jpg-dde28559571634c27acc6b891ccfe9af.s3tc.ctex"
+path.etc2="res://.godot/imported/linge_ping_Color_1b04f43b-7556-437b-9396-cd4bd4573a23.jpg-dde28559571634c27acc6b891ccfe9af.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "0a41e52edc1dab44e104b45d2818d669"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/teaser/linge_ping_Color_1b04f43b-7556-437b-9396-cd4bd4573a23.jpg"
-dest_files=["res://.godot/imported/linge_ping_Color_1b04f43b-7556-437b-9396-cd4bd4573a23.jpg-dde28559571634c27acc6b891ccfe9af.ctex"]
+dest_files=["res://.godot/imported/linge_ping_Color_1b04f43b-7556-437b-9396-cd4bd4573a23.jpg-dde28559571634c27acc6b891ccfe9af.s3tc.ctex", "res://.godot/imported/linge_ping_Color_1b04f43b-7556-437b-9396-cd4bd4573a23.jpg-dde28559571634c27acc6b891ccfe9af.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=2048
 detect_3d/compress_to=1

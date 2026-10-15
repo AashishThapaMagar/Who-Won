@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://owgo2c016iis"
 path.s3tc="res://.godot/imported/roof_09_rough_1k.jpg-d1fbb232fa0a924caad64cf973e0a384.s3tc.ctex"
+path.etc2="res://.godot/imported/roof_09_rough_1k.jpg-d1fbb232fa0a924caad64cf973e0a384.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/arenas/textures/roof_09/roof_09_rough_1k.jpg"
-dest_files=["res://.godot/imported/roof_09_rough_1k.jpg-d1fbb232fa0a924caad64cf973e0a384.s3tc.ctex"]
+dest_files=["res://.godot/imported/roof_09_rough_1k.jpg-d1fbb232fa0a924caad64cf973e0a384.s3tc.ctex", "res://.godot/imported/roof_09_rough_1k.jpg-d1fbb232fa0a924caad64cf973e0a384.etc2.ctex"]
 
 [params]
 

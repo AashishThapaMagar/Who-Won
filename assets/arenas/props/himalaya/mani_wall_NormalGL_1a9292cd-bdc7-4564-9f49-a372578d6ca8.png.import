@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://k24lisj372og"
-path="res://.godot/imported/mani_wall_NormalGL_1a9292cd-bdc7-4564-9f49-a372578d6ca8.png-3957c56f5781b25806de6fdb8549ac81.ctex"
+path.s3tc="res://.godot/imported/mani_wall_NormalGL_1a9292cd-bdc7-4564-9f49-a372578d6ca8.png-3957c56f5781b25806de6fdb8549ac81.s3tc.ctex"
+path.etc2="res://.godot/imported/mani_wall_NormalGL_1a9292cd-bdc7-4564-9f49-a372578d6ca8.png-3957c56f5781b25806de6fdb8549ac81.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "b367f5c1bc2f84ced31cc2088ca7cd41"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/arenas/props/himalaya/mani_wall_NormalGL_1a9292cd-bdc7-4564-9f49-a372578d6ca8.png"
-dest_files=["res://.godot/imported/mani_wall_NormalGL_1a9292cd-bdc7-4564-9f49-a372578d6ca8.png-3957c56f5781b25806de6fdb8549ac81.ctex"]
+dest_files=["res://.godot/imported/mani_wall_NormalGL_1a9292cd-bdc7-4564-9f49-a372578d6ca8.png-3957c56f5781b25806de6fdb8549ac81.s3tc.ctex", "res://.godot/imported/mani_wall_NormalGL_1a9292cd-bdc7-4564-9f49-a372578d6ca8.png-3957c56f5781b25806de6fdb8549ac81.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=2048
 detect_3d/compress_to=1

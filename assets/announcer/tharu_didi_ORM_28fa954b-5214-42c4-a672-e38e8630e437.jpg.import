@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://ybfkis15grj"
-path="res://.godot/imported/tharu_didi_ORM_28fa954b-5214-42c4-a672-e38e8630e437.jpg-ffc9eac51dd79bd43d504f7e797e2e69.ctex"
+path.s3tc="res://.godot/imported/tharu_didi_ORM_28fa954b-5214-42c4-a672-e38e8630e437.jpg-ffc9eac51dd79bd43d504f7e797e2e69.s3tc.ctex"
+path.etc2="res://.godot/imported/tharu_didi_ORM_28fa954b-5214-42c4-a672-e38e8630e437.jpg-ffc9eac51dd79bd43d504f7e797e2e69.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "ae2113087f10049db895bd508a386bf9"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/announcer/tharu_didi_ORM_28fa954b-5214-42c4-a672-e38e8630e437.jpg"
-dest_files=["res://.godot/imported/tharu_didi_ORM_28fa954b-5214-42c4-a672-e38e8630e437.jpg-ffc9eac51dd79bd43d504f7e797e2e69.ctex"]
+dest_files=["res://.godot/imported/tharu_didi_ORM_28fa954b-5214-42c4-a672-e38e8630e437.jpg-ffc9eac51dd79bd43d504f7e797e2e69.s3tc.ctex", "res://.godot/imported/tharu_didi_ORM_28fa954b-5214-42c4-a672-e38e8630e437.jpg-ffc9eac51dd79bd43d504f7e797e2e69.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=2048
 detect_3d/compress_to=1

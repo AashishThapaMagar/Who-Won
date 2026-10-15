@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://cpgxxcrtoy7f6"
 path.s3tc="res://.godot/imported/aerial_rocks_02_nor_gl_1k.jpg-dc09a1448a932e8ef5866f98eadfd7c5.s3tc.ctex"
+path.etc2="res://.godot/imported/aerial_rocks_02_nor_gl_1k.jpg-dc09a1448a932e8ef5866f98eadfd7c5.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/arenas/textures/aerial_rocks_02/aerial_rocks_02_nor_gl_1k.jpg"
-dest_files=["res://.godot/imported/aerial_rocks_02_nor_gl_1k.jpg-dc09a1448a932e8ef5866f98eadfd7c5.s3tc.ctex"]
+dest_files=["res://.godot/imported/aerial_rocks_02_nor_gl_1k.jpg-dc09a1448a932e8ef5866f98eadfd7c5.s3tc.ctex", "res://.godot/imported/aerial_rocks_02_nor_gl_1k.jpg-dc09a1448a932e8ef5866f98eadfd7c5.etc2.ctex"]
 
 [params]
 

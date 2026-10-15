@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://lnpdcba0a5ts"
-path="res://.godot/imported/sitting_log_ORM_0b4c8bbf-7d57-4366-9a68-d29df334e6d1.jpg-f86570b89b6d8b102bc60ebba73427a8.ctex"
+path.s3tc="res://.godot/imported/sitting_log_ORM_0b4c8bbf-7d57-4366-9a68-d29df334e6d1.jpg-f86570b89b6d8b102bc60ebba73427a8.s3tc.ctex"
+path.etc2="res://.godot/imported/sitting_log_ORM_0b4c8bbf-7d57-4366-9a68-d29df334e6d1.jpg-f86570b89b6d8b102bc60ebba73427a8.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "e0f766c26ce4d04fecc5f2ad56cf0a80"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/arenas/props/story_sup/sitting_log_ORM_0b4c8bbf-7d57-4366-9a68-d29df334e6d1.jpg"
-dest_files=["res://.godot/imported/sitting_log_ORM_0b4c8bbf-7d57-4366-9a68-d29df334e6d1.jpg-f86570b89b6d8b102bc60ebba73427a8.ctex"]
+dest_files=["res://.godot/imported/sitting_log_ORM_0b4c8bbf-7d57-4366-9a68-d29df334e6d1.jpg-f86570b89b6d8b102bc60ebba73427a8.s3tc.ctex", "res://.godot/imported/sitting_log_ORM_0b4c8bbf-7d57-4366-9a68-d29df334e6d1.jpg-f86570b89b6d8b102bc60ebba73427a8.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=2048
 detect_3d/compress_to=1

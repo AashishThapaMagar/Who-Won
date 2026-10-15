@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cj7jl8urfambj"
-path="res://.godot/imported/suspension_bridge_Color_3a292b5b-2fc8-4b8f-9eaf-ec5bc03b84ac.jpg-0ea4eb6a63b40195ddd4cdc106abb688.ctex"
+path.s3tc="res://.godot/imported/suspension_bridge_Color_3a292b5b-2fc8-4b8f-9eaf-ec5bc03b84ac.jpg-0ea4eb6a63b40195ddd4cdc106abb688.s3tc.ctex"
+path.etc2="res://.godot/imported/suspension_bridge_Color_3a292b5b-2fc8-4b8f-9eaf-ec5bc03b84ac.jpg-0ea4eb6a63b40195ddd4cdc106abb688.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "f07862bc3e39fc0dc32f823748a5581f"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/arenas/props/hill/suspension_bridge_Color_3a292b5b-2fc8-4b8f-9eaf-ec5bc03b84ac.jpg"
-dest_files=["res://.godot/imported/suspension_bridge_Color_3a292b5b-2fc8-4b8f-9eaf-ec5bc03b84ac.jpg-0ea4eb6a63b40195ddd4cdc106abb688.ctex"]
+dest_files=["res://.godot/imported/suspension_bridge_Color_3a292b5b-2fc8-4b8f-9eaf-ec5bc03b84ac.jpg-0ea4eb6a63b40195ddd4cdc106abb688.s3tc.ctex", "res://.godot/imported/suspension_bridge_Color_3a292b5b-2fc8-4b8f-9eaf-ec5bc03b84ac.jpg-0ea4eb6a63b40195ddd4cdc106abb688.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=2048
 detect_3d/compress_to=1

@@ -216,9 +216,14 @@ func set_touch_controls(value: bool) -> void:
 	_save()
 
 func _apply() -> void:
+	# A phone always plays full screen (no status or navigation bar), and
+	# its screen stays awake through a fight.
+	var phone := OS.has_feature("mobile")
 	DisplayServer.window_set_mode(
-		DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen else DisplayServer.WINDOW_MODE_WINDOWED
+		DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen or phone else DisplayServer.WINDOW_MODE_WINDOWED
 	)
+	if phone:
+		DisplayServer.screen_set_keep_on(true)
 	apply_audio()
 
 ## Also called by the Sfx autoload once it has created the SFX bus.

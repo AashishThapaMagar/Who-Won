@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://d0mh1fb4sgexb"
-path="res://.godot/imported/tharu_house_Color_f977dfb8-b639-40e6-8eda-6ae0d3593b82.jpg-b24f9cb4f96c5055d1208452cc590dd6.ctex"
+path.s3tc="res://.godot/imported/tharu_house_Color_f977dfb8-b639-40e6-8eda-6ae0d3593b82.jpg-b24f9cb4f96c5055d1208452cc590dd6.s3tc.ctex"
+path.etc2="res://.godot/imported/tharu_house_Color_f977dfb8-b639-40e6-8eda-6ae0d3593b82.jpg-b24f9cb4f96c5055d1208452cc590dd6.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "7b9be6825e36ab5c97507b979aaefdd0"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/arenas/props/terai/tharu_house_Color_f977dfb8-b639-40e6-8eda-6ae0d3593b82.jpg"
-dest_files=["res://.godot/imported/tharu_house_Color_f977dfb8-b639-40e6-8eda-6ae0d3593b82.jpg-b24f9cb4f96c5055d1208452cc590dd6.ctex"]
+dest_files=["res://.godot/imported/tharu_house_Color_f977dfb8-b639-40e6-8eda-6ae0d3593b82.jpg-b24f9cb4f96c5055d1208452cc590dd6.s3tc.ctex", "res://.godot/imported/tharu_house_Color_f977dfb8-b639-40e6-8eda-6ae0d3593b82.jpg-b24f9cb4f96c5055d1208452cc590dd6.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=2048
 detect_3d/compress_to=1

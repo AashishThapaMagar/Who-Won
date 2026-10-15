@@ -352,6 +352,8 @@ F1 in a fight: every move and combo.": "1 2 मुक्का, 3 4 लात।
 	"FREE PRACTICE": "खुला अभ्यास",
 
 	# ── Touch buttons ──
+	"PUNCH": "मुक्का",
+	"KICK": "लात",
 	"UP": "माथि",
 	"DOWN": "तल",
 	"CALL": "ललकार",

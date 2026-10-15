@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bcrfrbu86x3ji"
-path="res://.godot/imported/spin_kick_body_1.png-9824179d59cf787e7c6c6e06cfb0942c.ctex"
+path.s3tc="res://.godot/imported/spin_kick_body_1.png-9824179d59cf787e7c6c6e06cfb0942c.s3tc.ctex"
+path.etc2="res://.godot/imported/spin_kick_body_1.png-9824179d59cf787e7c6c6e06cfb0942c.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "dc788fed7da0aa688b1bedce5fb66968"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/fighters/anant/tripo/spin_kick_body_1.png"
-dest_files=["res://.godot/imported/spin_kick_body_1.png-9824179d59cf787e7c6c6e06cfb0942c.ctex"]
+dest_files=["res://.godot/imported/spin_kick_body_1.png-9824179d59cf787e7c6c6e06cfb0942c.s3tc.ctex", "res://.godot/imported/spin_kick_body_1.png-9824179d59cf787e7c6c6e06cfb0942c.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=2048
 detect_3d/compress_to=1

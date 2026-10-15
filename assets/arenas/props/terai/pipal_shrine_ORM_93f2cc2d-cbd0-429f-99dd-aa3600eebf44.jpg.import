@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://nbhb4deq68wd"
-path="res://.godot/imported/pipal_shrine_ORM_93f2cc2d-cbd0-429f-99dd-aa3600eebf44.jpg-68e24eac7da7cfbfa00e968698d0acf1.ctex"
+path.s3tc="res://.godot/imported/pipal_shrine_ORM_93f2cc2d-cbd0-429f-99dd-aa3600eebf44.jpg-68e24eac7da7cfbfa00e968698d0acf1.s3tc.ctex"
+path.etc2="res://.godot/imported/pipal_shrine_ORM_93f2cc2d-cbd0-429f-99dd-aa3600eebf44.jpg-68e24eac7da7cfbfa00e968698d0acf1.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "76c9ca5fe54edd8d53235360cd4a4cea"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/arenas/props/terai/pipal_shrine_ORM_93f2cc2d-cbd0-429f-99dd-aa3600eebf44.jpg"
-dest_files=["res://.godot/imported/pipal_shrine_ORM_93f2cc2d-cbd0-429f-99dd-aa3600eebf44.jpg-68e24eac7da7cfbfa00e968698d0acf1.ctex"]
+dest_files=["res://.godot/imported/pipal_shrine_ORM_93f2cc2d-cbd0-429f-99dd-aa3600eebf44.jpg-68e24eac7da7cfbfa00e968698d0acf1.s3tc.ctex", "res://.godot/imported/pipal_shrine_ORM_93f2cc2d-cbd0-429f-99dd-aa3600eebf44.jpg-68e24eac7da7cfbfa00e968698d0acf1.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=2048
 detect_3d/compress_to=1

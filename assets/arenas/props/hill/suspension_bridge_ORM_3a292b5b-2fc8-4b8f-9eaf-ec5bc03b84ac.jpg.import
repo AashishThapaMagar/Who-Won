@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b76rm2wuhb71o"
-path="res://.godot/imported/suspension_bridge_ORM_3a292b5b-2fc8-4b8f-9eaf-ec5bc03b84ac.jpg-f6c4364ef5f3cd78bb85526a3a3ee84e.ctex"
+path.s3tc="res://.godot/imported/suspension_bridge_ORM_3a292b5b-2fc8-4b8f-9eaf-ec5bc03b84ac.jpg-f6c4364ef5f3cd78bb85526a3a3ee84e.s3tc.ctex"
+path.etc2="res://.godot/imported/suspension_bridge_ORM_3a292b5b-2fc8-4b8f-9eaf-ec5bc03b84ac.jpg-f6c4364ef5f3cd78bb85526a3a3ee84e.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "c43efaf2ddd00799bdb7a3e5a62bdfd6"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/arenas/props/hill/suspension_bridge_ORM_3a292b5b-2fc8-4b8f-9eaf-ec5bc03b84ac.jpg"
-dest_files=["res://.godot/imported/suspension_bridge_ORM_3a292b5b-2fc8-4b8f-9eaf-ec5bc03b84ac.jpg-f6c4364ef5f3cd78bb85526a3a3ee84e.ctex"]
+dest_files=["res://.godot/imported/suspension_bridge_ORM_3a292b5b-2fc8-4b8f-9eaf-ec5bc03b84ac.jpg-f6c4364ef5f3cd78bb85526a3a3ee84e.s3tc.ctex", "res://.godot/imported/suspension_bridge_ORM_3a292b5b-2fc8-4b8f-9eaf-ec5bc03b84ac.jpg-f6c4364ef5f3cd78bb85526a3a3ee84e.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=2048
 detect_3d/compress_to=1

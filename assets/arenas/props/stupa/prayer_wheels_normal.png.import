@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c18pf2du26vy7"
-path="res://.godot/imported/prayer_wheels_normal.png-d64f2e0f93604199b03455d35eef37e1.ctex"
+path.s3tc="res://.godot/imported/prayer_wheels_normal.png-d64f2e0f93604199b03455d35eef37e1.s3tc.ctex"
+path.etc2="res://.godot/imported/prayer_wheels_normal.png-d64f2e0f93604199b03455d35eef37e1.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "7ab87e4cf98db5b62151ef2d8a8471de"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/arenas/props/stupa/prayer_wheels_normal.png"
-dest_files=["res://.godot/imported/prayer_wheels_normal.png-d64f2e0f93604199b03455d35eef37e1.ctex"]
+dest_files=["res://.godot/imported/prayer_wheels_normal.png-d64f2e0f93604199b03455d35eef37e1.s3tc.ctex", "res://.godot/imported/prayer_wheels_normal.png-d64f2e0f93604199b03455d35eef37e1.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=2048
 detect_3d/compress_to=1

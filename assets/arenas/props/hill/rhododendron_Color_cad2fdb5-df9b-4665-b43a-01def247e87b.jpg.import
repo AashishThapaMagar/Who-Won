@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bo1kmoscwg0gi"
-path="res://.godot/imported/rhododendron_Color_cad2fdb5-df9b-4665-b43a-01def247e87b.jpg-e3a363dad74e8893457f39300eb94ea6.ctex"
+path.s3tc="res://.godot/imported/rhododendron_Color_cad2fdb5-df9b-4665-b43a-01def247e87b.jpg-e3a363dad74e8893457f39300eb94ea6.s3tc.ctex"
+path.etc2="res://.godot/imported/rhododendron_Color_cad2fdb5-df9b-4665-b43a-01def247e87b.jpg-e3a363dad74e8893457f39300eb94ea6.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "42a7f99741e298edb08a5af3aa87ebb6"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/arenas/props/hill/rhododendron_Color_cad2fdb5-df9b-4665-b43a-01def247e87b.jpg"
-dest_files=["res://.godot/imported/rhododendron_Color_cad2fdb5-df9b-4665-b43a-01def247e87b.jpg-e3a363dad74e8893457f39300eb94ea6.ctex"]
+dest_files=["res://.godot/imported/rhododendron_Color_cad2fdb5-df9b-4665-b43a-01def247e87b.jpg-e3a363dad74e8893457f39300eb94ea6.s3tc.ctex", "res://.godot/imported/rhododendron_Color_cad2fdb5-df9b-4665-b43a-01def247e87b.jpg-e3a363dad74e8893457f39300eb94ea6.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=2048
 detect_3d/compress_to=1

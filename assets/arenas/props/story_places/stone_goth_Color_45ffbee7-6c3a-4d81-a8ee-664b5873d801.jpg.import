@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bcbyf15xlrsu"
-path="res://.godot/imported/stone_goth_Color_45ffbee7-6c3a-4d81-a8ee-664b5873d801.jpg-0a022fe8c78ce97328c674b7847c67bb.ctex"
+path.s3tc="res://.godot/imported/stone_goth_Color_45ffbee7-6c3a-4d81-a8ee-664b5873d801.jpg-0a022fe8c78ce97328c674b7847c67bb.s3tc.ctex"
+path.etc2="res://.godot/imported/stone_goth_Color_45ffbee7-6c3a-4d81-a8ee-664b5873d801.jpg-0a022fe8c78ce97328c674b7847c67bb.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "baaa00053ea5b55b2fb3088b22798590"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/arenas/props/story_places/stone_goth_Color_45ffbee7-6c3a-4d81-a8ee-664b5873d801.jpg"
-dest_files=["res://.godot/imported/stone_goth_Color_45ffbee7-6c3a-4d81-a8ee-664b5873d801.jpg-0a022fe8c78ce97328c674b7847c67bb.ctex"]
+dest_files=["res://.godot/imported/stone_goth_Color_45ffbee7-6c3a-4d81-a8ee-664b5873d801.jpg-0a022fe8c78ce97328c674b7847c67bb.s3tc.ctex", "res://.godot/imported/stone_goth_Color_45ffbee7-6c3a-4d81-a8ee-664b5873d801.jpg-0a022fe8c78ce97328c674b7847c67bb.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=2048
 detect_3d/compress_to=1

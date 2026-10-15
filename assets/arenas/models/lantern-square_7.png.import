@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://b0wbp2rgc0afa"
 path.s3tc="res://.godot/imported/lantern-square_7.png-f986c7d82f298bffb8da7490c33e8a42.s3tc.ctex"
+path.etc2="res://.godot/imported/lantern-square_7.png-f986c7d82f298bffb8da7490c33e8a42.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/arenas/models/lantern-square_7.png"
-dest_files=["res://.godot/imported/lantern-square_7.png-f986c7d82f298bffb8da7490c33e8a42.s3tc.ctex"]
+dest_files=["res://.godot/imported/lantern-square_7.png-f986c7d82f298bffb8da7490c33e8a42.s3tc.ctex", "res://.godot/imported/lantern-square_7.png-f986c7d82f298bffb8da7490c33e8a42.etc2.ctex"]
 
 [params]
 

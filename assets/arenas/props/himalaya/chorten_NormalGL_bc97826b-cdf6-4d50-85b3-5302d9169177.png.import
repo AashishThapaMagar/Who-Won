@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://7efq1taeamtn"
-path="res://.godot/imported/chorten_NormalGL_bc97826b-cdf6-4d50-85b3-5302d9169177.png-49ae55074dae44a16cc01fd364f386c1.ctex"
+path.s3tc="res://.godot/imported/chorten_NormalGL_bc97826b-cdf6-4d50-85b3-5302d9169177.png-49ae55074dae44a16cc01fd364f386c1.s3tc.ctex"
+path.etc2="res://.godot/imported/chorten_NormalGL_bc97826b-cdf6-4d50-85b3-5302d9169177.png-49ae55074dae44a16cc01fd364f386c1.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "0a1da2f0e9c3c32b84f6c2d35cd95939"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/arenas/props/himalaya/chorten_NormalGL_bc97826b-cdf6-4d50-85b3-5302d9169177.png"
-dest_files=["res://.godot/imported/chorten_NormalGL_bc97826b-cdf6-4d50-85b3-5302d9169177.png-49ae55074dae44a16cc01fd364f386c1.ctex"]
+dest_files=["res://.godot/imported/chorten_NormalGL_bc97826b-cdf6-4d50-85b3-5302d9169177.png-49ae55074dae44a16cc01fd364f386c1.s3tc.ctex", "res://.godot/imported/chorten_NormalGL_bc97826b-cdf6-4d50-85b3-5302d9169177.png-49ae55074dae44a16cc01fd364f386c1.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=2048
 detect_3d/compress_to=1
