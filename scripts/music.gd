@@ -6,7 +6,10 @@ var player: AudioStreamPlayer
 const BASE_VOLUME_DB := -10.0
 ## An arena with music of its own (stage index as in nepal_stage_3d ROUNDS)
 ## crossfades to it for the fight and back to the soundtrack after.
-const ARENA_TRACKS := {0: "res://assets/audio/music/heritage_square.ogg"}
+const ARENA_TRACKS := {
+	0: "res://assets/audio/music/heritage_square.ogg",   # calm: sarangi, bansuri, madal
+	5: "res://assets/audio/music/dashain_ground.ogg",    # Kung Fu Hustle-style chase
+}
 const CROSSFADE := 1.8
 const SILENT_DB := -60.0
 var arena_player: AudioStreamPlayer
