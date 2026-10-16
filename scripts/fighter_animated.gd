@@ -1059,12 +1059,66 @@ func _resolve_clips() -> void:
 		if animation != null:
 			animation.loop_mode = Animation.LOOP_LINEAR if clip_names.find_key(name) in LOOPING else Animation.LOOP_NONE
 
+## Sounds that belong to the body, read off the pose last drawn: a step
+## each time a foot plants while walking or running, and the thud of a
+## falling fighter the moment its hips reach the ground (a knockout or a
+## sweep), not when the blow landed. A plant is the foot coming back down
+## to its own resting height (each rig's ankle rests at its own height)
+## after lifting off it; speed can't tell, as feet creep over the floor
+## when a clip and the ground speed don't quite match. Heights in metres.
+const FOOT_LIFT := 0.02
+const FOOT_REST := 0.01
+const FOOT_GAP := 0.2
+const HIPS_DOWN := 0.42
+var _foot_lifted := {}
+var _foot_floor := {}
+var _foot_planted_at := {}
+var _cue_clock := 0.0
+var _fell := false
+var _cue_bones := {}
+func _sound_cues(fighter: Node, step: float) -> void:
+	if skeleton == null or root == null or fighter.get("body") == null:
+		return
+	var floor_y: float = fighter.body.global_position.y
+	var S: Dictionary = fighter.State
+	var walking: bool = fighter.state in [S.WALK, S.DASH] and fighter_grounded() and fighter.get("crouching") != true
+	for key in ["leftfoot", "rightfoot", "hips"]:
+		if not _cue_bones.has(key):
+			_cue_bones[key] = _bone(key)
+	_cue_clock += step
+	for key in ["leftfoot", "rightfoot"]:
+		var bone: int = _cue_bones[key]
+		if bone < 0:
+			continue
+		var height: float = (skeleton.global_transform * skeleton.get_bone_global_pose(bone)).origin.y - floor_y
+		# The foot's resting height: the lowest it has been lately.
+		var rest: float = minf(_foot_floor.get(key, height) + step * 0.05, height)
+		_foot_floor[key] = rest
+		if height > rest + FOOT_LIFT:
+			_foot_lifted[key] = true
+		elif height < rest + FOOT_REST and _foot_lifted.get(key, false):
+			_foot_lifted[key] = false
+			if walking and _cue_clock - float(_foot_planted_at.get(key, -1.0)) >= FOOT_GAP:
+				_foot_planted_at[key] = _cue_clock
+				var run: bool = fighter.running or fighter.state == S.DASH
+				preload("res://scripts/sfx.gd").fire("step_run" if run else "step_walk", -12.0 if run else -15.0)
+	var falling: bool = fighter.state == S.KO or (fighter.state == S.KNOCKDOWN and fighter.get("swept") == true)
+	var hips: int = _cue_bones["hips"]
+	if falling and hips >= 0:
+		var hips_height: float = (skeleton.global_transform * skeleton.get_bone_global_pose(hips)).origin.y - floor_y
+		if not _fell and hips_height < HIPS_DOWN:
+			_fell = true
+			preload("res://scripts/sfx.gd").fire("ko" if fighter.state == S.KO else "fall", 0.0 if fighter.state == S.KO else -2.0)
+	else:
+		_fell = false
+
 ## Picks and poses the clip for this frame. Called from the visual's
 ## _process and sync_pose.
 func update(delta: float) -> void:
 	if not active or visual.fighter == null:
 		return
 	var fighter: Node = visual.fighter
+	_sound_cues(fighter, delta)
 	# Only the facing turn: the procedural rig's knockdown/hit spin would
 	# double up with the clips' own falls and sink the model into the floor.
 	root.transform = Transform3D(Basis(Vector3.UP, visual.model.rotation.y), visual.model.position)

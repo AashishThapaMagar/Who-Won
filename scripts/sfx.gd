@@ -16,7 +16,8 @@ const USE_GENERATED := false
 ## A sound may have variants (hit_light_2.ogg, hit_light_3.ogg ...); each
 ## play picks one at random. Made by tools/make_eleven_sfx.py.
 const NAMES := ["hit_light", "hit_heavy", "block", "whoosh", "whoosh_heavy", "ko", "round", "fight", "menu_move", "menu_confirm", "menu_back", "wipe",
-	"step_walk", "step_run", "jump", "land"]
+	"step_walk", "step_run", "jump", "land", "sweep", "fall",
+	"punch_head", "punch_body", "kick_head", "kick_body", "kick_leg", "block_heavy"]
 const MAX_VARIANTS := 6
 var streams: Dictionary = {}   # name -> Array[AudioStream]
 var players: Array[AudioStreamPlayer] = []

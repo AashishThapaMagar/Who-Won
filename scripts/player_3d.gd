@@ -202,12 +202,21 @@ func _move_combat_body(delta: float) -> void:
 		body.position.z = move_toward(body.position.z, 0.0, LANE_RECENTER * delta)
 	velocity.y = -body.velocity.y * UNITS
 	var displacement := body.position - previous
-	_footsteps(Vector2(displacement.x, displacement.z).length())
+	# Footsteps sound on the animation's own foot plants (fighter_animated.gd
+	# _sound_cues); _footsteps is the fallback for a fighter with no rig.
+	if not _rig_steps():
+		_footsteps(Vector2(displacement.x, displacement.z).length())
 	var signed_distance := Vector2(displacement.x, displacement.z).length() * (-1.0 if planar.dot(forward) < -0.1 else 1.0)
 	travel += signed_distance * UNITS
 	global_position = Vector2(travel, -body.position.y * UNITS)
 	var target_angle := atan2(-forward.z, forward.x)
 	pivot.rotation.y = lerp_angle(pivot.rotation.y, target_angle, 1.0 - exp(-22.0 * delta))
+
+## True when the skinned rig is live and has feet to plant, so it sounds
+## the steps itself; otherwise steps fall back to distance walked.
+func _rig_steps() -> bool:
+	var rig = visual.get("animated") if visual != null else null
+	return rig != null and rig.get("active") == true and rig._bone("leftfoot") >= 0
 
 func _footsteps(moved: float) -> void:
 	if not body.is_on_floor() or state not in [State.WALK, State.DASH]:

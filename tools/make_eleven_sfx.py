@@ -7,29 +7,39 @@ Writes assets/audio/sfx/<name>.ogg, plus <name>_2.ogg, <name>_3.ogg ... for
 sounds with variants (sfx.gd picks one at random each time). The API key is
 read from ELEVENLABS_API_KEY in the git-ignored .env and never printed.
 """
-import json, os, subprocess, sys, tempfile, urllib.error, urllib.request
+import json, os, subprocess, sys, tempfile, time, urllib.error, urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "assets", "audio", "sfx")
-CLEAN = " Single isolated sound effect, dry, close-up, no music, no voice, no background ambience."
+CLEAN = (" Realistic cinematic foley, as in a modern martial-arts film: close-miked, punchy, full low end, crisp"
+         " transient. One single isolated sound, dry, no music, no voice, no crowd, no background ambience.")
 # name: (seconds, variants, prompt)
 SOUNDS = {
-    "hit_light": (0.6, 3, "Fast punch landing on a body in a kung fu movie, tight snappy slap-thump impact."),
-    "hit_heavy": (0.8, 3, "Powerful martial-arts kick landing on a body, deep heavy thump with a crack, kung fu film impact."),
-    "block": (0.6, 2, "Martial-arts forearm block, a punch stopped by a raised arm, dull leathery smack."),
-    "whoosh": (0.5, 3, "Very fast punch swinging through the air, short sharp kung fu whoosh with cloth snap."),
-    "whoosh_heavy": (0.7, 2, "Heavy roundhouse kick swinging through the air, deep swoosh with loose cloth trousers flapping."),
-    "ko": (2.2, 1, "Knockout in a kung fu film: a fighter falls hard onto a stone courtyard, heavy body thud with a deep cinematic boom and long tail."),
-    "round": (2.5, 1, "Single strike of a large bronze Nepali temple bell, warm deep ring with a long natural decay."),
-    "fight": (1.6, 1, "One huge dhol drum hit together with a bright cymbal crash, the start of a fight, cinematic and punchy."),
-    "menu_move": (0.5, 1, "Tiny soft wooden tick, a small wood block tapped once, gentle user-interface hover click."),
-    "menu_confirm": (1.0, 1, "Short bright tap on a small brass singing bowl, clear ting with a quick shimmer, user-interface confirm."),
-    "menu_back": (0.5, 1, "Soft low muted knock on wood, user-interface back or cancel sound."),
-    "wipe": (1.0, 1, "Quick cinematic transition whoosh, a swift swipe of heavy cloth through the air."),
-    "step_walk": (0.5, 4, "One single footstep of a soft leather shoe on old stone paving, calm walking pace."),
-    "step_run": (0.5, 4, "One single quick running footstep on stone paving, a light scuff and slap."),
-    "jump": (0.5, 1, "A fighter pushing off the ground to jump, short foot scuff and cloth rustle."),
-    "land": (0.6, 1, "A fighter landing on stone ground on both feet after a jump, firm thud with a little grit."),
+    "hit_light": (0.6, 3, "A fast bare-knuckle punch landing on a person's face, sharp meaty smack of fist on skin with a tight body thud."),
+    "hit_heavy": (0.9, 3, "A brutal full-power kick landing in a man's ribs, deep heavy body thump with a dull crack and the air knocked out, weighty cinematic impact."),
+    # Hits by what the blow struck (arena_3d.gd picks from the contact).
+    "punch_head": (0.55, 3, "A bare-knuckle punch cracking into a man's jaw, sharp wet slap of knuckles on the face with a snap of the head."),
+    "punch_body": (0.6, 3, "A hard punch sinking into a man's stomach, deep muffled thud of a fist into the torso through a cotton shirt."),
+    "kick_head": (0.8, 3, "A powerful high kick smashing into a man's head, a loud heavy whack of shin on skull with a deep thud."),
+    "kick_body": (0.8, 3, "A roundhouse kick slamming into a man's ribs, a heavy booming body thump with a dull crack."),
+    "kick_leg": (0.6, 3, "A low kick chopping into a man's thigh, a sharp heavy slap of shin on leg muscle."),
+    "block_heavy": (0.7, 3, "A heavy kick blocked by crossed forearms, a hard bone-on-bone smack with a deep jolting thud."),
+    "block": (0.6, 3, "A hard punch stopped by a raised forearm guard, solid bone-on-forearm smack with a short muffled thud."),
+    "whoosh": (0.5, 3, "A very fast punch cutting through the air, short sharp swish with the snap of a cotton sleeve."),
+    "whoosh_heavy": (0.7, 2, "A powerful spinning kick slicing through the air, deep heavy swoosh with loose trousers whipping."),
+    "ko": (2.5, 1, "A knocked-out fighter collapsing onto old stone paving, a heavy limp body slamming to the ground with a deep low boom and slow decaying rumble, slow-motion film moment."),
+    "round": (3.0, 1, "One strike of a large bronze bell in a Kathmandu temple at night, deep warm ring with a long natural shimmering decay."),
+    "fight": (1.8, 1, "One huge Nepali dhol drum hit together with a bright jhyali cymbal crash, massive and cinematic, the start of a duel."),
+    "menu_move": (0.5, 1, "A tiny soft click of a small wooden prayer bead tapped on wood, subtle and clean user-interface tick."),
+    "menu_confirm": (1.2, 1, "A single gentle strike of a small brass Tibetan singing bowl, clear ting with a soft shimmering tail."),
+    "menu_back": (0.5, 1, "A soft low knock on an old wooden door, muted and short, user-interface back sound."),
+    "wipe": (1.0, 1, "A swift cinematic whoosh, a heavy silk cloth swept fast through the air, smooth transition sound."),
+    "step_walk": (0.5, 4, "One single footstep of a cloth shoe on old stone paving, calm and grounded, a soft scuff and gentle heel tap."),
+    "step_run": (0.5, 4, "One single quick running footstep of a cloth shoe on stone paving, a fast slap with a light grit scuff."),
+    "jump": (0.5, 2, "A fighter springing off stone ground into a jump, a short foot push and scuff with a cloth rustle."),
+    "land": (0.6, 2, "A fighter landing on stone paving with both feet after a jump, a firm heavy thud with a little grit."),
+    "sweep": (0.8, 2, "A leg sweep: a low fast swoosh along the floor ending in a hard slap of a shin against an ankle."),
+    "fall": (1.2, 2, "A man swept off his feet crashing flat on his back on stone paving, a heavy body slam thud with a grunt-free exhale of cloth."),
 }
 
 
@@ -46,10 +56,18 @@ def generate(key, seconds, prompt):
                        "prompt_influence": 0.6}).encode()
     req = urllib.request.Request("https://api.elevenlabs.io/v1/sound-generation?output_format=mp3_44100_128",
                                  data=body, headers={"xi-api-key": key, "Content-Type": "application/json"})
-    try:
-        return urllib.request.urlopen(req, timeout=180).read()
-    except urllib.error.HTTPError as e:
-        sys.exit("ElevenLabs refused (%d): %s" % (e.code, e.read()[:400].decode("utf-8", "ignore")))
+    for attempt in range(4):
+        try:
+            return urllib.request.urlopen(req, timeout=180).read()
+        except urllib.error.HTTPError as e:
+            if e.code in (429, 500, 502, 503) and attempt < 3:
+                time.sleep(20)
+                continue
+            sys.exit("ElevenLabs refused (%d): %s" % (e.code, e.read()[:400].decode("utf-8", "ignore")))
+        except (ConnectionError, urllib.error.URLError, TimeoutError):
+            if attempt == 3:
+                raise
+            time.sleep(10)
 
 
 def to_ogg(mp3, path, seconds):

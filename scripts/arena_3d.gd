@@ -145,7 +145,6 @@ func _ready() -> void:
 	player1.ko.connect(func(): _end_round(2))
 	player2.ko.connect(func(): _end_round(1))
 	for fighter in [player1, player2]:
-		fighter.ko.connect(func(): preload("res://scripts/sfx.gd").fire("ko"))
 		fighter.ko.connect(_ko_3d.bind(fighter))
 	_contact_shadows()
 	_build_burst_pool()
@@ -396,10 +395,30 @@ func _effects_on() -> bool:
 	var settings := get_node_or_null("/root/Settings")
 	return settings == null or settings.hit_effects
 
+## The sound of a blow, by what it really struck (the contact the hit
+## detector measured): knuckles on a face, a fist in the stomach, a shin on
+## the ribs or the thigh; a guarded kick jolts harder than a guarded punch.
+## The harder it lands, the louder and lower it sounds.
+func _hit_sound(fighter: Node, blocked: bool, heavy: bool) -> void:
+	var touch = fighter.get("last_contact")
+	var part: String = touch.get("part", "") if touch is Dictionary else ""
+	var force: float = float(fighter.get("last_hit_force")) if fighter.get("last_hit_force") != null else 0.5
+	var sound := "block_heavy" if heavy else "block"
+	if not blocked:
+		match part:
+			"head":
+				sound = "kick_head" if heavy else "punch_head"
+			"leg":
+				sound = "kick_leg" if heavy else "punch_body"
+			_:
+				sound = "kick_body" if heavy else "punch_body"
+	var counter: bool = fighter.get("last_hit_counter") == true and not blocked
+	preload("res://scripts/sfx.gd").fire(sound, lerpf(-5.0, 1.0, force) + (2.0 if counter else 0.0), lerpf(1.06, 0.9, force))
+
 func _impact_3d(fighter: Node, blocked: bool, heavy: bool) -> void:
 	if ko_replay != null:
 		ko_replay.note_impact(fighter, blocked, heavy)
-	preload("res://scripts/sfx.gd").fire("block" if blocked else ("hit_heavy" if heavy else "hit_light"))
+	_hit_sound(fighter, blocked, heavy)
 	if not _effects_on():
 		if not blocked:
 			shake_3d = 0.045 if heavy else 0.022

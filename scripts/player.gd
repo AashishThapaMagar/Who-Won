@@ -161,6 +161,9 @@ var crouching: bool = false
 ## Knocked off its feet by a sweep: KNOCKDOWN starts below zero, the fall
 ## playing out before the fighter lies and gets up as after a throw.
 var swept: bool = false
+## The swing's whoosh has played for the current strike (it sounds as the
+## limb whips through, just before it lands, not when the wind-up starts).
+var _swing_heard: bool = false
 const SWEEP_FALL := 0.45
 
 ## "action" is the style_id of resources/styles/action.tres, the one style
@@ -563,7 +566,8 @@ func _start_attack(new_state: int, variant: String = "jab") -> void:
 	attack_connected = false
 	velocity.x = 0.0
 	attack_variant = variant
-	preload("res://scripts/sfx.gd").fire("whoosh_heavy" if new_state == State.KICK else "whoosh", -6.0)
+	# The whoosh waits for the limb to whip through (_process_attack).
+	_swing_heard = false
 	if variant == "kick" and current_style != null and current_style.has_finisher:
 		if _last_land_type == "punch" and combat_time - _last_land_time <= current_style.finisher_window and combat_time >= _finisher_cooldown_until:
 			attack_variant = "finisher"
@@ -573,6 +577,10 @@ func _start_attack(new_state: int, variant: String = "jab") -> void:
 
 func _process_attack(delta: float) -> void:
 	attack_timer += delta
+	if not _swing_heard and attack_timer >= attack_startup() * 0.6 and current_move.get("utility", "") == "":
+		_swing_heard = true
+		var swing := "sweep" if attack_variant == "strike_sweep" else ("whoosh_heavy" if state == State.KICK else "whoosh")
+		preload("res://scripts/sfx.gd").fire(swing, -6.0)
 	velocity.x = move_toward(velocity.x, 0.0, braking * delta)
 	var heavy: bool = attack_variant in ["kick", "finisher"]
 	var damage: int = kick_damage if heavy else (hook_damage if attack_variant == "hook" else punch_damage)
