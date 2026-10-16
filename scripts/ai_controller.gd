@@ -31,6 +31,12 @@ const GROUND_PUNCHES := [1, 2, 3]
 const SIDESTEP_CHANCE := [0.0, 0.12, 0.25]
 ## Firing a ready super when the rival is in reach (per decision).
 const SUPER_CHANCE := [0.15, 0.35, 0.6]
+## Reading a sweep coming and guarding it low.
+const LOW_READ := [0.2, 0.6, 0.9]
+## Meeting a jump-in with the rising uppercut.
+const ANTI_AIR := [0.1, 0.35, 0.65]
+## Reaching for the sweep in a decision at striking range.
+const SWEEP_CHANCE := [0.08, 0.14, 0.18]
 ## Getting up from a knockdown: roll clear, stay down, or rise striking.
 const WAKE_ROLL := [0.1, 0.3, 0.35]
 const WAKE_LATE := [0.0, 0.15, 0.25]
@@ -123,6 +129,8 @@ func _physics_process(delta: float) -> void:
 		if not _held_block and _reaction_cooldown <= 0.0:
 			if randf() < BLOCK_CHANCE[skill()]:
 				_set_block(true)
+				# A sweep has to be guarded crouching.
+				_set_crouch(opponent.current_move.get("low", false) and randf() < LOW_READ[skill()])
 			_reaction_cooldown = BLOCK_REACTION_TIME
 	elif _held_block and (not opponent_attacking or abs_distance > ATTACK_RANGE + 24.0):
 		_set_block(false)
@@ -130,6 +138,13 @@ func _physics_process(delta: float) -> void:
 	if _held_block:
 		_set_move(0)
 		return
+	_set_crouch(false)
+	# A rival jumping in close: meet it with the uppercut.
+	if opponent.state == opponent.State.JUMP and abs_distance < ATTACK_RANGE + 40.0 and _reaction_cooldown <= 0.0 			and fighter.state in [fighter.State.IDLE, fighter.State.WALK] and fighter.available_moves().has("crouch_punch"):
+		_reaction_cooldown = 0.6
+		if randf() < ANTI_AIR[skill()]:
+			_request_move("crouch_punch")
+			return
 	if _try_evade(opponent_attacking, abs_distance):
 		return
 	if _punish(abs_distance):
@@ -181,6 +196,8 @@ func _physics_process(delta: float) -> void:
 				move_id = "grapple"
 			elif fighter.character_profile.id == "abhi" and fighter.stamina < 55 and abs_distance > 85:
 				move_id = "back_heavy"
+			elif fighter.available_moves().has("sweep") and randf() < SWEEP_CHANCE[skill()]:
+				move_id = "sweep"
 			elif randf() < 0.35:
 				move_id = "drive" if randf() < 0.5 else "breaker"
 			elif randf() < 0.4:
@@ -277,7 +294,7 @@ func _try_evade(_attacking: bool, _abs_distance: float) -> bool:
 
 func _request_move(id: String) -> void:
 	# AI decisions enter the same expiring buffer and hit-confirm rules as input.
-	fighter._buffered_action = id if id in ["grapple", "super"] else ("punch" if id == "jab" else "kick")
+	fighter._buffered_action = id if id in ["grapple", "super", "sweep", "crouch_punch"] else ("punch" if id == "jab" else "kick")
 	fighter._buffered_direction = 1 if id == "forward_heavy" else (-1 if id == "back_heavy" else 0)
 	fighter._buffered_move = id if id in ["drive", "breaker"] else ""
 	fighter._buffer_remaining = fighter.input_buffer_time
@@ -302,6 +319,16 @@ func _set_block(active: bool) -> void:
 		Input.action_press(_prefix + "block")
 	else:
 		Input.action_release(_prefix + "block")
+		_set_crouch(false)
+
+## Holds down (crouch) where the layout has it.
+func _set_crouch(active: bool) -> void:
+	if not InputMap.has_action(_prefix + "crouch"):
+		return
+	if active:
+		Input.action_press(_prefix + "crouch")
+	else:
+		Input.action_release(_prefix + "crouch")
 
 func _tap(action: String) -> void:
 	Input.action_press(action)
@@ -309,7 +336,7 @@ func _tap(action: String) -> void:
 	Input.action_release(action)
 
 func _release_all() -> void:
-	for suffix in ["left", "right", "block", "jump", "punch", "kick", "far", "near"]:
+	for suffix in ["left", "right", "block", "crouch", "jump", "punch", "kick", "far", "near"]:
 		if InputMap.has_action(_prefix + suffix):
 			Input.action_release(_prefix + suffix)
 	_held_dir = 0

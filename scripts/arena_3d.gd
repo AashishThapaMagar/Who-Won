@@ -190,8 +190,8 @@ func _begin_round(index: int) -> void:
 	if MatchSetup.arcade:
 		place += "   /   " + (tr("FINAL BOSS") if MatchSetup.is_final_boss() else Settings.fmt("RIVAL %d OF %d", [MatchSetup.arcade_index + 1, MatchSetup.arcade_opponents.size()]))
 	banner_tagline.text = place
-	$UI/ControlsHint.text = "P1  A/D move  W jump  S guard  |  F 1  V 2  G 3  B 4     |     P2  Left/Right move  Up jump  Down guard  |  K 1  , 2  L 3  . 4\nF1 combos     |     Esc pause"
-	guide_text.text = "MOVEMENT: A/D or Left/Right approach and retreat. W / Up jumps, S / Down guards (and is the down of a command).\nForward and back are relative to your opponent.\n\n" + guide_text.text
+	$UI/ControlsHint.text = "P1  A/D move  W jump  S crouch  E guard  |  F 1  V 2  G 3  B 4     |     P2  Left/Right move  Up jump  Down crouch  O guard  |  K 1  , 2  L 3  . 4\nF1 combos     |     Esc pause"
+	guide_text.text = "MOVEMENT: A/D or Left/Right approach and retreat; hold back (or E / O) to guard. W / Up jumps, S / Down crouches (and is the down of a command).\nCROUCHING: 1 / 2 rising uppercut, 3 / 4 leg sweep. A sweep can only be guarded crouching.\nForward and back are relative to your opponent.\n\n" + guide_text.text
 	camera_target = Vector3(0, CAMERA_HEIGHT, 0)
 	camera_distance = CAMERA_CLOSE
 	camera_zoom_hold = 0.0

@@ -56,10 +56,11 @@ func is_final_boss() -> bool:
 func _ready() -> void:
 	var bindings_3d := [
 		["left", KEY_A, KEY_LEFT], ["right", KEY_D, KEY_RIGHT],
-		# Street Fighter layout: up jumps, down guards. Space/Enter and E/O
-		# still work as second keys. There is no sidestep: the fight stays
-		# on one line ("far"/"near" are kept, unbound, for old callers).
-		["jump", KEY_W, KEY_UP], ["block", KEY_S, KEY_DOWN],
+		# Street Fighter layout: up jumps, down crouches, holding back guards
+		# (E/O guard too). Space/Enter also jump. There is no sidestep: the
+		# fight stays on one line ("far"/"near" are kept, unbound, for old
+		# callers).
+		["jump", KEY_W, KEY_UP], ["crouch", KEY_S, KEY_DOWN],
 		["jump", KEY_SPACE, KEY_ENTER], ["block", KEY_E, KEY_O],
 		["far", KEY_NONE, KEY_NONE], ["near", KEY_NONE, KEY_NONE],
 		["punch", KEY_F, KEY_K], ["kick", KEY_G, KEY_L],
@@ -95,11 +96,12 @@ func _ready() -> void:
 ## Gamepads: pad 1 drives player one, pad 2 player two, on every action a
 ## key already drives (fight, select screen and the legacy 2D arena). A =
 ## punch, X = kick, Y = jump, right shoulder = guard, left shoulder = run,
-## right trigger = grapple, stick or d-pad = move (up jumps, down guards), Start or B =
+## right trigger = grapple, stick or d-pad = move (up jumps, down crouches), Start or B =
 ## pause, Back = movebook. Menus use Godot's own ui_* pad bindings.
 const PAD := {
 	"left": [JOY_AXIS_LEFT_X, -1.0, JOY_BUTTON_DPAD_LEFT], "right": [JOY_AXIS_LEFT_X, 1.0, JOY_BUTTON_DPAD_RIGHT],
-	"jump": [JOY_AXIS_LEFT_Y, -1.0, JOY_BUTTON_DPAD_UP], "block": [JOY_AXIS_LEFT_Y, 1.0, JOY_BUTTON_DPAD_DOWN], "punch": [JOY_BUTTON_A], "kick": [JOY_BUTTON_X],
+	"jump": [JOY_AXIS_LEFT_Y, -1.0, JOY_BUTTON_DPAD_UP], "crouch": [JOY_AXIS_LEFT_Y, 1.0, JOY_BUTTON_DPAD_DOWN],
+	"block": [JOY_BUTTON_RIGHT_SHOULDER], "punch": [JOY_BUTTON_A], "kick": [JOY_BUTTON_X],
 	"grapple": [JOY_AXIS_TRIGGER_RIGHT, 1.0], "run": [JOY_BUTTON_LEFT_SHOULDER],
 	"rpunch": [JOY_AXIS_TRIGGER_LEFT, 1.0], "rkick": [JOY_BUTTON_RIGHT_STICK],
 }
@@ -110,9 +112,9 @@ static func _map_gamepads() -> void:
 			for action in ["p%d_3d_%s" % [player + 1, key], "p%d_%s" % [player + 1, key]]:
 				if InputMap.has_action(action):
 					_pad_bind(action, player, PAD[key])
-	# Y and the right shoulder still jump and guard, beside the stick.
+	# Y still jumps, beside the stick.
 	for player in 2:
-		for pair in [["p%d_3d_jump", JOY_BUTTON_Y], ["p%d_3d_block", JOY_BUTTON_RIGHT_SHOULDER]]:
+		for pair in [["p%d_3d_jump", JOY_BUTTON_Y]]:
 			var action: String = pair[0] % (player + 1)
 			if InputMap.has_action(action):
 				var extra := InputEventJoypadButton.new()

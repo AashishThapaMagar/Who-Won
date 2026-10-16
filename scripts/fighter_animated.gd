@@ -29,7 +29,7 @@ const FALLBACK := {
 }
 ## Attack variants (from move data poses) that use the heavy-punch clip.
 const HEAVY_PUNCHES := ["cross", "hook", "rear_hook", "uppercut", "overhand", "backfist", "body_hook"]
-const LOOPING := ["idle", "walk", "walk_back", "sidestep", "sidestep_left", "sidestep_right", "run", "dash", "backdash", "block", "injured"]
+const LOOPING := ["idle", "walk", "walk_back", "sidestep", "sidestep_left", "sidestep_right", "run", "dash", "backdash", "block", "injured", "crouch"]
 ## Movement that keeps the guard up on the upper body.
 const GUARDED := ["walk", "walk_back", "sidestep", "sidestep_left", "sidestep_right", "dash", "backdash"]
 ## Bones the guard overlay drives (substring match on the bone name).
@@ -1072,11 +1072,14 @@ func update(delta: float) -> void:
 	var S: Dictionary = fighter.State
 	var state: int = fighter.state
 	var logical := "idle"
+	var crouched: bool = fighter.get("crouching") == true and clip_names.has("crouch")
 	match state:
+		S.IDLE:
+			logical = "crouch" if crouched else "idle"
 		S.PUNCH, S.KICK:
 			logical = _attack_clip(fighter)
 		S.WALK:
-			logical = _move_clip(fighter)
+			logical = "crouch" if crouched else _move_clip(fighter)
 		S.DASH:
 			logical = "dash" if fighter._dash_dir == fighter.facing else "backdash"
 		S.JUMP, S.JUMP_START:
@@ -1084,9 +1087,9 @@ func update(delta: float) -> void:
 		S.LAND:
 			logical = "land"
 		S.BLOCK:
-			logical = "block"
+			logical = "crouch" if crouched else "block"
 		S.BLOCKSTUN:
-			logical = "block_hit"
+			logical = "crouch" if crouched else "block_hit"
 		S.HITSTUN, S.STRUCK:
 			logical = _reaction if _reaction != "" else ("hit_heavy" if last_hit_heavy else "hit")
 		S.SUPER:
@@ -1099,6 +1102,8 @@ func update(delta: float) -> void:
 			logical = "thrown"
 		S.KNOCKDOWN:
 			logical = "downed" if fighter.knockdown_time < THROW.LIE_TIME else "getup"
+			if fighter.get("swept") == true and fighter.knockdown_time < 0.0:
+				logical = "swept"
 	# The winner celebrates over a knocked-out rival.
 	var rival = fighter.get("opponent")
 	if state == S.IDLE and rival != null and rival.state == rival.State.KO:
@@ -1131,7 +1136,7 @@ func update(delta: float) -> void:
 	if logical in ["super_open", "super_combo"]:
 		logical = "punch_heavy"
 		clip = clip_names.get(logical, clip_names.get("idle", ""))
-	if logical in ["throw", "thrown", "downed"] or (logical == "getup" and _has_own("getup")):
+	if logical in ["throw", "thrown", "downed", "swept"] or (logical == "getup" and _has_own("getup")):
 		guard_weight = 0.0
 		_play_throw(fighter, logical, delta, frozen)
 		_procedural(fighter, logical, delta, frozen)
@@ -1272,6 +1277,13 @@ func _play_throw(fighter: Node, logical: String, delta: float, frozen: bool) -> 
 				_scrub_clip(clip_names.thrown, THROW.clip_time(fighter.throw_time), delta, frozen)
 			else:
 				_fall(fighter.throw_time / THROW.END_TIME, delta, frozen)
+		"swept":
+			# Legs taken: the back half of the takedown's fall, quick.
+			var fall := clampf(1.0 + fighter.knockdown_time / fighter.SWEEP_FALL, 0.0, 1.0)
+			if paired:
+				_scrub_clip(clip_names.thrown, lerpf(THROW.CLIP_CONTACT, THROW.CLIP_END, fall), delta, frozen)
+			else:
+				_fall(fall, delta, frozen)
 		"downed":
 			if paired:
 				_scrub_clip(clip_names.thrown, THROW.CLIP_END, delta, frozen)

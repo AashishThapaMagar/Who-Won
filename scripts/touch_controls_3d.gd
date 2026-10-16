@@ -3,7 +3,8 @@ extends "res://scripts/touch_controls.gd"
 ##
 ##  * Left thumb: a floating joystick. Touch anywhere in the movement zone
 ##    and the stick appears under the thumb; slide left/right to walk, far
-##    to run, up to jump, down to guard (the same as W/A/S/D).
+##    to run, up to jump, down to crouch (the same as W/A/S/D). Pulled down,
+##    1/2 rise into the uppercut and 3/4 sweep.
 ##  * Right thumb: four big attack buttons in Tekken's 1 2 / 3 4 layout
 ##    (punches above, kicks below), a large GUARD, GRAB, SUPER (2 + 4
 ##    together) and CALL.
@@ -69,7 +70,7 @@ func _process(_delta: float) -> void:
 func _exit_tree() -> void:
 	_release_all()
 	for player in [1, 2]:
-		for suffix in ["left", "right", "far", "near", "jump", "block", "punch", "kick", "rpunch", "rkick", "grapple", "run"]:
+		for suffix in ["left", "right", "far", "near", "jump", "block", "crouch", "punch", "kick", "rpunch", "rkick", "grapple", "run"]:
 			Input.action_release("p%d_3d_%s" % [player, suffix])
 
 ## ── Layout ──
@@ -167,7 +168,7 @@ func _touch_up(index: int) -> void:
 		_steer(stick, Vector2.ZERO)
 
 ## Turns the stick's offset into held directions: left/right past the dead
-## zone, run further out, jump up, guard down.
+## zone, run further out, jump up, crouch down.
 func _steer(stick: Dictionary, offset: Vector2) -> void:
 	var p: String = stick.prefix
 	var want := {
@@ -175,7 +176,7 @@ func _steer(stick: Dictionary, offset: Vector2) -> void:
 		p + "right": offset.x > STICK_DEAD,
 		p + "run": absf(offset.x) > STICK_RUN,
 		p + "jump": offset.y < -STICK_VERTICAL,
-		p + "block": offset.y > STICK_VERTICAL,
+		p + "crouch": offset.y > STICK_VERTICAL,
 	}
 	for action: String in want:
 		var held: bool = stick.held.get(action, false)

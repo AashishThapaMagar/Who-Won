@@ -20,6 +20,8 @@ const STRIKES := [
 	["back_heavy", ["←", "3"], "Short, sturdy heavy for close range."],
 	["rp", ["2"], "Right punch. Links off 1 and into 4."],
 	["rk", ["4"], "Right kick. Ends the 1,2,4 and 3,4 strings."],
+	["crouch_punch", ["↓", "1"], "Rises out of the crouch. Meets a rival jumping in."],
+	["sweep", ["↓", "3"], "Low: only a crouching guard stops it. Knocks the rival down; slow to recover if guarded."],
 ]
 const SPECIALS := [
 	["drive", ["↓", "↘", "→", "3"], "Command ender. Big damage; cancel into it from a landed jab or cross."],

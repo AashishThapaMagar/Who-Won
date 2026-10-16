@@ -154,6 +154,14 @@ var wake_attack: String = ""
 var stamina_delay: float = 0.0
 var taunt_ready_at: float = 0.0
 var throw_tech_until: float = -1.0
+## Down held on the ground: the fighter crouches, ducks high blows, guards
+## low strikes (with back or guard held) and its punch and kick become the
+## rising uppercut and the sweep.
+var crouching: bool = false
+## Knocked off its feet by a sweep: KNOCKDOWN starts below zero, the fall
+## playing out before the fighter lies and gets up as after a throw.
+var swept: bool = false
+const SWEEP_FALL := 0.45
 
 ## "action" is the style_id of resources/styles/action.tres, the one style
 ## resource live matches now use for all four rounds. Archived styles
@@ -236,6 +244,8 @@ func _physics_process(delta: float) -> void:
 	if combat_time - _last_land_time > (current_style.combo_window if current_style != null else 0.6):
 		combo_stacks = 0
 	_update_facing()
+	if state not in [State.IDLE, State.WALK, State.BLOCK, State.BLOCKSTUN] and not (state in [State.PUNCH, State.KICK] and current_move.get("crouch", false)):
+		crouching = false
 	var was_grounded := _is_grounded()
 	velocity.y += GRAVITY * delta
 	# A throw or a super that ends the round plays out to its last frame.
@@ -275,6 +285,7 @@ func _physics_process(delta: float) -> void:
 					velocity.y = jump_velocity
 					velocity.x = _jump_direction * move_speed
 					state = State.JUMP
+					preload("res://scripts/sfx.gd").fire("jump", -8.0)
 			State.LAND:
 				velocity.x = move_toward(velocity.x, 0.0, braking * delta)
 				action_timer -= delta
@@ -287,12 +298,20 @@ func _physics_process(delta: float) -> void:
 	if not was_grounded and _is_grounded() and state == State.JUMP:
 		state = State.LAND
 		action_timer = LAND_TIME
+		preload("res://scripts/sfx.gd").fire("land", -6.0)
 	# Consume before aging: a queued action remains valid on the recovery tick.
 	_buffer_remaining -= delta
 	if _buffer_remaining <= 0.0:
 		_buffered_action = ""
 		_buffered_move = ""
 	_update_animation()
+
+## Down on the stick or keys: the crouch action, or guard on rigs and
+## legacy layouts that have no crouch.
+func _down_held() -> bool:
+	if InputMap.has_action(input_prefix + "crouch"):
+		return Input.is_action_pressed(input_prefix + "crouch")
+	return Input.is_action_pressed(input_prefix + "block")
 
 # Spatial hooks let the 3D body share the same combat rules and timing.
 func _is_grounded() -> bool:
@@ -355,7 +374,7 @@ func _capture_input() -> void:
 		motion_input.reset()
 		_motion_facing = facing
 	var horizontal := int(_movement_axis()) * facing
-	var down := Input.is_action_pressed(input_prefix + "block")
+	var down := _down_held()
 	motion_input.record((2 + horizontal) if down else (5 + horizontal), combat_time)
 	for action in ["jump", "punch", "kick", "rpunch", "rkick"]:
 		if InputMap.has_action(input_prefix + action) and Input.is_action_just_pressed(input_prefix + action):
@@ -400,10 +419,16 @@ func _update_animation() -> void:
 func _process_move_and_actions(delta: float = 1.0 / 60.0) -> void:
 	var direction := _movement_axis()
 	if _is_grounded():
+		crouching = _down_held() and controls_enabled
 		if Input.is_action_pressed(input_prefix + "block"):
 			_enter_block()
 			return
 		if _consume_action():
+			return
+		if crouching:
+			# Down: squat where you stand.
+			velocity.x = move_toward(velocity.x, 0.0, braking * delta)
+			state = State.IDLE
 			return
 		running = direction * facing > 0.0 and Input.is_action_pressed(input_prefix + "run")
 		var speed := move_speed * (1.0 if running else WALK_SPEED_RATIO)
@@ -434,12 +459,20 @@ func _consume_action() -> bool:
 		# Grabs are switched off: the button does nothing.
 		if available_moves().has("grapple"):
 			_start_style_move("grapple")
+	elif action in ["sweep", "crouch_punch"]:
+		# Asked for by name (the AI): squat into it.
+		if available_moves().has(action):
+			_start_style_move(action)
 	elif action == "jump":
+		crouching = false
 		state = State.JUMP_START
 		action_timer = JUMP_START_TIME
 		_jump_direction = _movement_axis()
 	else:
-		if not command.is_empty():
+		if crouching and command.is_empty() and available_moves().has("sweep") and state not in [State.PUNCH, State.KICK]:
+			# From the crouch: punches rise into the uppercut, kicks sweep.
+			_start_style_move("crouch_punch" if action in ["punch", "rpunch"] else "sweep")
+		elif not command.is_empty():
 			_start_style_move(command, chain_step + 1 if state in [State.PUNCH, State.KICK] else 0)
 		elif not next_id.is_empty():
 			_start_style_move(next_id, chain_step + 1)
@@ -489,6 +522,8 @@ func _start_style_move(move_id: String, step: int = 0) -> void:
 	_start_attack(State.KICK if data.kind == "kick" else State.PUNCH, data.pose)
 	current_move = data
 	chain_step = step
+	# The sweep stays down at the floor; everything else stands up.
+	crouching = data.get("crouch", false)
 	BATTLE_CRY.fire(player_id - 1, false, BATTLE_CRY.move_event(str(character_profile.id), move_id))
 	_update_animation()
 
@@ -604,6 +639,7 @@ func _on_hit_landed(attack_type: String, continued: bool = false, dealt: int = 0
 func _process_block(delta: float) -> void:
 	velocity.x = move_toward(velocity.x, 0.0, braking * delta)
 	block_hold_time += delta
+	crouching = _down_held()
 	if not Input.is_action_pressed(input_prefix + "block"):
 		state = State.IDLE
 		_process_move_and_actions(delta)
@@ -665,6 +701,13 @@ func take_hit(damage: int, knockback: float, attacker_facing: int, attacker: Nod
 	if is_action_fight() and _is_grounded() and state in [State.IDLE, State.WALK] and back_held and attacker_facing != facing:
 		blocked = true
 	blocked = blocked and not grapple
+	# A low strike gets under a standing guard: only a crouching guard stops it.
+	var low: bool = move.get("low", false)
+	if blocked and low and not crouching:
+		blocked = false
+		if attacker != null:
+			attacker.combat_notice = "LOW HIT"
+			attacker.notice_until = attacker.combat_time + 0.8
 	var attacking := state in [State.PUNCH, State.KICK]
 	var counter: bool = not blocked and attacking and attack_timer < attack_startup()
 	var punish: bool = not blocked and attacking and attack_timer >= attack_startup() + attack_active_time()
@@ -751,6 +794,15 @@ func take_hit(damage: int, knockback: float, attacker_facing: int, attacker: Nod
 			stun_timer = maxf(stun_timer, 0.55)
 	dealt = scaled_damage(dealt)
 	health = maxi(0, health - dealt)
+	if not blocked and move.get("knockdown", false) and health > 0 and _is_grounded():
+		# Swept off the feet: down on the back, then up again.
+		state = State.KNOCKDOWN
+		swept = true
+		crouching = false
+		knockdown_time = -SWEEP_FALL
+		wake_choice = ""
+		throw_partner = null
+		knockback *= 0.35
 	_gain_meter(attacker, dealt, blocked)
 	velocity.x = attacker_facing * knockback * (0.3 if blocked else (1.3 if last_hit_stagger else 1.0))
 	_knockback_start = absf(velocity.x)
@@ -1079,7 +1131,7 @@ func _slam() -> void:
 func _process_knockdown(delta: float) -> void:
 	velocity = Vector2.ZERO
 	# Choices open once the attacker has let go (it rises off a mount).
-	var free: bool = throw_partner == null or not is_inf(throw_partner.throw_rise_at)
+	var free: bool = (throw_partner == null or not is_inf(throw_partner.throw_rise_at)) and knockdown_time >= 0.0
 	var lying: bool = knockdown_time < THROW.LIE_TIME
 	if free and lying and wake_choice == "" and controls_enabled:
 		if _movement_axis() * facing < 0.0:
@@ -1102,6 +1154,7 @@ func _process_knockdown(delta: float) -> void:
 		_buffered_action = ""
 	if knockdown_time >= THROW.LIE_TIME + THROW.GETUP_TIME:
 		knockdown_time = 0.0
+		swept = false
 		wake_choice = ""
 		state = State.IDLE
 		if wake_attack != "":

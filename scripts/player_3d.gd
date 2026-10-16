@@ -52,6 +52,10 @@ const PLACED_STATES := [State.THROWING, State.THROWN, State.KNOCKDOWN, State.SUP
 ## The super's line, fixed when its opening strike lands (see _begin_super).
 var _super_anchor := Vector3.ZERO
 var _super_forward := Vector3.RIGHT
+## Footsteps: one sound per stride walked or run on the ground (metres).
+const WALK_STRIDE := 0.7
+const RUN_STRIDE := 1.1
+var _stride_left := 0.0
 
 func _physics_process(delta: float) -> void:
 	super._physics_process(delta * COMBAT_TEMPO)
@@ -141,7 +145,8 @@ func _move_combat_body(delta: float) -> void:
 	if state in PLACED_STATES or thrown_down:
 		_hold_placed_body()
 		return
-	var input := world_input() if controls_enabled else Vector3.ZERO
+	# Crouched, the fighter holds its ground.
+	var input := world_input() if controls_enabled and not crouching else Vector3.ZERO
 	# A held second forward tap carries the dash into a sustained run.
 	# Releasing, reversing, guarding or attacking ends that commitment.
 	if input.dot(forward) <= 0.35 or state not in [State.IDLE, State.WALK, State.DASH] or not controls_enabled:
@@ -197,11 +202,22 @@ func _move_combat_body(delta: float) -> void:
 		body.position.z = move_toward(body.position.z, 0.0, LANE_RECENTER * delta)
 	velocity.y = -body.velocity.y * UNITS
 	var displacement := body.position - previous
+	_footsteps(Vector2(displacement.x, displacement.z).length())
 	var signed_distance := Vector2(displacement.x, displacement.z).length() * (-1.0 if planar.dot(forward) < -0.1 else 1.0)
 	travel += signed_distance * UNITS
 	global_position = Vector2(travel, -body.position.y * UNITS)
 	var target_angle := atan2(-forward.z, forward.x)
 	pivot.rotation.y = lerp_angle(pivot.rotation.y, target_angle, 1.0 - exp(-22.0 * delta))
+
+func _footsteps(moved: float) -> void:
+	if not body.is_on_floor() or state not in [State.WALK, State.DASH]:
+		_stride_left = 0.0
+		return
+	_stride_left -= moved
+	if _stride_left <= 0.0:
+		var run := running or state == State.DASH
+		_stride_left += RUN_STRIDE if run else WALK_STRIDE
+		preload("res://scripts/sfx.gd").fire("step_run" if run else "step_walk", -12.0 if run else -15.0)
 
 func _separate_bodies() -> void:
 	# Grounded fighters are circular pushboxes, never platforms. They still

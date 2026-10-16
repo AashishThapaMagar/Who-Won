@@ -30,7 +30,7 @@ func _ready() -> void:
 	MatchSetup.vs_ai = previous_ai
 	player2.input_prefix = DUMMY_PREFIX
 	$UI/P2Label.text = player2.character_profile.name + " / PRACTICE DUMMY"
-	$UI/ControlsHint.text = "A/D WALK   W JUMP   S GUARD   SHIFT + FORWARD RUN   DOUBLE-TAP + HOLD FORWARD TO RUN\nF 1   V 2   G 3   B 4   H THROW   R RESET   F2 DUMMY   F1 MOVES   ESC PAUSE"
+	$UI/ControlsHint.text = "A/D WALK   W JUMP   S CROUCH   E GUARD   SHIFT + FORWARD RUN   DOUBLE-TAP + HOLD FORWARD TO RUN\nF 1   V 2   G 3   B 4   R RESET   F2 DUMMY   F1 MOVES   ESC PAUSE"
 	set_dummy_mode(0)
 
 func _begin_round(index: int) -> void:

@@ -70,6 +70,22 @@ const STYLE_MOVES := {
 }
 ## The only clips a fighter's style folder may override.
 const STRIKES := ["jab", "cross", "hook", "punch_heavy", "uppercut", "kick", "kick_front", "kick_spin", "grapple", "taunt", "victory"]
+## The crouch: a squat to stand (and guard) in and the leg sweep. Every
+## clip is Mixamo, so a fighter whose own pack lacks one borrows it from a
+## fighter that has it. [file under assets/fighters/, [start, impact, end]]
+## (impacts measured with tools/measure_strike_clips.gd: the sweeping foot
+## furthest out along the floor). The sweep is the capoeira rasteira, hand
+## on the floor and the leg flat out; Mixamo's "low block" and "front leg
+## sweep" are standing moves, so neither is used.
+const LOW_KIT := {
+	"crouch": ["abhi/fight/crouch_idle"],
+	"strike_sweep": ["anant/capoeira/rasteira_1", [0.25, 0.7, 1.5]],
+}
+const OWN_LOW := {
+	"ish": {"crouch": ["ish/fight/crouching_idle"]},
+	"anant": {"crouch": ["anant/fight/crouching_idle"]},
+	"bib": {"crouch": ["bib/fight/crouch_idle"]},
+}
 ## Fighters with Meshy's own moves (a "Merged Animations" .fbx, kept local
 ## like the Mixamo files): logical clip -> Meshy animation name. These
 ## replace the shared strikes, so each hit of a combo has its own motion.
@@ -411,6 +427,17 @@ static func _mixamo(fighter_id: String) -> Dictionary:
 		var pack_body: String = pack_folder + str(pack.get("body", "")) + ".fbx"
 		if pack.has("body") and ResourceLoader.exists(pack_body):
 			pack_scene = pack_body
+	for logical in LOW_KIT:
+		var entry: Array = OWN_LOW.get(fighter_id, {}).get(logical, LOW_KIT[logical])
+		var path := "res://assets/fighters/%s.fbx" % entry[0]
+		if not ResourceLoader.exists(path):
+			entry = LOW_KIT[logical]
+			path = "res://assets/fighters/%s.fbx" % entry[0]
+		if ResourceLoader.exists(path):
+			files["low_" + logical] = path
+			clips[logical] = "low_" + logical
+			if entry.size() > 1:
+				timing[logical] = entry[1]
 	var meshy := {}
 	var meshy_file := "res://assets/fighters/%s/meshy_moves.fbx" % fighter_id
 	if not ResourceLoader.exists(meshy_file):

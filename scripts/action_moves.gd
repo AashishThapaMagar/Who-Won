@@ -253,6 +253,19 @@ static func for_fighter(id: String) -> Dictionary:
 	if id in ["ish", "anant"]:
 		# Mounted after the takedown, punch rains up to three blows down.
 		m.grapple.ground_pound = true
+	# From the crouch: punch rises into an uppercut that meets a jump-in,
+	# kick sweeps the legs (a low blow: only a crouching guard stops it,
+	# and it puts the rival on the floor; whiffed or guarded it leaves the
+	# sweeper down there, open).
+	m.crouch_punch = BASE._move("Rising uppercut", "uppercut", "punch", "hook", 44, -96, 0.09, 0.08, 0.30, 1.3, 1.2, 6)
+	m.crouch_punch.hitstun = 0.4
+	var sweeps := {"anug": "Slide tackle", "ish": "Hammer sweep", "sab": "Iron sweep", "bib": "Relay sweep",
+		"abhi": "Thunder sweep", "sup": "Spiral sweep", "anant": "Rasteira"}
+	m.sweep = BASE._move(sweeps.get(id, "Leg sweep"), "strike_sweep", "kick", "kick", 70, -10, 0.16, 0.10, 0.42, 1.1, 0.6, 6)
+	m.sweep.blockstun = 0.18
+	m.sweep.low = true
+	m.sweep.knockdown = true
+	m.sweep.crouch = true
 	# Stamina costs are assigned by move slot/kind here rather than per-move
 	# above, so every fighter's moves stay priced consistently even though
 	# their reach/damage/timing differ.
