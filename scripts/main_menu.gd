@@ -20,12 +20,13 @@ const ENTRIES := [
 	["fighters", "FIGHTERS", "Meet the seven fighters of the square: their styles, strengths and supers."],
 	["records", "RECORDS", "Your fights, wins, streaks, perfects and favourite fighter."],
 	["settings", "SETTINGS", "Display, sound, graphics, fight rules, controls and how to play."],
+	["credits", "CREDITS", "The people and the tools behind the game."],
 	["exit", "EXIT", "Leave the square. Your records are saved."],
 ]
 const FIGHT_ENTRIES := 5
 ## Each entry's name in Nepali, beside the chosen entry.
 const NEPALI := {"arcade": "आर्केड", "story": "कथा", "local": "भिडन्त", "ai": "कम्प्युटरसँग", "practice": "अभ्यास",
-	"fighters": "योद्धाहरू", "records": "रेकर्ड", "settings": "सेटिङ", "exit": "बाहिर"}
+	"fighters": "योद्धाहरू", "records": "रेकर्ड", "settings": "सेटिङ", "credits": "श्रेय", "exit": "बाहिर"}
 const LIST_X := 40.0
 const LIST_TOP := 158.0
 const ROW_SMALL := 26.0
@@ -89,6 +90,7 @@ var _hover_blocked_until := 0
 
 func _ready() -> void:
 	theme = UI.theme()
+	Music.play_main()
 	backdrop = BACKDROP.new()
 	backdrop.locked_round = 0
 	add_child(backdrop)
@@ -410,6 +412,9 @@ func _activate_extra(key: String) -> void:
 			_show_records()
 		"settings":
 			_show_settings()
+		"credits":
+			transitioning = true
+			get_tree().change_scene_to_file("res://scenes/Credits.tscn")
 		"exit":
 			_confirm_exit()
 
@@ -665,8 +670,8 @@ func _show_controls() -> void:
 		var color := UI.GOLD if player == 0 else UI.VIOLET
 		UI.panel(modal_content, Vector2(x, 96), Vector2(270, 212), Color(color, 0.08), Color(color, 0.6), 0.06)
 		UI.heading(modal_content, Settings.fmt("PLAYER %d", [player + 1]), Vector2(x + 14, 100), Vector2(240, 28), 20, color, Color(0, 0, 0, 0.6))
-		var keys := [["A / D", "APPROACH / RETREAT"], ["W", "JUMP"], ["S", "GUARD"], ["F", "1  LEFT PUNCH"], ["V", "2  RIGHT PUNCH"], ["G", "3  LEFT KICK"], ["B", "4  RIGHT KICK"], ["H", "GRAPPLE"], ["SHIFT", "RUN"]] if player == 0 \
-			else [["← / →", "APPROACH / RETREAT"], ["↑", "JUMP"], ["↓", "GUARD"], ["K", "1  LEFT PUNCH"], [",", "2  RIGHT PUNCH"], ["L", "3  LEFT KICK"], [".", "4  RIGHT KICK"], ["J", "GRAPPLE"], ["CTRL", "RUN"]]
+		var keys := [["A / D", "APPROACH / RETREAT"], ["W", "JUMP"], ["S", "CROUCH"], ["F", "1  LEFT PUNCH"], ["V", "2  RIGHT PUNCH"], ["G", "3  LEFT KICK"], ["B", "4  RIGHT KICK"], ["E", "GUARD"], ["SHIFT", "RUN"]] if player == 0 \
+			else [["← / →", "APPROACH / RETREAT"], ["↑", "JUMP"], ["↓", "CROUCH"], ["K", "1  LEFT PUNCH"], [",", "2  RIGHT PUNCH"], ["L", "3  LEFT KICK"], [".", "4  RIGHT KICK"], ["O", "GUARD"], ["CTRL", "RUN"]]
 		for k in keys.size():
 			UI.key_hint(modal_content, keys[k][0], keys[k][1], Vector2(x + 14, 132 + k * 17))
 	var tip := UI.label(modal_content, "Double-tap forward to dash, back to backdash. Chain light and heavy strikes into combos.\nF1 movebook  /  Esc pause  /  R next round or rematch.", Vector2(28, 314), Vector2(400, 46), 11, UI.MUTED)
@@ -751,8 +756,8 @@ func _show_guide() -> void:
 	UI.eyebrow(modal_content, "BASICS", Vector2(28, 98), Vector2(270, 16), UI.GOLD)
 	UI.label(modal_content, "P1", Vector2(178, 98), Vector2(40, 16), 11, UI.GOLD)
 	UI.label(modal_content, "P2", Vector2(244, 98), Vector2(40, 16), 11, UI.VIOLET)
-	var basics := [["MOVE", "A  D", "← →"], ["JUMP", "W", "↑"], ["GUARD", "S", "↓"],
-		["1  2  3  4", "F V G B", "K , L ."], ["GRAB", "H", "J"], ["RUN", "SHIFT", "CTRL"]]
+	var basics := [["MOVE", "A  D", "← →"], ["JUMP", "W", "↑"], ["CROUCH", "S", "↓"],
+		["1  2  3  4", "F V G B", "K , L ."], ["GUARD", "E", "O"], ["RUN", "SHIFT", "CTRL"]]
 	for row in basics.size():
 		var y := 118.0 + row * 23.0
 		UI.label(modal_content, basics[row][0], Vector2(28, y), Vector2(140, 20), 12, UI.WHITE).add_theme_font_override("font", UI.strong_font())

@@ -93,6 +93,7 @@ func _ready() -> void:
 	voice_player = AudioStreamPlayer.new()
 	add_child(voice_player)
 	voice_player.finished.connect(_voice_finished)
+	Music.play_story()
 	lines = StoryDirector.current_lines()
 	line_index = 0
 	fade.color.a = 1.0
@@ -845,7 +846,7 @@ func _advance_flow() -> void:
 		StoryDirector.Phase.FINALE:
 			MatchSetup.story = false
 			MatchSetup.arcade = false
-			_leave("res://scenes/MainMenu.tscn")
+			_leave("res://scenes/Credits.tscn")
 		StoryDirector.Phase.PROLOGUE, StoryDirector.Phase.VICTORY:
 			StoryDirector.begin_intro(ROSTER.profile(MatchSetup.selected_fighters[1]).id)
 			var destination: int = StoryDirector.resolve()
@@ -886,6 +887,7 @@ func _flush_fade(from_tween := false) -> void:
 		then_do.call()
 
 func _exit_tree() -> void:
+	Music.narrating = false
 	# The arena is parked outside the tree while a set is on stage.
 	if is_instance_valid(stage) and not stage.is_inside_tree():
 		stage.free()
@@ -897,6 +899,9 @@ func _process(delta: float) -> void:
 		next_button.text = "%s / %s" % [tr(label), key]
 		skip_button.text = tr("SKIP") + " / " + ("B" if Settings.using_pad else "ESC")
 	elapsed += delta
+	# The music sinks under the narrator and rises again between lines
+	# (voice_bank.gd does the easing every frame).
+	Music.narrating = voice_player.playing
 	_update_book(delta)
 	if storybook != null:
 		storybook.reveal(text_label.visible_ratio)

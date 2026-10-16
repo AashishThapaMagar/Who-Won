@@ -13,8 +13,12 @@ const FOLDER := "res://assets/audio/sfx/"
 const RATE := 22050
 const VOICES := 10
 const USE_GENERATED := false
-const NAMES := ["hit_light", "hit_heavy", "block", "whoosh", "whoosh_heavy", "ko", "round", "fight", "menu_move", "menu_confirm", "menu_back", "wipe"]
-var streams: Dictionary = {}
+## A sound may have variants (hit_light_2.ogg, hit_light_3.ogg ...); each
+## play picks one at random. Made by tools/make_eleven_sfx.py.
+const NAMES := ["hit_light", "hit_heavy", "block", "whoosh", "whoosh_heavy", "ko", "round", "fight", "menu_move", "menu_confirm", "menu_back", "wipe",
+	"step_walk", "step_run", "jump", "land"]
+const MAX_VARIANTS := 6
+var streams: Dictionary = {}   # name -> Array[AudioStream]
 var players: Array[AudioStreamPlayer] = []
 var next_voice := 0
 
@@ -44,11 +48,16 @@ func _ready() -> void:
 		add_child(player)
 		players.append(player)
 	for sound in NAMES:
-		var recorded := _recorded(sound)
-		if recorded != null:
+		var recorded: Array = []
+		for v in MAX_VARIANTS:
+			var stream := _recorded(sound if v == 0 else "%s_%d" % [sound, v + 1])
+			if stream == null:
+				break
+			recorded.append(stream)
+		if not recorded.is_empty():
 			streams[sound] = recorded
-		elif USE_GENERATED:
-			streams[sound] = _wav(call("_make_" + sound))
+		elif USE_GENERATED and has_method("_make_" + sound):
+			streams[sound] = [_wav(call("_make_" + sound))]
 
 ## A small random pitch spread keeps repeated hits from sounding mechanical.
 func play(sound: String, volume_db := 0.0, pitch := 1.0) -> void:
@@ -56,7 +65,7 @@ func play(sound: String, volume_db := 0.0, pitch := 1.0) -> void:
 		return
 	var player := players[next_voice]
 	next_voice = (next_voice + 1) % players.size()
-	player.stream = streams[sound]
+	player.stream = (streams[sound] as Array).pick_random()
 	player.volume_db = volume_db
 	player.pitch_scale = pitch * randf_range(0.95, 1.05)
 	player.play()

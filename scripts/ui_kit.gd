@@ -104,6 +104,39 @@ static func saira(weight: int = 600, width: int = 100, italic := false) -> Font:
 		_saira[key] = font
 	return _saira[key]
 
+## Cinzel (assets/fonts, SIL Open Font License): Roman capitals in the
+## manner of a film poster, for the end credits; weight 400-900, with
+## optional letter spacing. Devanagari falls back to Tiro Devanagari Hindi,
+## a serif that sits beside it.
+static var _cinzel_file: Font
+static var _tiro_file: Font
+static var _cinema: Dictionary = {}
+static func cinema(weight: int = 500, spacing: int = 0) -> Font:
+	var key := "%d/%d" % [weight, spacing]
+	if not _cinema.has(key):
+		if _cinzel_file == null:
+			_cinzel_file = _font_file("res://assets/fonts/Cinzel.ttf")
+			_tiro_file = _font_file("res://assets/fonts/TiroDevanagariHindi-Regular.ttf")
+		if _cinzel_file == null:
+			return saira(weight)
+		var font := FontVariation.new()
+		font.base_font = _cinzel_file
+		font.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"): weight}
+		font.spacing_glyph = spacing
+		if _tiro_file != null:
+			font.fallbacks = [_tiro_file]
+		_cinema[key] = font
+	return _cinema[key]
+
+static func _font_file(path: String) -> Font:
+	if ResourceLoader.exists(path):
+		return load(path)
+	if FileAccess.file_exists(path):
+		var file := FontFile.new()
+		file.load_dynamic_font(path)
+		return file
+	return null
+
 ## Devanagari digits only (WhoWonNumerals, cut from Mukta Bold, OFL).
 static var _numerals_font: Font
 static func _numerals() -> Font:
