@@ -34,6 +34,8 @@ var camera_nudge := Vector3.ZERO
 ## The super cinematic: who is performing it, and how far the camera has
 ## swung into its close-up (0 = fight camera, 1 = full close-up).
 var super_fighter: Node = null
+## Until when (msec) a filmed finisher holds the super's close shot.
+var finisher_until := 0
 var cinematic := 0.0
 ## The knockout shot: the fallen fighter, and until when (real milliseconds,
 ## since the fall plays in slow motion) the camera holds low on the fall.
@@ -138,6 +140,8 @@ func _ready() -> void:
 		fighter.impact.connect(func(_point: Vector2, blocked: bool, heavy: bool): _impact_3d(fighter, blocked, heavy))
 		fighter.wall_hit.connect(_wall_impact)
 		fighter.super_started.connect(_super_cinematic.bind(fighter))
+		if fighter.has_signal("finisher_started"):
+			fighter.finisher_started.connect(_finisher_cinematic.bind(fighter))
 	health_bar1.max_value = player1.max_health
 	health_bar2.max_value = player2.max_health
 	player1.health_changed.connect(func(h, _mh): health_bar1.value = h)
@@ -316,7 +320,7 @@ func _update_fight_camera(delta: float) -> void:
 	var look: Vector3 = camera_target
 	# Super: swing to a low close-up from the attacker's front quarter and
 	# ease back out once the combo is over.
-	var performing: bool = is_instance_valid(super_fighter) and super_fighter.state == super_fighter.State.SUPER
+	var performing: bool = is_instance_valid(super_fighter) and (super_fighter.state == super_fighter.State.SUPER or Time.get_ticks_msec() < finisher_until)
 	var falling: bool = is_instance_valid(ko_fighter) and Time.get_ticks_msec() < ko_until
 	# The knockout cuts straight in (no ease) so the fall reads as instant.
 	if falling and cinematic < 1.0 and not performing:
@@ -478,6 +482,17 @@ func _super_cinematic(fighter: Node) -> void:
 	show.tween_interval(0.55)
 	show.tween_property(title, "modulate:a", 0.0, 0.3)
 	show.tween_callback(title.queue_free)
+
+## Ananta's finisher: the camera swings into the super's low, close profile
+## shot and the fight drops into slow motion for the blow, then eases back.
+func _finisher_cinematic(fighter: Node) -> void:
+	super_fighter = fighter
+	finisher_until = Time.get_ticks_msec() + 1500
+	fov_kick = 2.0
+	Engine.time_scale = 0.55
+	get_tree().create_timer(0.75, true, false, true).timeout.connect(func():
+		if Engine.time_scale < 1.0 and not is_replaying():
+			Engine.time_scale = 1.0)
 
 ## A fighter slammed into a railing: a heavy thud, stone dust bursting off
 ## the balustrade, sparks where the back meets it and a hard camera knock.

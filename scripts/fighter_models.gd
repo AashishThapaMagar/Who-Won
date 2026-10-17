@@ -118,14 +118,21 @@ const MESHY_OWN := {
 		"jab": "Left_Jab_from_Guard", "cross": "Right_Jab_from_Guard", "hook": "Left_Hook_from_Guard",
 		"uppercut": "Right_Upper_Hook_from_Guard", "punch_heavy": "Kung_Fu_Punch",
 		"kick": "Roundhouse_Kick", "kick_front": "Spartan_Kick", "kick_spin": "Lunge_Spin_Kick",
-		"finisher": "Dodge_and_Counter", "strike_sweep": "Sweep_Kick", "block": "Block1",
+		# Dodge and Counter once its GLB is in; the kung fu punch until then.
+		"finisher": ["Dodge_and_Counter", "Kung_Fu_Punch"], "strike_sweep": "Sweep_Kick", "block": "Block1",
 		"hit": "Hit_Reaction", "hit_head": "Face_Punch_Reaction", "hit_head_heavy": "Face_Punch_Reaction_2",
-		"hit_body": "Hit_Reaction_to_Waist", "victory": "Formal_Bow", "taunt": "Gentlemans_Bow",
+		"hit_body": "Hit_Reaction_to_Waist", "victory": ["Formal_Bow", "Victory_Cheer"], "taunt": "Gentlemans_Bow",
 		# The strikes his move table names (action_moves.gd); his low kick
 		# stays the Mixamo one, Meshy has none.
 		"strike_roundhouse": "Roundhouse_Kick", "strike_side_kick": "Spartan_Kick",
 		"strike_advancing_snap": "Step_in_High_Kick",
 	},
+}
+## Meshy routines whose strike is picked by hand: [start, impact, end].
+## The kung fu punch is a seven-second form; its standing straight punch
+## lands at 3.0 s (the measured "furthest reach" found a low move after it).
+const MESHY_CLIP_TIMING := {
+	"Kung_Fu_Punch": [2.6, 3.0, 3.45],
 }
 ## Fighters whose sweep is Meshy's floor-level Sweeping Kick (the rest keep
 ## the capoeira rasteira of LOW_KIT).
@@ -584,12 +591,22 @@ static func _mixamo(fighter_id: String) -> Dictionary:
 		else:
 			timing.erase(logical)
 	var own_meshy: Dictionary = MESHY_OWN.get(fighter_id, {})
+	var reversed: Array = pack.get("reversed", []).duplicate()
 	for logical in own_meshy:
-		var own_file := meshy_file(own_meshy[logical])
-		if ResourceLoader.exists(own_file):
-			tripo.append({"file": own_file, "clips": {logical: ""}})
-			clips[logical] = "meshy_" + logical
-			timing.erase(logical)
+		# A name, or names in order of preference (the first downloaded).
+		var names: Array = own_meshy[logical] if own_meshy[logical] is Array else [own_meshy[logical]]
+		for name in names:
+			var own_file := meshy_file(name)
+			if ResourceLoader.exists(own_file):
+				tripo.append({"file": own_file, "clips": {logical: ""}})
+				clips[logical] = "meshy_" + logical
+				timing.erase(logical)
+				if MESHY_CLIP_TIMING.has(name):
+					timing[logical] = MESHY_CLIP_TIMING[name]
+				# The pack played its own clip for this backwards (a walk-back
+				# used as the walk); the Meshy clip plays the right way round.
+				reversed.erase(logical)
+				break
 	if fighter_id in MESHY_SWEEPERS and clips.has("strike_sweeping_kick"):
 		clips["strike_sweep"] = clips["strike_sweeping_kick"]
 		timing["strike_sweep"] = timing["strike_sweeping_kick"]
@@ -626,7 +643,7 @@ static func _mixamo(fighter_id: String) -> Dictionary:
 		"timing": timing,
 		"meshy": meshy,
 		"tripo": tripo,
-		"reversed": pack.get("reversed", []),
+		"reversed": reversed,
 		"throw_posture": style.get("throw_posture", 0.0),
 		# The shared knockout stands still for 1.6 s before the body drops:
 		# a knockout starts at the drop, so the fall is the blow's reaction.

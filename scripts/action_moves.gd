@@ -158,7 +158,12 @@ static func for_fighter(id: String) -> Dictionary:
 			m.cross.name = "Straight cross"
 			m.hook.name = "Rear hook"
 			m.hook.pose = "hook"
-			m.combo_finish = BASE._move("The Final Word", "finisher_clip", "punch", "hook", 70, -92, 0.16, 0.10, 0.42, 2.0, 1.9, 30)
+			# The boss's finisher: heavier, live for longer, reaching further,
+			# connecting readily (hit_detection_3d.gd) and filmed close
+			# (arena_3d.gd _finisher_cinematic).
+			m.combo_finish = BASE._move("The Final Word", "finisher_clip", "punch", "hook", 80, -88, 0.16, 0.18, 0.42, 2.9, 2.2, 34)
+			m.combo_finish.finisher = true
+			m.combo_finish.hitstun = 0.7
 			m.combo_finish.hitstun = 0.6
 			# 3,3,4 kick string: body kick, front kick, spinning back kick.
 			m.kick.name = "Body kick"

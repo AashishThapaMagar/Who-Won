@@ -7,6 +7,8 @@ signal impact(point: Vector2, blocked: bool, heavy: bool)
 signal strike_connected(blocked: bool, force: float)
 ## A super's opening strike landed: the cinematic begins (see super_moves.gd).
 signal super_started
+## A finisher that is filmed (Ananta's): the arena cuts to a close shot.
+signal finisher_started
 
 const ROSTER := preload("res://scripts/fighter_roster.gd")
 const MOVES := preload("res://scripts/move_catalog.gd")
@@ -610,6 +612,8 @@ func _start_style_move(move_id: String, step: int = 0) -> void:
 	chain_step = step
 	# The sweep stays down at the floor; everything else stands up.
 	crouching = data.get("crouch", false)
+	if data.get("finisher", false):
+		finisher_started.emit()
 	BATTLE_CRY.fire(player_id - 1, false, BATTLE_CRY.move_event(str(character_profile.id), move_id))
 	_update_animation()
 
@@ -876,7 +880,8 @@ func take_hit(damage: int, knockback: float, attacker_facing: int, attacker: Nod
 		_received_hits = _received_hits + 1 if continued else 1
 		_combo_attacker = attacker
 		if not move.is_empty():
-			var scaling := maxf(0.4, 1.0 - (_received_hits - 1) * 0.15)
+			# A finisher ending a long string keeps most of its weight.
+			var scaling := maxf(0.75 if move.get("finisher", false) else 0.4, 1.0 - (_received_hits - 1) * 0.15)
 			dealt = maxi(1, roundi(damage * scaling * (1.2 if counter else 1.0)))
 		if attacker != null and (counter or punish):
 			attacker.combat_notice = "COUNTER HIT" if counter else "PUNISH"

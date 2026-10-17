@@ -77,7 +77,7 @@ func _physics_process(delta: float) -> void:
 			if not grab:
 				# A super's opener and a jump-in (its limb's path through the
 				# air can't be placed to the centimetre) connect more readily.
-				var generous: bool = fighter.current_move.get("super", false) or fighter.current_move.get("air", false)
+				var generous: bool = fighter.current_move.get("super", false) or fighter.current_move.get("air", false) or fighter.current_move.get("finisher", false)
 				var slack := SUPER_SLACK if generous else (COMBO_SLACK if continued else SLACK)
 				touch = contact(fighter, victim, slack, _last_strikes.get(fighter, []), delta)
 				if touch.is_empty() and fighter.attack_timer <= fighter.attack_startup() + delta * 1.5:
