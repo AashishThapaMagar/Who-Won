@@ -223,6 +223,9 @@ const STYLES := {
 		# for a big brawler (the swinging hooks and haymaker, a boxer's
 		# steps). Timings are those measured for the clip's owner.
 		"borrow": {
+			# His own wrestler's stance (in his style folder, which only
+			# strikes are taken from).
+			"idle": ["sab/style/wrestling_idle_mmaidle"],
 			"cross": ["abhi/fight/cross", [0.15, 0.37, 0.8]],
 			"hook": ["abhi/fight/right_hook", [0.1, 0.33, 0.9]],
 			"uppercut": ["ish/fight/left_uppercut", [0.15, 0.47, 1.0]],
@@ -338,6 +341,20 @@ const STYLES := {
 		"height": FIGHTER_HEIGHT, "width": 1.0, "tint": [Color("c29a3c"), Color("2f8a86")],
 		"clips": {"idle": "idle", "kick": "roundhouse_kick", "kick_spin": "flip_kick"},
 		"timing": {"kick": [0.45, 1.07, 1.9], "kick_spin": [0.4, 1.0, 1.8]},
+		# The Spiral fights in capoeira (the Mixamo capoeira set in
+		# assets/fighters/anant/capoeira/): he sways in the ginga, kicks
+		# with the martelo, the bencao push kick, the meia-lua de compasso
+		# spinning heel, and ends strings on the armada. Impacts measured
+		# with tools/measure_strike_clips.gd.
+		"borrow": {
+			"idle": ["anant/capoeira/ginga_variation_1"],
+			"walk": ["anant/capoeira/ginga_forward"],
+			"walk_back": ["anant/capoeira/ginga_backward"],
+			"kick": ["anant/capoeira/martelo_2", [0.15, 0.46, 1.0]],
+			"kick_front": ["anant/capoeira/bencao", [0.3, 0.64, 1.2]],
+			"kick_spin": ["anant/capoeira/meia_lua_de_compasso", [0.8, 1.32, 1.73]],
+			"finisher": ["anant/capoeira/armada", [0.85, 1.34, 1.63]],
+		},
 	},
 	"anant": {
 		"height": FIGHTER_HEIGHT, "width": 1.0, "tint": [Color("5a2f6a"), Color("d3ac62")],
@@ -556,11 +573,15 @@ static func _mixamo(fighter_id: String) -> Dictionary:
 	var built := "res://assets/fighters/%s/body.glb" % fighter_id
 	var graft := "" if own_body or not ResourceLoader.exists(built) else built
 	# The high-detail Meshy body (Meshy_Models, rigged by
-	# tools/rig_meshy_body.py) dresses whichever skeleton the fighter has,
-	# its own Mixamo one or the shared X Bot, so every clip plays on it.
+	# tools/rig_meshy_body.py) is fitted to the shared X Bot skeleton, so it
+	# goes on that skeleton: grafted onto a fighter's own older rig (whose
+	# rest pose and joints differ: Vajraveer's is turned under its parent)
+	# it bent and twisted. The fighter's own Mixamo clips still play: every
+	# Mixamo clip fits every Mixamo skeleton.
 	var meshy_body := "res://assets/fighters/%s/meshy_body.glb" % fighter_id
 	if ResourceLoader.exists(meshy_body):
 		graft = meshy_body
+		own_body = false
 	return {
 		"scene": body if own_body else SHARED + "idle.fbx",
 		"body": graft,

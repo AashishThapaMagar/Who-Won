@@ -200,6 +200,12 @@ const GRAVITY := 2200.0
 ## Falling pulls harder than rising, so a jump snaps down instead of
 ## floating (the arc of real fighting-game jumps).
 const FALL_GRAVITY := 1.35
+## A knockout's lift (combat units/s up), the share of the landing speed
+## it bounces back with, and how hard the body skids to a stop.
+const KO_POP := 430.0
+const KO_BOUNCE := 0.28
+const KO_SKID := 0.38
+var _ko_bounced := false
 
 ## The fighter's weight, from the roster build (Mahabali 1.18, Vajraveer
 ## 0.9): heavier bodies are shoved less by blows, take longer to start and
@@ -268,7 +274,12 @@ func _physics_process(delta: float) -> void:
 	velocity.y += GRAVITY * delta * (FALL_GRAVITY if velocity.y > 0.0 else 1.0)
 	# A throw or a super that ends the round plays out to its last frame.
 	if (not controls_enabled or state == State.KO) and state not in [State.THROWING, State.SUPER]:
-		velocity.x = move_toward(velocity.x, 0.0, braking * delta)
+		if state == State.KO:
+			# Knocked out: no braking in the air, a long skid on the ground.
+			if _is_grounded():
+				velocity.x = move_toward(velocity.x, 0.0, braking * KO_SKID * delta)
+		else:
+			velocity.x = move_toward(velocity.x, 0.0, braking * delta)
 	else:
 		match state:
 			State.HITSTUN, State.BLOCKSTUN:
@@ -312,7 +323,13 @@ func _physics_process(delta: float) -> void:
 					_process_move_and_actions(delta)
 			_:
 				_process_move_and_actions(delta)
+	var falling_speed := velocity.y
 	_move_combat_body(delta)
+	if not was_grounded and _is_grounded() and state == State.KO and not _ko_bounced and falling_speed > 150.0:
+		# The body hits the stone and bounces once.
+		_ko_bounced = true
+		velocity.y = -falling_speed * KO_BOUNCE
+		velocity.x *= 0.7
 	if not was_grounded and _is_grounded() and state == State.JUMP:
 		state = State.LAND
 		action_timer = LAND_TIME * mass()
@@ -874,6 +891,13 @@ func take_hit(damage: int, knockback: float, attacker_facing: int, attacker: Nod
 	if health <= 0:
 		state = State.KO
 		hurtbox.set_deferred("monitorable", false)
+		# The finishing blow lifts the body off its feet along the hit, more
+		# for a harder blow and less for a heavier fighter; it lands, bounces
+		# once and skids (_physics_process).
+		if _is_grounded():
+			velocity.y = -KO_POP * lerpf(0.55, 1.0, force) / mass()
+			velocity.x *= 1.35
+		_ko_bounced = false
 		# Barely a beat of freeze: the body goes the moment the blow lands.
 		hitstop_remaining = minf(hitstop_remaining, 0.03)
 		if attacker != null:

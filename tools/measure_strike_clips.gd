@@ -45,6 +45,16 @@ func _measure(path: String) -> void:
 			var reach := Vector2(at.x - hip.x, at.z - hip.z).length()
 			if reach > best.reach:
 				best = {"reach": reach, "t": t, "limb": limb, "height": at.y}
+	# When the hips first sink below 85% of their opening height (a fall).
+	var drop := -1.0
+	var opening := _global(skeleton, hips).origin.y
+	_pose(skeleton, animation, 0.0)
+	opening = _global(skeleton, hips).origin.y
+	for i in steps + 1:
+		_pose(skeleton, animation, i * 0.02)
+		if drop < 0.0 and _global(skeleton, hips).origin.y < opening * 0.85:
+			drop = i * 0.02
+	print("%s  hips drop=%.2f" % [path.get_file(), drop])
 	_pose(skeleton, animation, 0.0)
 	var ground := INF
 	for limb in ["left_foot", "right_foot"]:

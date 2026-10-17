@@ -603,7 +603,7 @@ func _tint(colors: Array) -> void:
 ## launch. Building one means opening and converting every clip file (about
 ## fifty for a full move pack, ~10 s); a cached set loads in a fraction of
 ## that. Bump CLIP_CACHE_VERSION whenever the conversion below changes.
-const CLIP_CACHE_VERSION := 8
+const CLIP_CACHE_VERSION := 9
 const CLIP_CACHE_DIR := "user://clip_cache/"
 static var _clip_cache := {}
 
@@ -706,6 +706,13 @@ func _build_clip_files(files: Dictionary, meshy: Dictionary, target: Skeleton3D,
 				var source_skeletons := scene.find_children("*", "Skeleton3D", true, false)
 				if not source_skeletons.is_empty():
 					_scale_positions(animation, _hips_height(skeleton[0]) / maxf(_hips_height(source_skeletons[0]), 0.0001))
+					# A rig whose skeleton is turned under its parent (the
+					# Tripo-built Vajraveer's) keys its root in that turned
+					# frame: carried into this skeleton's frame, its clips
+					# stand upright here instead of lying on their side.
+					var turn := _node_rotation(target, character).inverse() * _node_rotation(source_skeletons[0], scene)
+					if not turn.is_equal_approx(Quaternion.IDENTITY):
+						_turn_root(animation, source_skeletons[0].get_bone_name(0), turn)
 				if not key in TRAVELLING:
 					clip_pace["files/" + key] = _pin_hips(animation)
 				if key.ends_with("jump"):
@@ -996,6 +1003,18 @@ static func _node_rotation(skeleton: Skeleton3D, top: Node) -> Quaternion:
 		node = node.get_parent()
 	return rotation
 
+## Turns the root bone's keys (rotation and travel) by `turn`.
+static func _turn_root(animation: Animation, root_bone: String, turn: Quaternion) -> void:
+	for track in animation.get_track_count():
+		if String(animation.track_get_path(track).get_concatenated_subnames()) != root_bone:
+			continue
+		for key in animation.track_get_key_count(track):
+			match animation.track_get_type(track):
+				Animation.TYPE_ROTATION_3D:
+					animation.track_set_key_value(track, key, turn * (animation.track_get_key_value(track, key) as Quaternion))
+				Animation.TYPE_POSITION_3D:
+					animation.track_set_key_value(track, key, turn * (animation.track_get_key_value(track, key) as Vector3))
+
 ## Holds the root bone's horizontal position at its first key (keeping the
 ## up-down bob), making a travelling clip play in place. Returns how fast
 ## the clip travelled, in metres per second.
@@ -1100,6 +1119,30 @@ func _resolve_clips() -> void:
 		var animation := player.get_animation(name)
 		if animation != null:
 			animation.loop_mode = Animation.LOOP_LINEAR if clip_names.find_key(name) in LOOPING else Animation.LOOP_NONE
+	_measure_ko_start()
+
+## A knockout plays from just before the body drops: knockout clips open
+## with a second or more of reeling, which the KO's slow motion stretched
+## so long the fighter was still on his feet when the replay began. Found
+## from the hips' height in the clip (the shared clip's is set in
+## fighter_models.gd KO_FALL_START).
+func _measure_ko_start() -> void:
+	var starts: Dictionary = config.get("starts", {})
+	var animation := player.get_animation(clip_names.get("ko", ""))
+	if starts.has("ko") or animation == null:
+		return
+	for track in animation.get_track_count():
+		if animation.track_get_type(track) != Animation.TYPE_POSITION_3D or _bone_key(String(animation.track_get_path(track).get_concatenated_subnames())) != "hips":
+			continue
+		if animation.track_get_key_count(track) < 2:
+			return
+		var opening: float = (animation.track_get_key_value(track, 0) as Vector3).y
+		for key in animation.track_get_key_count(track):
+			if (animation.track_get_key_value(track, key) as Vector3).y < opening * 0.85:
+				starts["ko"] = maxf(0.0, animation.track_get_key_time(track, key) - 0.2)
+				config["starts"] = starts
+				return
+		return
 
 ## Sounds that belong to the body, read off the pose last drawn: a step
 ## each time a foot plants while walking or running, and the thud of a
