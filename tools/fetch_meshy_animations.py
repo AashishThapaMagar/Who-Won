@@ -42,6 +42,7 @@ WANTED = {
     "Dodge_and_Counter": 93, "Sweep_Kick": 455, "Block1": 138,
     "Face_Punch_Reaction": 174, "Face_Punch_Reaction_2": 176, "Hit_Reaction_to_Waist": 171,
     "Hit_Reaction": 178, "Formal_Bow": 41, "Gentlemans_Bow": 42, "Step_in_High_Kick": 218,
+    "Run_2": 14, "Regular_Jump": 466,
 }
 
 def api_key():

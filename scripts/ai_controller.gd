@@ -124,10 +124,12 @@ func _physics_process(delta: float) -> void:
 	# continue the chain, same as a buffered player input would.
 	if fighter.attack_connected and fighter.state in [fighter.State.PUNCH, fighter.State.KICK]:
 		_combo_reaction += delta
-		if _combo_reaction > 0.07 * reaction_scale and fighter.chain_step < COMBO_LENGTH[skill()] and fighter._buffered_action.is_empty():
+		var length: int = COMBO_LENGTH[skill()] + (4 if boss and skill() == 2 else 0)
+		if _combo_reaction > 0.07 * reaction_scale and fighter.chain_step < length and fighter._buffered_action.is_empty():
 			# Mixes punches and kicks; the last blow is the heavy one (the
-			# finisher once the string is six deep).
-			var last: bool = fighter.chain_step >= COMBO_LENGTH[skill()] - 1
+			# finisher once the string is deep enough). Ananta on the hardest
+			# setting goes for his twelve.
+			var last: bool = fighter.chain_step >= length - 1
 			_request_move("kick" if last or randf() < 0.3 else "jab")
 			_combo_reaction = -0.3
 	else:

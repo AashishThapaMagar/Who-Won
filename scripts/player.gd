@@ -553,11 +553,21 @@ func _consume_action() -> bool:
 ## less, so a long combo stays in reach without being a one-touch kill.
 const MAX_CHAIN := 8
 const FINISH_FROM := 5
+## The final boss strings longer: Ananta's combos run to twelve blows, his
+## finisher from the tenth.
+const BOSS_CHAIN := 12
+const BOSS_FINISH_FROM := 9
+
+func max_chain() -> int:
+	return BOSS_CHAIN if character_profile.get("id", "") == "anant" else MAX_CHAIN
+
+func finish_from() -> int:
+	return BOSS_FINISH_FROM if character_profile.get("id", "") == "anant" else FINISH_FROM
 const FLOW := {"punch": ["jab", "cross", "hook"], "rpunch": ["rp", "cross", "hook"],
 	"kick": ["kick", "forward_heavy", "back_heavy"], "rkick": ["rk", "kick", "forward_heavy"]}
 
 func _next_chain_move(action: String) -> String:
-	if current_move.is_empty() or not attack_connected or chain_step >= MAX_CHAIN - 1:
+	if current_move.is_empty() or not attack_connected or chain_step >= max_chain() - 1:
 		return ""
 	if not FLOW.has(action) or current_move.get("air", false) or current_move.get("knockdown", false):
 		return ""
@@ -565,7 +575,7 @@ func _next_chain_move(action: String) -> String:
 	# The finisher ends a string.
 	if current_move == moves.get("combo_finish", {}):
 		return ""
-	if action in ["kick", "rkick"] and chain_step >= FINISH_FROM and moves.has("combo_finish"):
+	if action in ["kick", "rkick"] and chain_step >= finish_from() and moves.has("combo_finish"):
 		return "combo_finish"
 	var next: String = current_move.next_light if action == "punch" else (current_move.next_heavy if action == "kick" else "")
 	if action == "rpunch":
@@ -574,7 +584,7 @@ func _next_chain_move(action: String) -> String:
 		next = str(current_move.get("next_rk", ""))
 	# A move's own route to the finisher (1,1,1,3) also waits for the string
 	# to be six deep; before that the string flows on.
-	if next != "" and moves.has(next) and not (next == "combo_finish" and chain_step < FINISH_FROM):
+	if next != "" and moves.has(next) and not (next == "combo_finish" and chain_step < finish_from()):
 		return next
 	for id in FLOW[action]:
 		if moves.has(id) and moves[id] != current_move:

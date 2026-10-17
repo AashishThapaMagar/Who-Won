@@ -33,8 +33,10 @@ func run() -> void:
 	current_scene = arena
 	p1 = arena.player1
 	p2 = arena.player2
-	var rhythm := ["punch", "punch", "rpunch", "punch", "kick", "rkick", "punch", "kick"]
 	for index in 7:
+		var rhythm := ["punch", "punch", "rpunch", "punch", "kick", "rkick", "punch", "kick"]
+		if index == 6:
+			rhythm = ["punch", "punch", "rpunch", "punch", "kick", "rkick", "punch", "rpunch", "kick", "punch", "rkick", "kick"]
 		p1.apply_character(index)
 		p2.apply_character(0 if index != 0 else 1)
 		arena._begin_round(0)
@@ -57,7 +59,8 @@ func run() -> void:
 				await tap(rhythm[step])
 			if step >= rhythm.size() - 1 and p1.state not in [p1.State.PUNCH, p1.State.KICK]:
 				break
-		check(best >= 7, "%s strings a combo of 7+ blows (got %d)" % [p1.character_profile.id, best])
+		var want := 11 if p1.character_profile.id == "anant" else 7
+		check(best >= want, "%s strings a combo of %d+ blows (got %d)" % [p1.character_profile.id, want, best])
 		check(p2.health > 0, "%s's long combo leaves the rival standing (health %d)" % [p1.character_profile.id, p2.health])
 	print("LONG_COMBO_TEST: ", "ALL PASS" if failures.is_empty() else failures)
 	quit(0 if failures.is_empty() else 1)

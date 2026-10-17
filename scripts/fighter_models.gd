@@ -114,7 +114,7 @@ const MESHY_OWN := {
 	# meshy_file.)
 	"anant": {
 		"idle": "Fight_Idle", "walk": "Walk_Fight_Forward", "walk_back": "Walk_Fight_Back",
-		"backdash": "Stand_Dodge",
+		"run": "Run_2", "jump": "Regular_Jump", "backdash": "Stand_Dodge",
 		"jab": "Left_Jab_from_Guard", "cross": "Right_Jab_from_Guard", "hook": "Left_Hook_from_Guard",
 		"uppercut": "Right_Upper_Hook_from_Guard", "punch_heavy": "Kung_Fu_Punch",
 		"kick": "Roundhouse_Kick", "kick_front": "Spartan_Kick", "kick_spin": "Lunge_Spin_Kick",
