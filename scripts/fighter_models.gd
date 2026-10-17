@@ -122,6 +122,9 @@ const MESHY_OWN := {
 		"finisher": ["Dodge_and_Counter", "Kung_Fu_Punch"], "strike_sweep": "Sweep_Kick", "block": "Block1",
 		"hit": "Hit_Reaction", "hit_head": "Face_Punch_Reaction", "hit_head_heavy": "Face_Punch_Reaction_2",
 		"hit_body": "Hit_Reaction_to_Waist", "victory": ["Formal_Bow", "Victory_Cheer"], "taunt": "Gentlemans_Bow",
+		# A body blow folds him at the waist; his Mixamo liver-shot buckled
+		# his knees and dropped him into his rival.
+		"hit_liver": "Hit_Reaction_to_Waist", "hit_heavy": "Hit_Reaction_to_Waist",
 		# The strikes his move table names (action_moves.gd); his low kick
 		# stays the Mixamo one, Meshy has none.
 		"strike_roundhouse": "Roundhouse_Kick", "strike_side_kick": "Spartan_Kick",
@@ -409,10 +412,10 @@ const STYLES := {
 				"block": "high_right_block", "block_hit": "block_reaction",
 				# Body-shot reactions: the head-hit clips whip his head so far
 				# back that the collar and neck stretch.
-				"hit": "body_hit_by_straight_punch", "hit_heavy": "livershot_knockdown",
+				"hit": "body_hit_by_straight_punch", "hit_heavy": "body_hit_by_straight_punch",
 				# Reactions picked by where and how hard each blow lands.
 				"hit_head": "medium_head_hit", "hit_head_alt": "taking_punch_reaction", "hit_head_heavy": "heavy_head_hit",
-				"hit_body": "body_hit_by_straight_punch", "hit_liver": "livershot_knockdown",
+				"hit_body": "body_hit_by_straight_punch", "hit_liver": "body_hit_by_straight_punch",
 				"victory": "boxing_victory", "taunt": "boxing_taunt",
 				# Extra strikes, played by moves whose pose names them.
 				"strike_roundhouse": "mma_roundhouse_kick", "strike_side_kick": "mma_side_kick",

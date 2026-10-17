@@ -603,7 +603,7 @@ func _tint(colors: Array) -> void:
 ## launch. Building one means opening and converting every clip file (about
 ## fifty for a full move pack, ~10 s); a cached set loads in a fraction of
 ## that. Bump CLIP_CACHE_VERSION whenever the conversion below changes.
-const CLIP_CACHE_VERSION := 15
+const CLIP_CACHE_VERSION := 16
 const CLIP_CACHE_DIR := "user://clip_cache/"
 static var _clip_cache := {}
 
@@ -715,6 +715,13 @@ func _build_clip_files(files: Dictionary, meshy: Dictionary, target: Skeleton3D,
 						_turn_root(animation, source_skeletons[0].get_bone_name(0), turn)
 				if not key in TRAVELLING:
 					clip_pace["files/" + key] = _pin_hips(animation)
+					# Over the fighter's own spot, whatever the clip began at
+					# (a reaction that started off-centre carried the body
+					# into the rival).
+					for bone in skeleton[0].get_bone_count():
+						if _bone_key(skeleton[0].get_bone_name(bone)) == "hips":
+							_centre_hips(animation, skeleton[0].get_bone_rest(bone).origin)
+							break
 				if key.ends_with("jump"):
 					_ground_jump(animation)
 				library.add_animation(key, animation)
