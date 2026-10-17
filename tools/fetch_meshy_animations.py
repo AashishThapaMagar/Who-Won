@@ -30,6 +30,16 @@ WANTED = {
     "Knock_Down": 187, "Stand_Up_1": 344, "Stand_Up_2": 345,  # knockdown, get-up
     "Chest_Pound_Taunt": 88, "Victory_Cheer": 59,      # Mahabali's taunt, a win
     "Left_Uppercut_from_Guard": 196,
+    # Ananta's own set: a master's guard and footwork, guard-stance hands,
+    # the kung fu punch, three kicks, a dodge-and-counter finisher, his
+    # sweep, a guard, reactions and bows.
+    "Fight_Idle": 250, "Walk_Fight_Forward": 21, "Walk_Fight_Back": 20, "Stand_Dodge": 156,
+    "Left_Jab_from_Guard": 191, "Right_Jab_from_Guard": 192, "Left_Hook_from_Guard": 193,
+    "Right_Upper_Hook_from_Guard": 195, "Kung_Fu_Punch": 96,
+    "Roundhouse_Kick": 207, "Spartan_Kick": 206, "Lunge_Spin_Kick": 216,
+    "Dodge_and_Counter": 93, "Sweep_Kick": 455, "Block1": 138,
+    "Face_Punch_Reaction": 174, "Face_Punch_Reaction_2": 176, "Hit_Reaction_to_Waist": 171,
+    "Hit_Reaction": 178, "Formal_Bow": 41, "Gentlemans_Bow": 42, "Step_in_High_Kick": 218,
 }
 
 def api_key():

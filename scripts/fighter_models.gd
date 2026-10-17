@@ -104,6 +104,26 @@ const MESHY_KIT := {
 const MESHY_OWN := {
 	"sab": {"victory": "Chest_Pound_Taunt", "taunt": "Chest_Pound_Taunt"},
 	"anug": {"victory": "Victory_Cheer"},
+	# Ananta, the master, moves entirely in his own Meshy set: a low guard
+	# and fighting steps, guard-stance jab, cross, hook and rising hook, the
+	# kung fu punch, roundhouse, Spartan and lunging spin kicks, a dodge and
+	# counter to end his strings, a stunt sweep, his guard, his reactions,
+	# and a formal bow when he wins. Each strike's impact is measured from
+	# the clip as it loads (fighter_animated.gd _add_meshy_clips).
+	"anant": {
+		"idle": "Fight_Idle", "walk": "Walk_Fight_Forward", "walk_back": "Walk_Fight_Back",
+		"backdash": "Stand_Dodge",
+		"jab": "Left_Jab_from_Guard", "cross": "Right_Jab_from_Guard", "hook": "Left_Hook_from_Guard",
+		"uppercut": "Right_Upper_Hook_from_Guard", "punch_heavy": "Kung_Fu_Punch",
+		"kick": "Roundhouse_Kick", "kick_front": "Spartan_Kick", "kick_spin": "Lunge_Spin_Kick",
+		"finisher": "Dodge_and_Counter", "strike_sweep": "Sweep_Kick", "block": "Block1",
+		"hit": "Hit_Reaction", "hit_head": "Face_Punch_Reaction", "hit_head_heavy": "Face_Punch_Reaction_2",
+		"hit_body": "Hit_Reaction_to_Waist", "victory": "Formal_Bow", "taunt": "Gentlemans_Bow",
+		# The strikes his move table names (action_moves.gd); his low kick
+		# stays the Mixamo one, Meshy has none.
+		"strike_roundhouse": "Roundhouse_Kick", "strike_side_kick": "Spartan_Kick",
+		"strike_advancing_snap": "Step_in_High_Kick",
+	},
 }
 ## Fighters whose sweep is Meshy's floor-level Sweeping Kick (the rest keep
 ## the capoeira rasteira of LOW_KIT).
