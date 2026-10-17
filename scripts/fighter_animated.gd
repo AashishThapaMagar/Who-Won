@@ -603,7 +603,7 @@ func _tint(colors: Array) -> void:
 ## launch. Building one means opening and converting every clip file (about
 ## fifty for a full move pack, ~10 s); a cached set loads in a fraction of
 ## that. Bump CLIP_CACHE_VERSION whenever the conversion below changes.
-const CLIP_CACHE_VERSION := 16
+const CLIP_CACHE_VERSION := 20
 const CLIP_CACHE_DIR := "user://clip_cache/"
 static var _clip_cache := {}
 
@@ -1333,6 +1333,63 @@ func _sound_cues(fighter: Node, step: float) -> void:
 ## Picks and poses the clip for this frame. Called from the visual's
 ## _process and sync_pose.
 func update(delta: float) -> void:
+	_update_pose(delta)
+	if active and visual.fighter != null and config.get("face_lock", false):
+		_face_lock(visual.fighter, delta)
+
+## Face-lock (fighters whose clips turn the body on their own, Ananta's
+## Meshy forms): after each frame's pose, the whole body is turned about
+## its hips so they face the rival with the roster's three-quarter blade
+## (about 30 degrees, chest a little to the camera). Moves that spin on
+## purpose (spin kick, sweep, air strikes) and knockdowns are left free.
+const FACE_BLADE := deg_to_rad(30.0)
+const FACE_FREE_VARIANTS := ["spin", "strike_sweep", "strike_jump_punch", "strike_flying_kick"]
+var _face_turn := 0.0
+func _face_lock(fighter: Node, delta: float) -> void:
+	var S: Dictionary = fighter.State
+	var free: bool = fighter.state in [S.KO, S.KNOCKDOWN, S.THROWN, S.THROWING, S.STRUCK, S.JUMP, S.JUMP_START] 		or (fighter.state in [S.PUNCH, S.KICK] and str(fighter.attack_variant) in FACE_FREE_VARIANTS)
+	var goal := 0.0
+	var rival = fighter.get("opponent")
+	var camera := root.get_viewport().get_camera_3d() if root.is_inside_tree() else null
+	var left := _bone("leftupleg")
+	var right := _bone("rightupleg")
+	var hips_at := Vector3.ZERO
+	if not free and rival != null and rival.get("body") != null and camera != null and left >= 0 and right >= 0:
+		var l: Vector3 = skeleton.global_transform * skeleton.get_bone_global_pose(left).origin
+		var r: Vector3 = skeleton.global_transform * skeleton.get_bone_global_pose(right).origin
+		hips_at = (l + r) * 0.5
+		var facing := (l - r).cross(Vector3.UP)
+		facing.y = 0.0
+		var to_rival: Vector3 = rival.body.global_position - fighter.body.global_position
+		to_rival.y = 0.0
+		var to_camera: Vector3 = camera.global_position - fighter.body.global_position
+		to_camera.y = 0.0
+		if facing.length() > 0.01 and to_rival.length() > 0.01:
+			to_rival = to_rival.normalized()
+			var toward := to_rival.rotated(Vector3.UP, FACE_BLADE)
+			var away := to_rival.rotated(Vector3.UP, -FACE_BLADE)
+			var desired := toward if toward.dot(to_camera) > away.dot(to_camera) else away
+			goal = clampf(facing.normalized().signed_angle_to(desired, Vector3.UP), -1.3, 1.3)
+	# Strikes play exactly as authored: each is aimed along its own line, and
+	# turning the body (even held from the strike's start) threw fists and
+	# feet off their target (his jab fell from 9 in 10 landing to 6). The
+	# lock eases off through a punch or kick and back on after; his filmed
+	# finisher and his super (they always connect) stay locked.
+	if fighter.state in [S.PUNCH, S.KICK] and not fighter.current_move.get("finisher", false):
+		goal = 0.0
+	_face_turn = lerp_angle(_face_turn, goal, 1.0 - exp(-14.0 * delta))
+	if absf(_face_turn) < 0.002 or skeleton == null:
+		return
+	if hips_at == Vector3.ZERO:
+		var hips := _bone("hips")
+		hips_at = skeleton.global_transform * skeleton.get_bone_global_pose(hips).origin if hips >= 0 else root.global_position
+	var turn := Basis(Vector3.UP, _face_turn)
+	var placed := root.global_transform
+	placed.origin = hips_at + turn * (placed.origin - hips_at)
+	placed.basis = turn * placed.basis
+	root.global_transform = placed
+
+func _update_pose(delta: float) -> void:
 	if not active or visual.fighter == null:
 		return
 	var fighter: Node = visual.fighter
@@ -1441,7 +1498,9 @@ func update(delta: float) -> void:
 			# Flow out of a punch or kick back into guard, don't snap.
 			settle = maxf(settle, STRIKE_SETTLE)
 		_from_strike = false
-		player.play(clip, 0.0 if logical == "ko" else 0.05 if logical in REACTIONS else settle)
+		# Into a flinch fast, but over a few frames: a cut in a single frame
+		# threw the hands and head a metre between two frames.
+		player.play(clip, 0.0 if logical == "ko" else 0.12 if logical in REACTIONS else settle)
 		if restart:
 			player.seek(0.0, true)
 		# Clips that open with a still beat (the knockout) start where the

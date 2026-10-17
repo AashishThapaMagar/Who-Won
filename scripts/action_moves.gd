@@ -266,7 +266,7 @@ static func for_fighter(id: String) -> Dictionary:
 	m.crouch_punch = BASE._move("Rising uppercut", "uppercut", "punch", "hook", 44, -96, 0.09, 0.08, 0.30, 1.3, 1.2, 6)
 	m.crouch_punch.hitstun = 0.4
 	var sweeps := {"anug": "Slide tackle", "ish": "Hammer sweep", "sab": "Iron sweep", "bib": "Relay sweep",
-		"abhi": "Thunder sweep", "sup": "Spiral sweep", "anant": "Rasteira"}
+		"abhi": "Thunder sweep", "sup": "Spiral sweep", "anant": "Crown sweep"}
 	m.sweep = BASE._move(sweeps.get(id, "Leg sweep"), "strike_sweep", "kick", "kick", 70, -10, 0.16, 0.10, 0.42, 1.1, 0.6, 6)
 	m.sweep.blockstun = 0.18
 	m.sweep.low = true

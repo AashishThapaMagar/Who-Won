@@ -16,8 +16,9 @@ const SUPERS := {
 	},
 	"anant": {
 		"name": "CROWN BARRAGE", "clip": "punch_heavy",
-		# Left, right, left, right.
-		"start": 0.3, "hits": [0.63, 0.87, 1.1, 1.37], "end": 1.95,
+		# His Meshy kung fu form: the lunging punch (the opener lands on its
+		# way out), the high kick, the straight punch, the closing punch.
+		"start": 1.0, "hits": [1.05, 2.75, 3.0, 4.25], "end": 4.55,
 		"damage": [6, 6, 7, 13], "travel": 0.6,
 	},
 }

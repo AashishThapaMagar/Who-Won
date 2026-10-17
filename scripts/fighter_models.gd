@@ -83,7 +83,6 @@ const LOW_KIT := {
 }
 const OWN_LOW := {
 	"ish": {"crouch": ["ish/fight/crouching_idle"]},
-	"anant": {"crouch": ["anant/fight/crouching_idle"]},
 	"bib": {"crouch": ["bib/fight/crouch_idle"]},
 }
 ## Moves from Meshy's animation library (tools/fetch_meshy_animations.py,
@@ -104,38 +103,13 @@ const MESHY_KIT := {
 const MESHY_OWN := {
 	"sab": {"victory": "Chest_Pound_Taunt", "taunt": "Chest_Pound_Taunt"},
 	"anug": {"victory": "Victory_Cheer"},
-	# Ananta, the master, moves entirely in his own Meshy set: a low guard
-	# and fighting steps, guard-stance jab, cross, hook and rising hook, the
-	# kung fu punch, roundhouse, Spartan and lunging spin kicks, a dodge and
-	# counter to end his strings, a stunt sweep, his guard, his reactions,
-	# and a formal bow when he wins. Each strike's impact is measured from
-	# the clip as it loads (fighter_animated.gd _add_meshy_clips).
-	# (Moves whose GLB isn't downloaded yet keep his Mixamo clips: see
-	# meshy_file.)
-	"anant": {
-		"idle": "Fight_Idle", "walk": "Walk_Fight_Forward", "walk_back": "Walk_Fight_Back",
-		"run": "Run_2", "jump": "Regular_Jump", "backdash": "Stand_Dodge",
-		"jab": "Left_Jab_from_Guard", "cross": "Right_Jab_from_Guard", "hook": "Left_Hook_from_Guard",
-		"uppercut": "Right_Upper_Hook_from_Guard", "punch_heavy": "Kung_Fu_Punch",
-		"kick": "Roundhouse_Kick", "kick_front": "Spartan_Kick", "kick_spin": "Lunge_Spin_Kick",
-		# Dodge and Counter once its GLB is in; the kung fu punch until then.
-		"finisher": ["Dodge_and_Counter", "Kung_Fu_Punch"], "strike_sweep": "Sweep_Kick", "block": "Block1",
-		"hit": "Hit_Reaction", "hit_head": "Face_Punch_Reaction", "hit_head_heavy": "Face_Punch_Reaction_2",
-		"hit_body": "Hit_Reaction_to_Waist", "victory": ["Formal_Bow", "Victory_Cheer"], "taunt": "Gentlemans_Bow",
-		# A body blow folds him at the waist; his Mixamo liver-shot buckled
-		# his knees and dropped him into his rival.
-		"hit_liver": "Hit_Reaction_to_Waist", "hit_heavy": "Hit_Reaction_to_Waist",
-		# The strikes his move table names (action_moves.gd); his low kick
-		# stays the Mixamo one, Meshy has none.
-		"strike_roundhouse": "Roundhouse_Kick", "strike_side_kick": "Spartan_Kick",
-		"strike_advancing_snap": "Step_in_High_Kick",
-	},
 }
 ## Meshy routines whose strike is picked by hand: [start, impact, end].
 ## The kung fu punch is a seven-second form; its standing straight punch
 ## lands at 3.0 s (the measured "furthest reach" found a low move after it).
 const MESHY_CLIP_TIMING := {
 	"Kung_Fu_Punch": [2.6, 3.0, 3.45],
+	"Sweeping_Kick": [0.7, 1.24, 1.9],
 }
 ## Fighters whose sweep is Meshy's floor-level Sweeping Kick (the rest keep
 ## the capoeira rasteira of LOW_KIT).
@@ -148,13 +122,6 @@ const MESHY_SWEEPERS := ["ish", "sab", "bib"]
 ## [file, clip name, optional [start, impact, end] window]. Without a window
 ## a strike's impact is measured from the clip (furthest reach).
 const TRIPO_MOVES := {
-	"anant": {
-		# A spinning high kick: he turns his back, whips the leg up head
-		# high and lands facing forward again.
-		# Windowed by hand: the measured "furthest reach" caught the leg still
-		# chambered at hip height (0.7 s); the foot peaks head high at 0.8 s.
-		"kick_spin": ["spin_kick.glb", "front_kick_02", [0.3, 0.8, 1.35]],
-	},
 	"sup": {
 		# His win and taunt, and the story's gestures: cutscene lines play
 		# these by name ("pose": "bow").
@@ -388,51 +355,8 @@ const STYLES := {
 			"finisher": ["anant/capoeira/armada", [0.85, 1.34, 1.63]],
 		},
 	},
-	"anant": {
-		"height": FIGHTER_HEIGHT, "width": 1.0, "tint": [Color("5a2f6a"), Color("d3ac62")],
-		"clips": {"idle": "mma_idle", "kick": "martial_arts_kick", "kick_spin": "martial_arts_kick", "victory": "fireball"},
-		"timing": {"kick": [0.2, 0.73, 1.5], "kick_spin": [0.2, 0.73, 1.5]},
-		# MMA: his 47-clip Mixamo set (Downloads/Ananta_MMA) in
-		# assets/fighters/anant/fight/ (kept local), "With Skin" on his
-		# cleaned-up T-pose body. Every fighting clip is used.
-		"pack": {
-			"folder": "fight/",
-			"reversed": ["walk"],
-			"body": "boxing_victory",
-			"moves": {
-				"idle": "mma_standing_idle", "walk": "boxing_walk_backward", "walk_back": "boxing_walk_backward",
-				"sidestep_left": "walk_strafe_left", "sidestep_right": "walk_strafe_right",
-				"run": "unarmed_run_forward", "dash": "unarmed_run_forward", "backdash": "unarmed_run_backward",
-				"jump": "jump_in_place",
-				"jab": "jab_punch", "cross": "cross_punch", "hook": "rear_hand_hook",
-				"uppercut": "left_uppercut", "punch_heavy": "four_punch_combo",
-				"kick": "mma_medium_kick", "kick_front": "lead_foot_front_snap_kick", "kick_spin": "mma_spinning_back_kick",
-				"grapple": "double_leg_takedown_attacker", "thrown": "double_leg_takedown_victim", "getup": "get_up_from_back",
-				"finisher": "four_punch_combo",
-				"block": "high_right_block", "block_hit": "block_reaction",
-				# Body-shot reactions: the head-hit clips whip his head so far
-				# back that the collar and neck stretch.
-				"hit": "body_hit_by_straight_punch", "hit_heavy": "body_hit_by_straight_punch",
-				# Reactions picked by where and how hard each blow lands.
-				"hit_head": "medium_head_hit", "hit_head_alt": "taking_punch_reaction", "hit_head_heavy": "heavy_head_hit",
-				"hit_body": "body_hit_by_straight_punch", "hit_liver": "body_hit_by_straight_punch",
-				"victory": "boxing_victory", "taunt": "boxing_taunt",
-				# Extra strikes, played by moves whose pose names them.
-				"strike_roundhouse": "mma_roundhouse_kick", "strike_side_kick": "mma_side_kick",
-				"strike_low_kick": "mma_low_kick", "strike_advancing_snap": "rear_foot_advancing_front_snap_kick",
-			},
-			# [start, impact, end] around the frame the fist, knee or foot
-			# reaches furthest (measured from each clip).
-			"timing": {
-				"jab": [0.25, 0.57, 0.95], "cross": [0.75, 1.13, 1.6], "hook": [0.1, 0.4, 0.85],
-				"uppercut": [0.15, 0.47, 1.0], "punch_heavy": [0.3, 0.63, 1.5],
-				"kick": [0.35, 0.73, 1.3], "kick_front": [0.6, 1.1, 1.5], "kick_spin": [0.45, 0.97, 1.5],
-				"grapple": [0.1, 0.9, 1.5], "finisher": [0.95, 1.37, 2.1],
-				"strike_roundhouse": [0.35, 0.77, 1.3], "strike_side_kick": [0.25, 0.63, 1.2],
-				"strike_low_kick": [0.25, 0.6, 1.1], "strike_advancing_snap": [0.9, 1.37, 1.9],
-			},
-		},
-	},
+	# Ananta is built by _ananta() (ANANTA below), not from a style.
+	"anant": {"height": FIGHTER_HEIGHT, "width": 1.0, "tint": [Color("5a2f6a"), Color("d3ac62")]},
 }
 ## Other entries, kept as examples of the format.
 const MODELS := {
@@ -485,10 +409,80 @@ static func entry(fighter_id: String) -> Dictionary:
 			"height": style.get("height", 1.8), "width": 1.0, "tint": [],
 			"yaw": PI / 2.0, "files": {}, "clips": {}, "timing": {},
 		}
+	if fighter_id == "anant":
+		return _ananta()
 	if STYLES.has(fighter_id):
 		return _mixamo(fighter_id)
 	var data: Dictionary = MODELS.get(fighter_id, {})
 	return data if data.get("enabled", false) else {}
+
+## Ananta, built from one table and nothing else: every move he makes and
+## where it comes from. A Meshy library move (assets/fighters/meshy/<name>.glb,
+## tools/fetch_meshy_animations.py; the first downloaded of a list is used),
+## and where Meshy has none yet a generic clip every fighter can wear
+## ("clip:" a shared Mixamo file under assets/fighters/). No old move pack, no
+## Tripo clips, no flags carried over from them.
+##
+## His positioning lives in fighter_animated.gd: every clip's hips centred on
+## his spot (_centre_hips), his feet set on the floor (_ground_feet), and the
+## face-lock keeping him turned to his rival (_face_lock).
+const ANANTA := {
+	"idle": ["Fight_Idle"], "walk": ["Walk_Fight_Forward"], "walk_back": ["Walk_Fight_Back"],
+	"run": ["Run_2", "clip:anug/running"], "jump": ["Regular_Jump", "clip:abhi/fight/jump"],
+	"backdash": ["Stand_Dodge"], "crouch": ["clip:abhi/fight/crouch_idle"],
+	"jab": ["Left_Jab_from_Guard"], "cross": ["Right_Jab_from_Guard"], "hook": ["Left_Hook_from_Guard"],
+	"uppercut": ["Right_Upper_Hook_from_Guard"], "punch_heavy": ["Kung_Fu_Punch"],
+	"kick": ["Roundhouse_Kick"], "kick_front": ["Spartan_Kick"], "kick_spin": ["Lunge_Spin_Kick"],
+	"finisher": ["Dodge_and_Counter", "Kung_Fu_Punch"],
+	"strike_sweep": ["Sweep_Kick", "Sweeping_Kick"],
+	"strike_jump_punch": ["Jumping_Punch"], "strike_flying_kick": ["Flying_Fist_Kick"],
+	# The strikes his move table names (action_moves.gd).
+	"strike_roundhouse": ["Roundhouse_Kick"], "strike_side_kick": ["Spartan_Kick"],
+	"strike_advancing_snap": ["Step_in_High_Kick", "Spartan_Kick"], "strike_low_kick": ["Spartan_Kick"],
+	"block": ["Block1", "clip:anug/body_block"], "block_hit": ["Block1", "clip:anug/body_block"],
+	"hit": ["Hit_Reaction", "clip:anug/head_hit"], "hit_head": ["Face_Punch_Reaction", "clip:anug/head_hit"],
+	"hit_head_heavy": ["Face_Punch_Reaction_2", "clip:anug/reaction"],
+	"hit_body": ["Hit_Reaction_to_Waist", "clip:anug/hit_to_body"],
+	"hit_heavy": ["Hit_Reaction_to_Waist", "clip:anug/hit_to_body"],
+	"hit_liver": ["Hit_Reaction_to_Waist", "clip:anug/hit_to_body"],
+	"hit_side": ["clip:anug/hit_on_side_of_body"], "hit_body_alt": ["clip:anug/hit_to_body_1"],
+	"ko": ["clip:anug/knocked_out"], "knock_down": ["Knock_Down"],
+	"thrown": ["clip:ish/fight/double_leg_takedown_victim"], "getup": ["clip:ish/fight/get_up_from_back"],
+	"victory": ["Formal_Bow", "Victory_Cheer"], "taunt": ["Gentlemans_Bow", "Victory_Cheer"],
+}
+
+static func _ananta() -> Dictionary:
+	var files := {}
+	var clips := {}
+	var timing := {}
+	var meshy := []
+	for logical in ANANTA:
+		for source in ANANTA[logical]:
+			if str(source).begins_with("clip:"):
+				var path := "res://assets/fighters/%s.fbx" % str(source).trim_prefix("clip:")
+				if ResourceLoader.exists(path):
+					files["clip_" + logical] = path
+					clips[logical] = "clip_" + logical
+					break
+			else:
+				var glb := meshy_file(source)
+				if ResourceLoader.exists(glb):
+					meshy.append({"file": glb, "clips": {logical: ""}})
+					clips[logical] = "meshy_" + logical
+					if MESHY_CLIP_TIMING.has(source):
+						timing[logical] = MESHY_CLIP_TIMING[source]
+					break
+	var graft := "res://assets/fighters/anant/meshy_body.glb"
+	var style: Dictionary = STYLES.anant
+	return {
+		"scene": SHARED + "idle.fbx",
+		"body": graft if ResourceLoader.exists(graft) else "",
+		"enabled": ResourceLoader.exists(SHARED + "idle.fbx"),
+		"height": style.height, "width": 1.0, "thicken": {}, "tint": [] if ResourceLoader.exists(graft) else style.tint,
+		"yaw": PI / 2.0, "files": files, "clips": clips, "timing": timing,
+		"meshy": {}, "tripo": meshy, "reversed": [], "throw_posture": 0.0, "face_lock": true,
+		"starts": {"ko": KO_FALL_START} if files.get("clip_ko", "").ends_with("knocked_out.fbx") else {},
+	}
 
 ## Shared body and clips, overlaid with the fighter's own style folder.
 static func _mixamo(fighter_id: String) -> Dictionary:
@@ -648,6 +642,7 @@ static func _mixamo(fighter_id: String) -> Dictionary:
 		"tripo": tripo,
 		"reversed": reversed,
 		"throw_posture": style.get("throw_posture", 0.0),
+		"face_lock": style.get("face_lock", false),
 		# The shared knockout stands still for 1.6 s before the body drops:
 		# a knockout starts at the drop, so the fall is the blow's reaction.
 		"starts": {"ko": KO_FALL_START} if clips.get("ko", "") == "ko" else {},

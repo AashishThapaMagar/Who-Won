@@ -15,6 +15,8 @@ extends Node3D
 ## side the blow came from and how fast the limb was travelling.
 var fighters: Array = []
 var shape := BoxShape3D.new()
+## Where a strike's zone starts in front of the attacker's centre (metres).
+const NEAR := 0.25
 ## Air allowed between the two surfaces, in metres: cloth and skin.
 const SLACK := 0.03
 ## A little looser for the follow-ups of a combo already landing (the first
@@ -59,9 +61,17 @@ func _physics_process(delta: float) -> void:
 		var hitbox: Area2D = fighter.hitbox
 		if not hitbox.active or not fighter.controls_enabled or fighter.combat_paused or fighter.hitstop_remaining > 0.0:
 			continue
-		var center: Vector3 = fighter.body.global_position + fighter.forward * absf(hitbox.position.x) / 64.0 + Vector3.UP * -hitbox.position.y / 64.0
+		# The zone runs from just in front of the attacker out to the move's
+		# reach: centred at the full reach, a long kick sailed past a rival
+		# standing closer than that (a 1.1 m kick missed at 0.8 m). The limb
+		# must still really touch (contact below).
+		var far: float = absf(hitbox.position.x) / 64.0 + shape.size.x * 0.5
+		var depth: float = maxf(shape.size.x, far - NEAR)
+		var center: Vector3 = fighter.body.global_position + fighter.forward * (far - depth * 0.5) + Vector3.UP * -hitbox.position.y / 64.0
+		var zone := BoxShape3D.new()
+		zone.size = Vector3(depth, shape.size.y, shape.size.z)
 		var query := PhysicsShapeQueryParameters3D.new()
-		query.shape = shape
+		query.shape = zone
 		query.transform = Transform3D(Basis(Vector3.UP, atan2(-fighter.forward.z, fighter.forward.x)), center)
 		query.collision_mask = 2
 		query.collide_with_areas = true
@@ -71,14 +81,28 @@ func _physics_process(delta: float) -> void:
 			if victim == fighter or victim in hitbox._already_hit:
 				continue
 			var continued: bool = victim.state == victim.State.HITSTUN and victim._combo_attacker == fighter
-			# Grabs take hold at their own range; strikes must connect.
-			var grab: bool = fighter.current_move.get("kind", "") == "grapple"
+			# Grabs take hold at their own range, and so does a super's opening
+			# strike (a cinematic, it shouldn't hang on a fist's exact path);
+			# other strikes must connect.
+			var grab: bool = fighter.current_move.get("kind", "") == "grapple" or fighter.current_move.get("super", false)
+			# Ananta's sweep and spin kick are Meshy forms that lunge, and the
+			# lunge is held in place (his hips stay on his spot), so their foot
+			# falls short of where the move reaches: they land on a rival in
+			# their zone. Both commit him (the sweep guarded low, the kick slow).
+			if fighter.character_profile.get("id", "") == "anant" and (fighter.current_move.get("knockdown", false) or str(fighter.attack_variant) == "spin"):
+				grab = true
 			var touch := {}
 			if not grab:
 				# A super's opener and a jump-in (its limb's path through the
 				# air can't be placed to the centimetre) connect more readily.
-				var generous: bool = fighter.current_move.get("super", false) or fighter.current_move.get("air", false) or fighter.current_move.get("finisher", false)
+				var generous: bool = fighter.current_move.get("super", false) or fighter.current_move.get("air", false) 						or fighter.current_move.get("finisher", false) or fighter.current_move.get("knockdown", false) \
+						or str(fighter.attack_variant) == "spin"
 				var slack := SUPER_SLACK if generous else (COMBO_SLACK if continued else SLACK)
+				# The final boss's strikes are retargeted Meshy forms whose
+				# limbs can't be placed to the centimetre: they connect as a
+				# landed combo's follow-ups do.
+				if fighter.character_profile.get("id", "") == "anant":
+					slack = maxf(slack, COMBO_SLACK)
 				touch = contact(fighter, victim, slack, _last_strikes.get(fighter, []), delta)
 				if touch.is_empty() and fighter.attack_timer <= fighter.attack_startup() + delta * 1.5:
 					# First live frame: sweep back over the swing's last frames.
