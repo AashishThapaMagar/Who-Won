@@ -110,8 +110,10 @@ const MESHY_OWN := {
 	# counter to end his strings, a stunt sweep, his guard, his reactions,
 	# and a formal bow when he wins. Each strike's impact is measured from
 	# the clip as it loads (fighter_animated.gd _add_meshy_clips).
+	# (His stance and steps stay his Mixamo ones: Meshy's fight idle and
+	# fight walks are bladed sideways and low, which in a side-on fight
+	# turned his back to the camera and read as hunched and twisted.)
 	"anant": {
-		"idle": "Fight_Idle", "walk": "Walk_Fight_Forward", "walk_back": "Walk_Fight_Back",
 		"backdash": "Stand_Dodge",
 		"jab": "Left_Jab_from_Guard", "cross": "Right_Jab_from_Guard", "hook": "Left_Hook_from_Guard",
 		"uppercut": "Right_Upper_Hook_from_Guard", "punch_heavy": "Kung_Fu_Punch",
