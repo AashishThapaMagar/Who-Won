@@ -168,6 +168,9 @@ const SWEEP_FALL := 0.45
 ## One attack per jump: punch or kick in the air is the diving fist or the
 ## flying kick (an overhead), cleared on landing.
 var air_attack_used: bool = false
+## The shove back off a guarded blow (combat units/s), fading out over
+## about a sixth of a second while the strike recovers.
+var guard_recoil: float = 0.0
 
 ## "action" is the style_id of resources/styles/action.tres, the one style
 ## resource live matches now use for all four rounds. Archived styles
@@ -194,6 +197,15 @@ func available_moves() -> Dictionary:
 	return MOVES.for_style(current_style.style_id if current_style != null else "karate")
 
 const GRAVITY := 2200.0
+## Falling pulls harder than rising, so a jump snaps down instead of
+## floating (the arc of real fighting-game jumps).
+const FALL_GRAVITY := 1.35
+
+## The fighter's weight, from the roster build (Mahabali 1.18, Vajraveer
+## 0.9): heavier bodies are shoved less by blows, take longer to start and
+## stop, jump a touch lower and land harder.
+func mass() -> float:
+	return float(character_profile.get("build", 1.0))
 const DASH_DURATION := 0.16
 const JUMP_START_TIME := 0.05
 const LAND_TIME := 0.05
@@ -253,7 +265,7 @@ func _physics_process(delta: float) -> void:
 	if state not in [State.IDLE, State.WALK, State.BLOCK, State.BLOCKSTUN] and not (state in [State.PUNCH, State.KICK] and current_move.get("crouch", false)):
 		crouching = false
 	var was_grounded := _is_grounded()
-	velocity.y += GRAVITY * delta
+	velocity.y += GRAVITY * delta * (FALL_GRAVITY if velocity.y > 0.0 else 1.0)
 	# A throw or a super that ends the round plays out to its last frame.
 	if (not controls_enabled or state == State.KO) and state not in [State.THROWING, State.SUPER]:
 		velocity.x = move_toward(velocity.x, 0.0, braking * delta)
@@ -288,7 +300,7 @@ func _physics_process(delta: float) -> void:
 			State.JUMP_START:
 				action_timer -= delta
 				if action_timer <= 0.0:
-					velocity.y = jump_velocity
+					velocity.y = jump_velocity / pow(mass(), 0.25)
 					velocity.x = _jump_direction * move_speed
 					state = State.JUMP
 					preload("res://scripts/sfx.gd").fire("jump", -8.0)
@@ -303,7 +315,7 @@ func _physics_process(delta: float) -> void:
 	_move_combat_body(delta)
 	if not was_grounded and _is_grounded() and state == State.JUMP:
 		state = State.LAND
-		action_timer = LAND_TIME
+		action_timer = LAND_TIME * mass()
 		preload("res://scripts/sfx.gd").fire("land", -6.0)
 	elif not was_grounded and _is_grounded() and state in [State.PUNCH, State.KICK] and current_move.get("air", false):
 		# The air attack ends where it lands, with a beat to recover.
@@ -606,6 +618,9 @@ func _process_attack(delta: float) -> void:
 		preload("res://scripts/sfx.gd").fire(swing, -6.0)
 	if not airborne:
 		velocity.x = move_toward(velocity.x, 0.0, braking * delta)
+	if absf(guard_recoil) > 1.0:
+		velocity.x = guard_recoil
+		guard_recoil = move_toward(guard_recoil, 0.0, 900.0 * delta)
 	var heavy: bool = attack_variant in ["kick", "finisher"]
 	var damage: int = kick_damage if heavy else (hook_damage if attack_variant == "hook" else punch_damage)
 	var knockback: float = kick_knockback if heavy else (hook_knockback if attack_variant == "hook" else punch_knockback)
@@ -843,7 +858,11 @@ func take_hit(damage: int, knockback: float, attacker_facing: int, attacker: Nod
 		throw_partner = null
 		knockback *= 0.35
 	_gain_meter(attacker, dealt, blocked)
-	velocity.x = attacker_facing * knockback * (0.3 if blocked else (1.3 if last_hit_stagger else 1.0))
+	# Heavier bodies give less ground; a guarded blow pushes the attacker
+	# back off the guard too (it had something solid to push against).
+	velocity.x = attacker_facing * knockback * (0.3 if blocked else (1.3 if last_hit_stagger else 1.0)) / pow(mass(), 0.8)
+	if blocked and attacker != null and attacker.get("guard_recoil") != null:
+		attacker.guard_recoil = -attacker_facing * knockback * 0.35 / attacker.mass()
 	_knockback_start = absf(velocity.x)
 	health_changed.emit(health, max_health)
 	if not blocked:

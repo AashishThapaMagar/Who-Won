@@ -522,9 +522,17 @@ func _graft_body(path: String) -> void:
 		mesh.owner = null
 		mesh.get_parent().remove_child(mesh)
 		target.add_child(mesh)
-		# Skinning ignores the node's own transform; this only places its
-		# bounds, which _fit measures.
-		mesh.transform = placed
+		# The skinned vertices come out in the skeleton's space, and Godot
+		# draws them through the mesh node's transform; so the vertices are
+		# moved into the skeleton's space (its units: a Mixamo FBX rig is in
+		# centimetres) and the node sits at the skeleton's origin. Left in
+		# their own space under a scaled node, a body grafted onto a
+		# centimetre rig came out a hundred times too big.
+		if not placed.is_equal_approx(Transform3D.IDENTITY):
+			mesh.mesh = _moved_mesh(mesh.mesh, placed)
+			for i in skin.get_bind_count():
+				skin.set_bind_pose(i, skin.get_bind_pose(i) * placed.affine_inverse())
+		mesh.transform = Transform3D.IDENTITY
 		mesh.skin = skin
 		mesh.skeleton = NodePath("..")
 	scene.free()
@@ -548,6 +556,34 @@ func _skeleton_mapping(source: Skeleton3D, target: Skeleton3D, bones: Dictionary
 		frames.append(Transform3D(basis.scaled(Vector3.ONE * size), hips))
 	return frames[1] * frames[0].affine_inverse()
 
+## `source` with every vertex, normal and tangent carried by `move`
+## (materials kept). Blend shapes are dropped; grafted bodies have none.
+static func _moved_mesh(source: Mesh, move: Transform3D) -> ArrayMesh:
+	var moved := ArrayMesh.new()
+	var turn := move.basis.orthonormalized()
+	for surface in source.get_surface_count():
+		var arrays := source.surface_get_arrays(surface)
+		var points: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		for i in points.size():
+			points[i] = move * points[i]
+		arrays[Mesh.ARRAY_VERTEX] = points
+		if arrays[Mesh.ARRAY_NORMAL] is PackedVector3Array:
+			var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+			for i in normals.size():
+				normals[i] = (turn * normals[i]).normalized()
+			arrays[Mesh.ARRAY_NORMAL] = normals
+		if arrays[Mesh.ARRAY_TANGENT] is PackedFloat32Array:
+			var tangents: PackedFloat32Array = arrays[Mesh.ARRAY_TANGENT]
+			for i in range(0, tangents.size(), 4):
+				var t := (turn * Vector3(tangents[i], tangents[i + 1], tangents[i + 2])).normalized()
+				tangents[i] = t.x
+				tangents[i + 1] = t.y
+				tangents[i + 2] = t.z
+			arrays[Mesh.ARRAY_TANGENT] = tangents
+		moved.add_surface_from_arrays(source.surface_get_primitive_type(surface), arrays)
+		moved.surface_set_material(surface, source.surface_get_material(surface))
+	return moved
+
 ## Paints the shared body in the fighter's colours: [body, joints]. Meshes
 ## named like joints or trims take the second colour.
 func _tint(colors: Array) -> void:
@@ -567,7 +603,7 @@ func _tint(colors: Array) -> void:
 ## launch. Building one means opening and converting every clip file (about
 ## fifty for a full move pack, ~10 s); a cached set loads in a fraction of
 ## that. Bump CLIP_CACHE_VERSION whenever the conversion below changes.
-const CLIP_CACHE_VERSION := 7
+const CLIP_CACHE_VERSION := 8
 const CLIP_CACHE_DIR := "user://clip_cache/"
 static var _clip_cache := {}
 

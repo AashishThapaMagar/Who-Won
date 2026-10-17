@@ -271,8 +271,11 @@ static func for_fighter(id: String) -> Dictionary:
 	# Jumping Punch and Flying Fist Kick). Both are overheads: a crouching
 	# guard can't stop them, the answer to a fighter sitting on the sweep.
 	# They stay live into the landing; landing ends them (player.gd).
-	m.jump_punch = BASE._move("Diving fist", "strike_jump_punch", "punch", "hook", 50, -96, 0.10, 0.22, 0.20, 1.3, 1.1, 0)
-	m.jump_kick = BASE._move("Flying kick", "strike_flying_kick", "kick", "kick", 66, -92, 0.10, 0.22, 0.20, 1.35, 1.4, 0)
+	# Reach and height are from the jumper's feet: in the air they reach
+	# the rival's head and chest at the close range a jump-in ends at (the
+	# bodies push apart as the jumper comes in), not the air beyond them.
+	m.jump_punch = BASE._move("Diving fist", "strike_jump_punch", "punch", "hook", 36, -52, 0.10, 0.22, 0.20, 1.3, 1.1, 0)
+	m.jump_kick = BASE._move("Flying kick", "strike_flying_kick", "kick", "kick", 42, -46, 0.10, 0.22, 0.20, 1.35, 1.4, 0)
 	for air in [m.jump_punch, m.jump_kick]:
 		air.air = true
 		air.overhead = true

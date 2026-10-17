@@ -152,16 +152,21 @@ const MESHY_MOVES := {
 	# Ananta's Meshy set exports with id names; each is [id, second the blow
 	# lands], measured from the peak reach of the striking hand or foot.
 }
+## Every fighter stands the same height (metres) and none is stretched
+## wider: blows meet at the same heights, reach matches the hitboxes, and
+## nothing passes over a head or stops short of a chest. Weight still
+## differs (the roster's build: knockback, footwork, landings).
+const FIGHTER_HEIGHT := 1.8
 ## Per-fighter style: body build and tint, plus style clips (file in
 ## style/ -> logical clip) and their timing. Impact times were measured
 ## from each download (peak extension of the striking hand, foot or head).
 const STYLES := {
 	"anug": {
-		"height": 1.8, "width": 1.12, "tint": [Color("2c5a3e"), Color("d9b45c")],
+		"height": FIGHTER_HEIGHT, "width": 1.0, "tint": [Color("2c5a3e"), Color("d9b45c")],
 		"clips": {"idle": "idle", "block_hit": "goalkeeper_catch", "backdash": "dodging"},
 	},
 	"ish": {
-		"height": 1.8, "width": 1.0, "tint": [Color("a2322c"), Color("2a2227")],
+		"height": FIGHTER_HEIGHT, "width": 1.0, "tint": [Color("a2322c"), Color("2a2227")],
 		# His takedown is a spear: the chest comes up through the shot so
 		# the shoulder drives into the stomach, not the thighs.
 		"throw_posture": 0.34,
@@ -210,7 +215,7 @@ const STYLES := {
 		},
 	},
 	"sab": {
-		"height": 1.92, "width": 1.22, "tint": [Color("27375a"), Color("c48f49")],
+		"height": FIGHTER_HEIGHT, "width": 1.0, "tint": [Color("27375a"), Color("c48f49")],
 		"clips": {"idle": "wrestling_idle_mmaidle", "punch_heavy": "headbutt", "grapple": "grab_and_slam"},
 		"timing": {"punch_heavy": [0.2, 0.73, 1.5], "grapple": [0.3, 0.93, 3.3]},
 		# His own set is small (stance, steps, headbutt, slam): the rest of
@@ -232,7 +237,7 @@ const STYLES := {
 		},
 	},
 	"bib": {
-		"height": 1.7, "width": 1.0, "tint": [Color("223f8a"), Color("9fe0c8")],
+		"height": FIGHTER_HEIGHT, "width": 1.0, "tint": [Color("223f8a"), Color("9fe0c8")],
 		# The Tripo body's arms came out thin: fuller sleeves and forearms.
 		"thicken": {"arm": 1.4, "forearm": 1.45, "hand": 1.2},
 		"clips": {"idle": "idle", "jab": "jab", "run": "fast_run", "backdash": "dodging"},
@@ -287,7 +292,7 @@ const STYLES := {
 		},
 	},
 	"abhi": {
-		"height": 1.82, "width": 1.1, "tint": [Color("5c2f78"), Color("dbb258")],
+		"height": FIGHTER_HEIGHT, "width": 1.0, "tint": [Color("5c2f78"), Color("dbb258")],
 		"clips": {"idle": "idle", "punch_heavy": "punching_haymaker", "taunt": "taunt", "victory": "victory"},
 		"timing": {"punch_heavy": [0.0, 0.4, 1.0], "taunt": [0.0, 0.8, 1.63]},
 		# His 46-clip Mixamo set (Downloads/Abhi_MMA) in assets/fighters/abhi/fight/
@@ -330,12 +335,12 @@ const STYLES := {
 		},
 	},
 	"sup": {
-		"height": 1.8, "width": 1.0, "tint": [Color("c29a3c"), Color("2f8a86")],
+		"height": FIGHTER_HEIGHT, "width": 1.0, "tint": [Color("c29a3c"), Color("2f8a86")],
 		"clips": {"idle": "idle", "kick": "roundhouse_kick", "kick_spin": "flip_kick"},
 		"timing": {"kick": [0.45, 1.07, 1.9], "kick_spin": [0.4, 1.0, 1.8]},
 	},
 	"anant": {
-		"height": 1.86, "width": 1.02, "tint": [Color("5a2f6a"), Color("d3ac62")],
+		"height": FIGHTER_HEIGHT, "width": 1.0, "tint": [Color("5a2f6a"), Color("d3ac62")],
 		"clips": {"idle": "mma_idle", "kick": "martial_arts_kick", "kick_spin": "martial_arts_kick", "victory": "fireball"},
 		"timing": {"kick": [0.2, 0.73, 1.5], "kick_spin": [0.2, 0.73, 1.5]},
 		# MMA: his 47-clip Mixamo set (Downloads/Ananta_MMA) in
@@ -550,13 +555,20 @@ static func _mixamo(fighter_id: String) -> Dictionary:
 	var own_body := ResourceLoader.exists(body)
 	var built := "res://assets/fighters/%s/body.glb" % fighter_id
 	var graft := "" if own_body or not ResourceLoader.exists(built) else built
+	# The high-detail Meshy body (Meshy_Models, rigged by
+	# tools/rig_meshy_body.py) dresses whichever skeleton the fighter has,
+	# its own Mixamo one or the shared X Bot, so every clip plays on it.
+	var meshy_body := "res://assets/fighters/%s/meshy_body.glb" % fighter_id
+	if ResourceLoader.exists(meshy_body):
+		graft = meshy_body
 	return {
 		"scene": body if own_body else SHARED + "idle.fbx",
 		"body": graft,
 		"enabled": ResourceLoader.exists(SHARED + "idle.fbx"),
 		"height": style.get("height", 1.8),
 		"width": style.get("width", 1.0),
-		"thicken": style.get("thicken", {}),
+		# The Meshy bodies have their own limbs; only the old ones were filled out.
+		"thicken": {} if graft.ends_with("meshy_body.glb") else style.get("thicken", {}),
 		"tint": [] if own_body or graft != "" else style.get("tint", []),
 		"yaw": PI / 2.0,
 		"files": files,

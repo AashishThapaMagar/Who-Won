@@ -165,7 +165,8 @@ func _move_combat_body(delta: float) -> void:
 		if input.dot(forward) < -0.35 and not running:
 			target *= backward_speed_ratio
 		var current := Vector3(body.velocity.x, 0.0, body.velocity.z) * UNITS
-		planar = current.move_toward(target, (LOCO_BRAKE if input.is_zero_approx() else LOCO_ACCEL) * delta)
+		# Heavier fighters take longer to get going and to stop.
+		planar = current.move_toward(target, (LOCO_BRAKE if input.is_zero_approx() else LOCO_ACCEL) / sqrt(mass()) * delta)
 		state = State.WALK if planar.length() > 8.0 else State.IDLE
 	if state == State.DASH:
 		planar = dash_vector * move_speed * (1.85 if dash_vector.dot(forward) >= 0 else 1.45)
