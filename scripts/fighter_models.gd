@@ -110,10 +110,10 @@ const MESHY_OWN := {
 	# counter to end his strings, a stunt sweep, his guard, his reactions,
 	# and a formal bow when he wins. Each strike's impact is measured from
 	# the clip as it loads (fighter_animated.gd _add_meshy_clips).
-	# (His stance and steps stay his Mixamo ones: Meshy's fight idle and
-	# fight walks are bladed sideways and low, which in a side-on fight
-	# turned his back to the camera and read as hunched and twisted.)
+	# (Moves whose GLB isn't downloaded yet keep his Mixamo clips: see
+	# meshy_file.)
 	"anant": {
+		"idle": "Fight_Idle", "walk": "Walk_Fight_Forward", "walk_back": "Walk_Fight_Back",
 		"backdash": "Stand_Dodge",
 		"jab": "Left_Jab_from_Guard", "cross": "Right_Jab_from_Guard", "hook": "Left_Hook_from_Guard",
 		"uppercut": "Right_Upper_Hook_from_Guard", "punch_heavy": "Kung_Fu_Punch",
@@ -452,6 +452,13 @@ const MODELS := {
 ## project in the editor once so the file imports.
 const DROP_NAMES := ["meshy_rig.glb", "rig.glb", "meshy_rig.gltf", "rig.gltf"]
 
+## A Meshy library move as saved by tools/fetch_meshy_animations.py: its
+## GLB download (Mixamo bone names, glTF axes). The FBX download retargets
+## twisted (the body hunched and turned), so a move with only an FBX is
+## left out and the fighter keeps the clip it had.
+static func meshy_file(name: String) -> String:
+	return "res://assets/fighters/meshy/%s.glb" % name
+
 static func dropped_scene(fighter_id: String) -> String:
 	var folder := "res://assets/fighters/%s/" % fighter_id
 	for name in DROP_NAMES + [fighter_id + ".glb", fighter_id + ".gltf"]:
@@ -566,7 +573,7 @@ static func _mixamo(fighter_id: String) -> Dictionary:
 			timing.erase(logical)
 	for logical in MESHY_KIT:
 		var entry: Array = MESHY_KIT[logical]
-		var kit_file := "res://assets/fighters/meshy/%s.fbx" % entry[0]
+		var kit_file := meshy_file(entry[0])
 		if not ResourceLoader.exists(kit_file):
 			continue
 		# "" takes the file's one animation, whatever Meshy named it.
@@ -578,7 +585,7 @@ static func _mixamo(fighter_id: String) -> Dictionary:
 			timing.erase(logical)
 	var own_meshy: Dictionary = MESHY_OWN.get(fighter_id, {})
 	for logical in own_meshy:
-		var own_file := "res://assets/fighters/meshy/%s.fbx" % own_meshy[logical]
+		var own_file := meshy_file(own_meshy[logical])
 		if ResourceLoader.exists(own_file):
 			tripo.append({"file": own_file, "clips": {logical: ""}})
 			clips[logical] = "meshy_" + logical

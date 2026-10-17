@@ -31,6 +31,8 @@ const GROUND_PUNCHES := [1, 2, 3]
 const SIDESTEP_CHANCE := [0.0, 0.12, 0.25]
 ## Firing a ready super when the rival is in reach (per decision).
 const SUPER_CHANCE := [0.15, 0.35, 0.6]
+## How many blows the AI strings together once a combo lands.
+const COMBO_LENGTH := [2, 4, 7]
 ## Reading a sweep coming and guarding it low.
 const LOW_READ := [0.2, 0.6, 0.9]
 ## Meeting a jump-in with the rising uppercut.
@@ -122,8 +124,11 @@ func _physics_process(delta: float) -> void:
 	# continue the chain, same as a buffered player input would.
 	if fighter.attack_connected and fighter.state in [fighter.State.PUNCH, fighter.State.KICK]:
 		_combo_reaction += delta
-		if _combo_reaction > 0.07 * reaction_scale and fighter.chain_step < 2 and fighter._buffered_action.is_empty():
-			_request_move("chain_finish" if fighter.chain_step == 1 and fighter.available_moves().has("chain_finish") else "jab")
+		if _combo_reaction > 0.07 * reaction_scale and fighter.chain_step < COMBO_LENGTH[skill()] and fighter._buffered_action.is_empty():
+			# Mixes punches and kicks; the last blow is the heavy one (the
+			# finisher once the string is six deep).
+			var last: bool = fighter.chain_step >= COMBO_LENGTH[skill()] - 1
+			_request_move("kick" if last or randf() < 0.3 else "jab")
 			_combo_reaction = -0.3
 	else:
 		_combo_reaction = 0.0

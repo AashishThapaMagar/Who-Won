@@ -8,7 +8,7 @@ id is remembered in assets/fighters/meshy/rig.json) and each animation is
 saved as assets/fighters/meshy/<name>.fbx (kept local, like the Mixamo files).
 
   python tools/fetch_meshy_animations.py --list fighting     # browse the library (free)
-  python tools/fetch_meshy_animations.py                     # fetch WANTED not yet saved
+  MESHY_FORMAT=glb python tools/fetch_meshy_animations.py    # fetch WANTED not yet saved (GLB: use this)
   python tools/fetch_meshy_animations.py Jumping_Punch Leg_Sweep
 
 Costs: rigging 5 credits (once), 3 credits per animation. The API key is
@@ -19,9 +19,11 @@ import base64, json, os, sys, time, urllib.error, urllib.parse, urllib.request
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "assets", "fighters", "meshy")
 API = "https://api.meshy.ai/openapi/v1"
-# The humanoid Meshy rigs and animates: Mahabali's body (any clean,
-# textured humanoid facing +Z works; only its motion is used).
-RIG_MODEL = os.path.join(ROOT, "assets", "fighters", "sab", "body.glb")
+# The humanoid Meshy rigs and animates: a model Meshy made itself, standing
+# in its A-pose (the slimmed Nepali Master, tools/prep_meshy_body.py). Only
+# its motion is used, but the rig must fit cleanly: rigged from a game body
+# already bound in a fisted T-pose, every clip came out hunched over.
+RIG_MODEL = os.path.join(ROOT, "build", "meshy_prep", "anant.glb")
 # What the game wants first: saved name -> Meshy library action_id
 # (python tools/fetch_meshy_animations.py --list <words> finds more).
 WANTED = {
@@ -115,7 +117,8 @@ def main():
         for item in library(key, args[1] if len(args) > 1 else ""):
             print(item.get("action_id"), item.get("name"), "|", item.get("category"), "/", item.get("sub_category"))
         return
-    names = args or [n for n in WANTED if not os.path.exists(os.path.join(OUT, n + ".fbx"))]
+    ext = ".glb" if os.environ.get("MESHY_FORMAT") == "glb" else ".fbx"
+    names = args or [n for n in WANTED if not os.path.exists(os.path.join(OUT, n + ext))]
     if not names:
         print("all saved")
         return
@@ -137,8 +140,11 @@ def main():
         task_id = task.get("result") or task.get("id")
         done = wait(key, "/animations/%s" % task_id)
         result = done.get("result", done)
-        url = result.get("processed_animation_fps_fbx_url") or result.get("animation_fbx_url")
-        download(url, os.path.join(OUT, name + ".fbx"))
+        if os.environ.get("MESHY_FORMAT") == "glb":
+            download(result.get("animation_glb_url"), os.path.join(OUT, name + ".glb"))
+        else:
+            url = result.get("processed_animation_fps_fbx_url") or result.get("animation_fbx_url")
+            download(url, os.path.join(OUT, name + ".fbx"))
         print("saved", name)
 
 

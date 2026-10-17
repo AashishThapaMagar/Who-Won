@@ -544,20 +544,42 @@ func _consume_action() -> bool:
 			_start_style_move(move_id)
 	return true
 
+## Strings run up to MAX_CHAIN blows. A move's own follow-up (next_light,
+## next_heavy, next_rp, next_rk) comes first; past it, or where it has none,
+## the string flows on into the pressed button's strike that isn't the one
+## just thrown, so any rhythm of buttons keeps a landed combo going. Once
+## the string is six blows deep, heavy brings the fighter's signature
+## finisher, which ends it. Damage scales down blow by blow (take_hit), and each blow pushes
+## less, so a long combo stays in reach without being a one-touch kill.
+const MAX_CHAIN := 8
+const FINISH_FROM := 5
+const FLOW := {"punch": ["jab", "cross", "hook"], "rpunch": ["rp", "cross", "hook"],
+	"kick": ["kick", "forward_heavy", "back_heavy"], "rkick": ["rk", "kick", "forward_heavy"]}
+
 func _next_chain_move(action: String) -> String:
-	if current_move.is_empty() or not attack_connected or chain_step >= 3:
+	if current_move.is_empty() or not attack_connected or chain_step >= MAX_CHAIN - 1:
 		return ""
+	if not FLOW.has(action) or current_move.get("air", false) or current_move.get("knockdown", false):
+		return ""
+	var moves := available_moves()
+	# The finisher ends a string.
+	if current_move == moves.get("combo_finish", {}):
+		return ""
+	if action in ["kick", "rkick"] and chain_step >= FINISH_FROM and moves.has("combo_finish"):
+		return "combo_finish"
 	var next: String = current_move.next_light if action == "punch" else (current_move.next_heavy if action == "kick" else "")
 	if action == "rpunch":
 		next = str(current_move.get("next_rp", ""))
 	elif action == "rkick":
 		next = str(current_move.get("next_rk", ""))
-	if next != "" and not available_moves().has(next):
-		return ""
-	# Chains are three hits; only a signature finisher may be the fourth.
-	if chain_step >= 2 and next != "combo_finish":
-		return ""
-	return next
+	# A move's own route to the finisher (1,1,1,3) also waits for the string
+	# to be six deep; before that the string flows on.
+	if next != "" and moves.has(next) and not (next == "combo_finish" and chain_step < FINISH_FROM):
+		return next
+	for id in FLOW[action]:
+		if moves.has(id) and moves[id] != current_move:
+			return id
+	return ""
 
 func _start_style_move(move_id: String, step: int = 0) -> void:
 	var data: Dictionary = available_moves()[move_id]
@@ -877,6 +899,9 @@ func take_hit(damage: int, knockback: float, attacker_facing: int, attacker: Nod
 	_gain_meter(attacker, dealt, blocked)
 	# Heavier bodies give less ground; a guarded blow pushes the attacker
 	# back off the guard too (it had something solid to push against).
+	# Deep in a combo each blow shoves less, so the string stays in reach.
+	if continued:
+		knockback *= maxf(0.3, 1.0 - 0.12 * _received_hits)
 	velocity.x = attacker_facing * knockback * (0.3 if blocked else (1.3 if last_hit_stagger else 1.0)) / pow(mass(), 0.8)
 	if blocked and attacker != null and attacker.get("guard_recoil") != null:
 		attacker.guard_recoil = -attacker_facing * knockback * 0.35 / attacker.mass()

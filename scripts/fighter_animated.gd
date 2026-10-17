@@ -603,7 +603,7 @@ func _tint(colors: Array) -> void:
 ## launch. Building one means opening and converting every clip file (about
 ## fifty for a full move pack, ~10 s); a cached set loads in a fraction of
 ## that. Bump CLIP_CACHE_VERSION whenever the conversion below changes.
-const CLIP_CACHE_VERSION := 9
+const CLIP_CACHE_VERSION := 12
 const CLIP_CACHE_DIR := "user://clip_cache/"
 static var _clip_cache := {}
 
@@ -820,7 +820,7 @@ func _add_meshy_clips(library: AnimationLibrary, path: String, wanted: Dictionar
 			clip_name = names[0]
 		if clip_name == "":
 			continue
-		var clip := from.get_animation(clip_name)
+		var clip := _face_forward(from.get_animation(clip_name), source, source_hips)
 		var rotation_tracks := {}
 		var position_track := -1
 		for track in clip.get_track_count():
@@ -1002,6 +1002,56 @@ static func _node_rotation(skeleton: Skeleton3D, top: Node) -> Quaternion:
 			rotation = (node as Node3D).transform.basis.get_rotation_quaternion() * rotation
 		node = node.get_parent()
 	return rotation
+
+## A copy of `clip` turned about the vertical so its body starts facing the
+## way the rig faces at rest (towards the rival, in the fight). Meshy authors
+## some moves facing another way (its horse-stance idle a quarter turn off),
+## which played them square to the camera. Facing is read from the
+## shoulders on the first frame; turns within the move are kept.
+func _face_forward(clip: Animation, source: Skeleton3D, hips: int) -> Animation:
+	var keys := {}
+	for bone in source.get_bone_count():
+		keys[_bone_key(source.get_bone_name(bone))] = bone
+	if not (keys.has("leftarm") and keys.has("rightarm") and keys.has("head")):
+		return clip
+	var local := {}
+	for track in clip.get_track_count():
+		var bone := source.find_bone(String(clip.track_get_path(track).get_concatenated_subnames()))
+		if bone < 0 or clip.track_get_key_count(track) == 0:
+			continue
+		var pose: Transform3D = local.get(bone, source.get_bone_rest(bone))
+		match clip.track_get_type(track):
+			Animation.TYPE_ROTATION_3D:
+				pose.basis = Basis(clip.rotation_track_interpolate(track, 0.0))
+			Animation.TYPE_POSITION_3D:
+				pose.origin = clip.position_track_interpolate(track, 0.0)
+		local[bone] = pose
+	var posed := func(bone: int) -> Vector3:
+		var at := Transform3D()
+		var chain := bone
+		var parts: Array[Transform3D] = []
+		while chain >= 0:
+			parts.push_front(local.get(chain, source.get_bone_rest(chain)))
+			chain = source.get_bone_parent(chain)
+		for part in parts:
+			at = at * part
+		return at.origin
+	var up := (source.get_bone_global_rest(keys.head).origin - source.get_bone_global_rest(hips).origin).normalized()
+	var rest_facing := (source.get_bone_global_rest(keys.leftarm).origin - source.get_bone_global_rest(keys.rightarm).origin).cross(up)
+	var start_facing: Vector3 = (posed.call(keys.leftarm) - posed.call(keys.rightarm)).cross(up)
+	rest_facing = (rest_facing - up * rest_facing.dot(up)).normalized()
+	start_facing = (start_facing - up * start_facing.dot(up)).normalized()
+	if rest_facing.length() < 0.5 or start_facing.length() < 0.5:
+		return clip
+	var angle := start_facing.signed_angle_to(rest_facing, up)
+	# A bladed guard (a boxer's jab stance) is meant to sit at an angle; only
+	# a move turned further (Meshy's horse stance 47°, its floor sweep 54°) is
+	# corrected; Meshy's guard-stance jabs sit at about 35°.
+	if absf(angle) < deg_to_rad(40.0):
+		return clip
+	var turned := clip.duplicate() as Animation
+	_turn_root(turned, source.get_bone_name(hips), Quaternion(up, angle))
+	return turned
 
 ## Turns the root bone's keys (rotation and travel) by `turn`.
 static func _turn_root(animation: Animation, root_bone: String, turn: Quaternion) -> void:
