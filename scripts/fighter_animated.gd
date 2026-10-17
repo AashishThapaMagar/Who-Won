@@ -603,7 +603,7 @@ func _tint(colors: Array) -> void:
 ## launch. Building one means opening and converting every clip file (about
 ## fifty for a full move pack, ~10 s); a cached set loads in a fraction of
 ## that. Bump CLIP_CACHE_VERSION whenever the conversion below changes.
-const CLIP_CACHE_VERSION := 13
+const CLIP_CACHE_VERSION := 15
 const CLIP_CACHE_DIR := "user://clip_cache/"
 static var _clip_cache := {}
 
@@ -907,6 +907,7 @@ func _add_meshy_clips(library: AnimationLibrary, path: String, wanted: Dictionar
 			timing[logical] = [maxf(0.0, peak_time - 0.4), peak_time, minf(clip.length, peak_time + 0.55)]
 			config["timing"] = timing
 		clip_pace["files/" + key] = _pin_hips(out)
+		_centre_hips(out, target.get_bone_rest(target_hips).origin)
 		if logical == "jump" or logical in AIR_STRIKES:
 			# The game's physics lifts the body; the clip keeps only the
 			# tuck, or the fighter would rise twice as high.
@@ -916,8 +917,79 @@ func _add_meshy_clips(library: AnimationLibrary, path: String, wanted: Dictionar
 					for k in out.track_get_key_count(track):
 						var v: Vector3 = out.track_get_key_value(track, k)
 						out.track_set_key_value(track, k, Vector3(v.x, minf(v.y, ground.y), v.z))
+		elif not logical in UNGROUNDED:
+			_ground_feet(out, target)
 		library.add_animation(key, out)
 	scene.free()
+
+## Puts a retargeted clip's hips over the rig's own (pinned by _pin_hips
+## to wherever the clip began): Meshy's roundhouse starts with the hips
+## 0.75 m off to one side, so the whole body played away from the
+## fighter's real spot, hitbox and shadow for the length of the kick.
+static func _centre_hips(animation: Animation, rest: Vector3) -> void:
+	for track in animation.get_track_count():
+		if animation.track_get_type(track) != Animation.TYPE_POSITION_3D or animation.track_get_key_count(track) == 0:
+			continue
+		var first: Vector3 = animation.track_get_key_value(track, 0)
+		var shift := Vector3(rest.x - first.x, 0.0, rest.z - first.z)
+		for k in animation.track_get_key_count(track):
+			animation.track_set_key_value(track, k, (animation.track_get_key_value(track, k) as Vector3) + shift)
+
+## Moves left off the floor by _ground_feet: in the air, or lying down.
+const UNGROUNDED := ["jump", "knock_down", "ko", "thrown", "getup", "downed"]
+
+## Lifts or lowers a retargeted clip so its lowest foot rests where the
+## rig's feet rest: Meshy's legs are proportioned a little differently, so
+## after retargeting the hips sat low and the feet sank into the floor (an
+## ankle 1 cm off the ground where it rests at 11). Measured by posing the
+## target skeleton from the clip's own tracks every few frames.
+func _ground_feet(animation: Animation, target: Skeleton3D) -> void:
+	var feet: Array[int] = []
+	for key in ["leftfoot", "rightfoot"]:
+		for bone in target.get_bone_count():
+			if _bone_key(target.get_bone_name(bone)) == key:
+				feet.append(bone)
+	if feet.size() < 2:
+		return
+	var tracks := {}
+	var hips_track := -1
+	for track in animation.get_track_count():
+		var bone := target.find_bone(String(animation.track_get_path(track).get_concatenated_subnames()))
+		if bone < 0:
+			continue
+		if animation.track_get_type(track) == Animation.TYPE_ROTATION_3D:
+			tracks[bone] = track
+		elif animation.track_get_type(track) == Animation.TYPE_POSITION_3D:
+			hips_track = track
+	if hips_track < 0:
+		return
+	var hips_bone := target.find_bone(String(animation.track_get_path(hips_track).get_concatenated_subnames()))
+	var rest_floor := minf(target.get_bone_global_rest(feet[0]).origin.y, target.get_bone_global_rest(feet[1]).origin.y)
+	var lowest := INF
+	var t := 0.0
+	while t <= animation.length:
+		for foot in feet:
+			var chain: Array[int] = []
+			var bone := foot
+			while bone >= 0:
+				chain.push_front(bone)
+				bone = target.get_bone_parent(bone)
+			var at := Transform3D()
+			for link in chain:
+				var local := target.get_bone_rest(link)
+				if tracks.has(link):
+					local.basis = Basis(animation.rotation_track_interpolate(tracks[link], t))
+				if link == hips_bone:
+					local.origin = animation.position_track_interpolate(hips_track, t)
+				at = at * local
+			lowest = minf(lowest, at.origin.y)
+		t += 0.1
+	var lift := rest_floor - lowest
+	if absf(lift) < 0.01 or absf(lift) > 0.5:
+		return
+	for k in animation.track_get_key_count(hips_track):
+		var v: Vector3 = animation.track_get_key_value(hips_track, k)
+		animation.track_set_key_value(hips_track, k, v + Vector3(0.0, lift, 0.0))
 
 ## Where a bone points in the rest pose (world space): toward its main
 ## mapped child (the spine, neck or head over the shoulders and legs), or on
