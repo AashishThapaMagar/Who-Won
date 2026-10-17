@@ -603,7 +603,7 @@ func _tint(colors: Array) -> void:
 ## launch. Building one means opening and converting every clip file (about
 ## fifty for a full move pack, ~10 s); a cached set loads in a fraction of
 ## that. Bump CLIP_CACHE_VERSION whenever the conversion below changes.
-const CLIP_CACHE_VERSION := 12
+const CLIP_CACHE_VERSION := 13
 const CLIP_CACHE_DIR := "user://clip_cache/"
 static var _clip_cache := {}
 
@@ -1049,6 +1049,10 @@ func _face_forward(clip: Animation, source: Skeleton3D, hips: int) -> Animation:
 	# corrected; Meshy's guard-stance jabs sit at about 35°.
 	if absf(angle) < deg_to_rad(40.0):
 		return clip
+	# Turned back only to the blade every other fighter's stance has (about
+	# 30 degrees, chest a little to the camera on the left): squared fully
+	# to the rival, Ananta read as turned away next to them.
+	angle -= signf(angle) * deg_to_rad(30.0)
 	var turned := clip.duplicate() as Animation
 	_turn_root(turned, source.get_bone_name(hips), Quaternion(up, angle))
 	return turned
