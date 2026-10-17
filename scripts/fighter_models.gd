@@ -86,6 +86,28 @@ const OWN_LOW := {
 	"anant": {"crouch": ["anant/fight/crouching_idle"]},
 	"bib": {"crouch": ["bib/fight/crouch_idle"]},
 }
+## Moves from Meshy's animation library (tools/fetch_meshy_animations.py,
+## kept local in assets/fighters/meshy/): Meshy animated one rigged body and
+## fighter_animated.gd retargets the motion onto every fighter (MESHY_BONES),
+## so the whole roster shares them. logical clip -> [file, [start, impact,
+## end] or none].
+## Windows read off each clip frame by frame: the diving fist comes down
+## at 1.5 s, the flying kick is fully out at 2.93 s, the sweeping kick's
+## leg crosses the floor at 1.24 s.
+const MESHY_KIT := {
+	"strike_jump_punch": ["Jumping_Punch", [1.1, 1.5, 1.9]],
+	"strike_flying_kick": ["Flying_Fist_Kick", [2.55, 2.93, 3.4]],
+	"strike_sweeping_kick": ["Sweeping_Kick", [0.7, 1.24, 1.9]],
+}
+## Fighters' own Meshy clips: logical clip -> Meshy file. Mahabali beats
+## his chest when he wins; Anug, who had no win of his own, cheers.
+const MESHY_OWN := {
+	"sab": {"victory": "Chest_Pound_Taunt", "taunt": "Chest_Pound_Taunt"},
+	"anug": {"victory": "Victory_Cheer"},
+}
+## Fighters whose sweep is Meshy's floor-level Sweeping Kick (the rest keep
+## the capoeira rasteira of LOW_KIT).
+const MESHY_SWEEPERS := ["ish", "sab", "bib"]
 ## Fighters with Meshy's own moves (a "Merged Animations" .fbx, kept local
 ## like the Mixamo files): logical clip -> Meshy animation name. These
 ## replace the shared strikes, so each hit of a combo has its own motion.
@@ -191,6 +213,23 @@ const STYLES := {
 		"height": 1.92, "width": 1.22, "tint": [Color("27375a"), Color("c48f49")],
 		"clips": {"idle": "wrestling_idle_mmaidle", "punch_heavy": "headbutt", "grapple": "grab_and_slam"},
 		"timing": {"punch_heavy": [0.2, 0.73, 1.5], "grapple": [0.3, 0.93, 3.3]},
+		# His own set is small (stance, steps, headbutt, slam): the rest of
+		# a full fighter's moves come from the roster's Mixamo clips, picked
+		# for a big brawler (the swinging hooks and haymaker, a boxer's
+		# steps). Timings are those measured for the clip's owner.
+		"borrow": {
+			"cross": ["abhi/fight/cross", [0.15, 0.37, 0.8]],
+			"hook": ["abhi/fight/right_hook", [0.1, 0.33, 0.9]],
+			"uppercut": ["ish/fight/left_uppercut", [0.15, 0.47, 1.0]],
+			"finisher": ["abhi/style/punching_haymaker", [0.0, 0.4, 1.0]],
+			"dash": ["ish/fight/boxing_dodge_advance"],
+			"backdash": ["ish/fight/boxing_dodge_retreat"],
+			"jump": ["abhi/fight/jump"],
+			"thrown": ["ish/fight/double_leg_takedown_victim"],
+			"getup": ["ish/fight/get_up_from_back"],
+			"hit_liver": ["ish/fight/livershot_knockdown"],
+			# (His win and taunt are Meshy's Chest Pound: MESHY_OWN.)
+		},
 	},
 	"bib": {
 		"height": 1.7, "width": 1.0, "tint": [Color("223f8a"), Color("9fe0c8")],
@@ -427,6 +466,19 @@ static func _mixamo(fighter_id: String) -> Dictionary:
 		var pack_body: String = pack_folder + str(pack.get("body", "")) + ".fbx"
 		if pack.has("body") and ResourceLoader.exists(pack_body):
 			pack_scene = pack_body
+	# Clips borrowed from other fighters' Mixamo sets to fill this one's
+	# gaps: [file under assets/fighters/, optional [start, impact, end]].
+	var borrowed: Dictionary = style.get("borrow", {})
+	for logical in borrowed:
+		var entry: Array = borrowed[logical]
+		var path := "res://assets/fighters/%s.fbx" % entry[0]
+		if ResourceLoader.exists(path):
+			files["borrow_" + logical] = path
+			clips[logical] = "borrow_" + logical
+			if entry.size() > 1:
+				timing[logical] = entry[1]
+			else:
+				timing.erase(logical)
 	for logical in LOW_KIT:
 		var entry: Array = OWN_LOW.get(fighter_id, {}).get(logical, LOW_KIT[logical])
 		var path := "res://assets/fighters/%s.fbx" % entry[0]
@@ -468,6 +520,28 @@ static func _mixamo(fighter_id: String) -> Dictionary:
 			timing[logical] = entry[2]
 		else:
 			timing.erase(logical)
+	for logical in MESHY_KIT:
+		var entry: Array = MESHY_KIT[logical]
+		var kit_file := "res://assets/fighters/meshy/%s.fbx" % entry[0]
+		if not ResourceLoader.exists(kit_file):
+			continue
+		# "" takes the file's one animation, whatever Meshy named it.
+		tripo.append({"file": kit_file, "clips": {logical: ""}})
+		clips[logical] = "meshy_" + logical
+		if entry.size() > 1:
+			timing[logical] = entry[1]
+		else:
+			timing.erase(logical)
+	var own_meshy: Dictionary = MESHY_OWN.get(fighter_id, {})
+	for logical in own_meshy:
+		var own_file := "res://assets/fighters/meshy/%s.fbx" % own_meshy[logical]
+		if ResourceLoader.exists(own_file):
+			tripo.append({"file": own_file, "clips": {logical: ""}})
+			clips[logical] = "meshy_" + logical
+			timing.erase(logical)
+	if fighter_id in MESHY_SWEEPERS and clips.has("strike_sweeping_kick"):
+		clips["strike_sweep"] = clips["strike_sweeping_kick"]
+		timing["strike_sweep"] = timing["strike_sweeping_kick"]
 	# A fighter's own rigged body (assets/fighters/<id>/body.fbx, from Mixamo
 	# "With Skin") replaces the X Bot and keeps its real textures untinted.
 	var body := "res://assets/fighters/%s/body.fbx" % fighter_id

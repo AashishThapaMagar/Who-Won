@@ -284,6 +284,7 @@ F1 in a fight: every move and combo.": "1 2 मुक्का, 3 4 लात।
 	"A/D WALK   W JUMP   S CROUCH   E GUARD   SHIFT + FORWARD RUN   DOUBLE-TAP + HOLD FORWARD TO RUN\nF 1   V 2   G 3   B 4   R RESET   F2 DUMMY   F1 MOVES   ESC PAUSE": "A/D हिँड्ने   W उफ्रिने   S निहुरिने   E बचाउ   SHIFT + अगाडि दौडिने   दुई पटक थिचेर अगाडि थिचिराखे दौडिने\nF 1   V 2   G 3   B 4   R रिसेट   F2 डमी   F1 चाल   ESC रोक्ने",
 	"CROUCH": "निहुरिने",
 	"LOW HIT": "तल्लो प्रहार",
+	"OVERHEAD": "माथिबाट प्रहार",
 	"ROUND %d": "राउन्ड %d",
 	"FINAL ROUND": "अन्तिम राउन्ड",
 	"FIGHT!": "लडाइँ सुरु!",

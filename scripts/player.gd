@@ -165,6 +165,9 @@ var swept: bool = false
 ## limb whips through, just before it lands, not when the wind-up starts).
 var _swing_heard: bool = false
 const SWEEP_FALL := 0.45
+## One attack per jump: punch or kick in the air is the diving fist or the
+## flying kick (an overhead), cleared on landing.
+var air_attack_used: bool = false
 
 ## "action" is the style_id of resources/styles/action.tres, the one style
 ## resource live matches now use for all four rounds. Archived styles
@@ -302,6 +305,16 @@ func _physics_process(delta: float) -> void:
 		state = State.LAND
 		action_timer = LAND_TIME
 		preload("res://scripts/sfx.gd").fire("land", -6.0)
+	elif not was_grounded and _is_grounded() and state in [State.PUNCH, State.KICK] and current_move.get("air", false):
+		# The air attack ends where it lands, with a beat to recover.
+		hitbox.set_active(false)
+		current_move = {}
+		chain_step = 0
+		state = State.LAND
+		action_timer = LAND_TIME * 3.0
+		preload("res://scripts/sfx.gd").fire("land", -4.0)
+	if _is_grounded() and state not in [State.JUMP, State.JUMP_START]:
+		air_attack_used = false
 	# Consume before aging: a queued action remains valid on the recovery tick.
 	_buffer_remaining -= delta
 	if _buffer_remaining <= 0.0:
@@ -443,6 +456,15 @@ func _process_move_and_actions(delta: float = 1.0 / 60.0) -> void:
 		if direction != 0.0:
 			velocity.x = move_toward(velocity.x, direction * move_speed, acceleration * 0.12 * delta)
 		state = State.JUMP
+		if _buffered_action in ["punch", "kick", "rpunch", "rkick"] and not air_attack_used and available_moves().has("jump_kick"):
+			# In the air: punch dives, kick flies; the jump's arc carries on.
+			var carry := velocity.x
+			var air_move := "jump_punch" if _buffered_action in ["punch", "rpunch"] else "jump_kick"
+			_buffered_action = ""
+			_buffer_remaining = 0.0
+			air_attack_used = true
+			_start_style_move(air_move)
+			velocity.x = carry
 
 func _consume_action() -> bool:
 	if _buffered_action.is_empty() or not _is_grounded():
@@ -577,11 +599,13 @@ func _start_attack(new_state: int, variant: String = "jab") -> void:
 
 func _process_attack(delta: float) -> void:
 	attack_timer += delta
+	var airborne: bool = current_move.get("air", false)
 	if not _swing_heard and attack_timer >= attack_startup() * 0.6 and current_move.get("utility", "") == "":
 		_swing_heard = true
 		var swing := "sweep" if attack_variant == "strike_sweep" else ("whoosh_heavy" if state == State.KICK else "whoosh")
 		preload("res://scripts/sfx.gd").fire(swing, -6.0)
-	velocity.x = move_toward(velocity.x, 0.0, braking * delta)
+	if not airborne:
+		velocity.x = move_toward(velocity.x, 0.0, braking * delta)
 	var heavy: bool = attack_variant in ["kick", "finisher"]
 	var damage: int = kick_damage if heavy else (hook_damage if attack_variant == "hook" else punch_damage)
 	var knockback: float = kick_knockback if heavy else (hook_knockback if attack_variant == "hook" else punch_knockback)
@@ -592,7 +616,8 @@ func _process_attack(delta: float) -> void:
 		# including manual links. Early punches retain close-range pressure.
 		damage = maxi(1, int(round(base * float(current_move.damage))))
 		knockback = (kick_knockback if heavy else punch_knockback) * float(current_move.push)
-		velocity.x = facing * float(current_move.lunge) / attack_startup() if attack_timer < attack_startup() else 0.0
+		if not airborne:
+			velocity.x = facing * float(current_move.lunge) / attack_startup() if attack_timer < attack_startup() else 0.0
 	if attack_variant == "finisher":
 		damage = int(round(damage * current_style.finisher_damage_mult))
 		knockback *= current_style.finisher_knockback_mult
@@ -715,6 +740,12 @@ func take_hit(damage: int, knockback: float, attacker_facing: int, attacker: Nod
 		blocked = false
 		if attacker != null:
 			attacker.combat_notice = "LOW HIT"
+			attacker.notice_until = attacker.combat_time + 0.8
+	# An overhead (a jump attack) comes down over a crouching guard.
+	if blocked and move.get("overhead", false) and crouching:
+		blocked = false
+		if attacker != null:
+			attacker.combat_notice = "OVERHEAD"
 			attacker.notice_until = attacker.combat_time + 0.8
 	var attacking := state in [State.PUNCH, State.KICK]
 	var counter: bool = not blocked and attacking and attack_timer < attack_startup()

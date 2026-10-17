@@ -46,6 +46,9 @@ const INJURED_HEALTH := 0.25
 ## a diving catch) would drift away from the body and snap back.
 const TRAVELLING := ["ko"]
 ## Attack-like clips driven by the fighter's attack timer.
+## Strikes thrown in the air: their clips' own leap is flattened, the
+## jump's physics carries the body.
+const AIR_STRIKES := ["strike_jump_punch", "strike_flying_kick"]
 const SCRUBBED := ["jab", "cross", "hook", "punch_heavy", "uppercut", "kick", "kick_spin", "kick_front", "grapple", "taunt", "finisher"]
 ## Meshy's biped skeleton names -> Mixamo bone keys (see _bone_key); every
 ## other bone already shares the Mixamo name.
@@ -564,7 +567,7 @@ func _tint(colors: Array) -> void:
 ## launch. Building one means opening and converting every clip file (about
 ## fifty for a full move pack, ~10 s); a cached set loads in a fraction of
 ## that. Bump CLIP_CACHE_VERSION whenever the conversion below changes.
-const CLIP_CACHE_VERSION := 6
+const CLIP_CACHE_VERSION := 7
 const CLIP_CACHE_DIR := "user://clip_cache/"
 static var _clip_cache := {}
 
@@ -769,6 +772,9 @@ func _add_meshy_clips(library: AnimationLibrary, path: String, wanted: Dictionar
 		for candidate in names:
 			if String(candidate).contains(String(wanted[logical])):
 				clip_name = candidate
+		# No name given: the file's one animation (a single-move download).
+		if String(wanted[logical]) == "" and not names.is_empty():
+			clip_name = names[0]
 		if clip_name == "":
 			continue
 		var clip := from.get_animation(clip_name)
@@ -858,7 +864,7 @@ func _add_meshy_clips(library: AnimationLibrary, path: String, wanted: Dictionar
 			timing[logical] = [maxf(0.0, peak_time - 0.4), peak_time, minf(clip.length, peak_time + 0.55)]
 			config["timing"] = timing
 		clip_pace["files/" + key] = _pin_hips(out)
-		if logical == "jump":
+		if logical == "jump" or logical in AIR_STRIKES:
 			# The game's physics lifts the body; the clip keeps only the
 			# tuck, or the fighter would rise twice as high.
 			for track in out.get_track_count():

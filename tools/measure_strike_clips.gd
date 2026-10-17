@@ -49,7 +49,7 @@ func _measure(path: String) -> void:
 	var ground := INF
 	for limb in ["left_foot", "right_foot"]:
 		ground = minf(ground, _global(skeleton, limbs[limb]).origin.y)
-	print("%s  len=%.2f  impact=%.2f  limb=%s  reach=%.0f  limb_height=%.0f  hips_start=%.0f  feet=%.0f (units as imported)" % [
+	print("%s  len=%.2f  impact=%.2f  limb=%s  reach=%.2f  limb_height=%.2f  hips_start=%.2f  feet=%.2f (units as imported)" % [
 		path.get_file(), animation.length, best.t, best.limb, best.reach, best.height, start_hips.y, ground])
 	scene.free()
 

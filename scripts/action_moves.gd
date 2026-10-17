@@ -67,7 +67,8 @@ static func for_fighter(id: String) -> Dictionary:
 			m.breaker = BASE._move("Iron uppercut", "uppercut", "punch", "hook", 42, -96, 0.2, 0.08, 0.4, 1.8, 1.6, 16)
 			m.drive.name = "Battering ram"
 			m.drive.pose = "overhand"
-			m.combo_finish = BASE._move("Anvil Drop", "overhand", "punch", "hook", 50, -92, 0.16, 0.09, 0.42, 1.9, 1.9, 18)
+			# His haymaker (fighter_models.gd sab borrow) ends the 1,1,1,3 string.
+			m.combo_finish = BASE._move("Anvil Drop", "finisher_clip", "punch", "hook", 50, -92, 0.16, 0.09, 0.42, 1.9, 1.9, 18)
 		"bib":
 			m.jab.name = "Needle check"
 			m.cross.name = "Rapid straight"
@@ -266,6 +267,17 @@ static func for_fighter(id: String) -> Dictionary:
 	m.sweep.low = true
 	m.sweep.knockdown = true
 	m.sweep.crouch = true
+	# In the air: punch is a diving fist, kick a flying kick (Meshy's
+	# Jumping Punch and Flying Fist Kick). Both are overheads: a crouching
+	# guard can't stop them, the answer to a fighter sitting on the sweep.
+	# They stay live into the landing; landing ends them (player.gd).
+	m.jump_punch = BASE._move("Diving fist", "strike_jump_punch", "punch", "hook", 50, -96, 0.10, 0.22, 0.20, 1.3, 1.1, 0)
+	m.jump_kick = BASE._move("Flying kick", "strike_flying_kick", "kick", "kick", 66, -92, 0.10, 0.22, 0.20, 1.35, 1.4, 0)
+	for air in [m.jump_punch, m.jump_kick]:
+		air.air = true
+		air.overhead = true
+		air.hitstun = 0.42
+		air.blockstun = 0.2
 	# Stamina costs are assigned by move slot/kind here rather than per-move
 	# above, so every fighter's moves stay priced consistently even though
 	# their reach/damage/timing differ.

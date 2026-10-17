@@ -37,6 +37,9 @@ const LOW_READ := [0.2, 0.6, 0.9]
 const ANTI_AIR := [0.1, 0.35, 0.65]
 ## Reaching for the sweep in a decision at striking range.
 const SWEEP_CHANCE := [0.08, 0.14, 0.18]
+## Jumping in from just outside striking range with an overhead.
+const JUMP_IN := [0.06, 0.12, 0.18]
+var _air_plan := false
 ## Getting up from a knockdown: roll clear, stay down, or rise striking.
 const WAKE_ROLL := [0.1, 0.3, 0.35]
 const WAKE_LATE := [0.0, 0.15, 0.25]
@@ -139,6 +142,14 @@ func _physics_process(delta: float) -> void:
 		_set_move(0)
 		return
 	_set_crouch(false)
+	# Jumping in: strike as the arc comes down into range.
+	if _air_plan and fighter.state == fighter.State.JUMP:
+		if abs_distance < ATTACK_RANGE + 30.0 and fighter.velocity.y > -250.0:
+			_air_plan = false
+			_request_move("jump_kick" if randf() < 0.6 else "jump_punch")
+			return
+	elif fighter._is_grounded() and fighter.state != fighter.State.JUMP_START:
+		_air_plan = false
 	# A rival jumping in close: meet it with the uppercut.
 	if opponent.state == opponent.State.JUMP and abs_distance < ATTACK_RANGE + 40.0 and _reaction_cooldown <= 0.0 			and fighter.state in [fighter.State.IDLE, fighter.State.WALK] and fighter.available_moves().has("crouch_punch"):
 		_reaction_cooldown = 0.6
@@ -173,6 +184,12 @@ func _physics_process(delta: float) -> void:
 	if abs_distance > APPROACH_RANGE and _jump_cooldown <= 0.0 and randf() < 0.15:
 		_tap(_prefix + "jump")
 		_jump_cooldown = 1.8
+	elif abs_distance > ATTACK_RANGE + 20.0 and abs_distance < 190.0 and _jump_cooldown <= 0.0 			and fighter.available_moves().has("jump_kick") and randf() < JUMP_IN[skill()]:
+		_set_move(toward)
+		_tap(_prefix + "jump")
+		_jump_cooldown = 2.5
+		_air_plan = true
+		return
 
 	if abs_distance > ATTACK_RANGE:
 		_set_move(toward)
@@ -294,7 +311,7 @@ func _try_evade(_attacking: bool, _abs_distance: float) -> bool:
 
 func _request_move(id: String) -> void:
 	# AI decisions enter the same expiring buffer and hit-confirm rules as input.
-	fighter._buffered_action = id if id in ["grapple", "super", "sweep", "crouch_punch"] else ("punch" if id == "jab" else "kick")
+	fighter._buffered_action = id if id in ["grapple", "super", "sweep", "crouch_punch"] else ("punch" if id in ["jab", "jump_punch"] else "kick")
 	fighter._buffered_direction = 1 if id == "forward_heavy" else (-1 if id == "back_heavy" else 0)
 	fighter._buffered_move = id if id in ["drive", "breaker"] else ""
 	fighter._buffer_remaining = fighter.input_buffer_time

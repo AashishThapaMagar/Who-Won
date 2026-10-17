@@ -148,5 +148,58 @@ func run() -> void:
 	await frames(2)
 	check(p1.current_move.get("low", false), "The AI's sweep request starts the sweep")
 
+	# Jump attacks: kick in the air is the flying kick, an overhead that a
+	# crouching guard can't stop and a standing guard can; landing ends it.
+	for guard in ["crouch", "stand"]:
+		await reset()
+		p1.body.position = Vector3(-1.0, 0.02, 0)
+		Input.action_press("p2_3d_block")
+		if guard == "crouch":
+			Input.action_press("p2_3d_crouch")
+		await frames(6)
+		Input.action_press("p1_3d_right")
+		await tap("jump")
+		var kicked := false
+		var outcome := ""
+		for frame in 120:
+			await frames(1)
+			if not kicked and p1.state == p1.State.JUMP and p1.velocity.y > -300.0:
+				await tap("kick")
+				kicked = true
+				await frames(1)
+				check(p1.current_move.get("air", false), "Kick in the air is the flying kick (got %s)" % p1.current_move.get("name", "nothing"))
+			if kicked and outcome == "":
+				if p2.state == p2.State.HITSTUN:
+					outcome = "hit"
+				elif p2.state == p2.State.BLOCKSTUN:
+					outcome = "blocked"
+			if kicked and p1._is_grounded() and p1.state not in [p1.State.PUNCH, p1.State.KICK, p1.State.JUMP] and frame > 30:
+				break
+		Input.action_release("p1_3d_right")
+		if guard == "crouch":
+			check(outcome == "hit", "A flying kick comes down over a crouching guard (got %s)" % outcome)
+		else:
+			check(outcome == "blocked", "A standing guard blocks the flying kick (got %s)" % outcome)
+		check(p1.state != p1.State.KICK or p1._is_grounded() == false, "Landing ends the air attack")
+		release_all()
+	# One air attack per jump.
+	await reset()
+	p2.body.position = Vector3(3.0, 0.02, 0)
+	await tap("jump")
+	for frame in 12:
+		await frames(1)
+	await tap("punch")
+	await frames(2)
+	var first: String = p1.current_move.get("name", "")
+	check(first == "Diving fist", "Punch in the air is the diving fist (got %s)" % first)
+	for frame in 40:
+		await frames(1)
+		if p1.state == p1.State.JUMP:
+			break
+	await tap("kick")
+	await frames(2)
+	check(p1.state == p1.State.JUMP or p1._is_grounded() or p1.current_move.get("name", "") == first, "Only one attack per jump")
+	release_all()
+
 	print("CROUCH_TEST: ", "ALL PASS" if failures.is_empty() else failures)
 	quit(0 if failures.is_empty() else 1)
