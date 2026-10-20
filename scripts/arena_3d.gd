@@ -118,6 +118,11 @@ func _ready() -> void:
 	player2.opponent = player1
 	player1.apply_character(MatchSetup.selected_fighters[0])
 	player2.apply_character(MatchSetup.selected_fighters[1])
+	# Each fighter speaks in their own voice where the player recorded none.
+	var voices := get_node_or_null("/root/BattleCry")
+	if voices != null and voices.has_method("use_fighter"):
+		voices.use_fighter(0, str(player1.character_profile.id))
+		voices.use_fighter(1, str(player2.character_profile.id))
 	$UI/P1Label.text = "P1 / " + player1.character_profile.name
 	$UI/P2Label.text = "P2 / " + player2.character_profile.name + (" / AI" if MatchSetup.vs_ai else "")
 	p1_start_pos = player1.position

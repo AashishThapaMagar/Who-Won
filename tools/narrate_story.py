@@ -1,9 +1,12 @@
-"""Records the Story Mode narration with ElevenLabs.
+"""Records Story Mode with ElevenLabs: the narration and every character's
+own lines, each in their own voice (CAST).
 
-Each narration line (no speaker) of each book becomes
-audio/story/<fighter>/<key>.ogg, which story_dialogue.gd plays when the
-line comes up (and turns the page after). A manifest remembers what text
-each file was made from, so a re-run only records new or changed lines.
+Each line of each book becomes audio/story/<fighter>/<key>.ogg, which
+story_dialogue.gd plays when the line comes up (and turns the page after).
+A manifest remembers what text and voice each file was made from, so a
+re-run only records new or changed lines.
+
+  python tools/narrate_story.py --voice bill --cast  # narration and dialogue
 
   python tools/narrate_story.py --sample            # one line, every candidate voice
   python tools/narrate_story.py --voice george      # every book
@@ -28,6 +31,18 @@ MODEL = "eleven_multilingual_v2"
 # Cinematic: unhurried and expressive, still steady from line to line.
 SETTINGS = {"stability": 0.42, "similarity_boost": 0.8, "style": 0.38, "use_speaker_boost": True}
 SAMPLE_LINE = "Then the letter came. The same one, sealed, to all six of the master's old students."
+# Who speaks each fighter's lines (ElevenLabs premade voices).
+CAST = {
+    "anant": "pNInz6obpgDQGcFmaJgB",   # Adam: dominant, firm - the master
+    "ish": "TX3LPaxmHKxFdv7VOQHJ",     # Liam: energetic, young - the tea-stall dreamer
+    "sab": "N2lVS1w4EtoT3dr4eOWO",     # Callum: husky trickster - the lazy joker
+    "bib": "SOYHLrjzK2X1ezoPC6cr",     # Harry: fierce young warrior - facing his fear
+    "abhi": "IKne3meq5aSn9XLyUdCD",    # Charlie: deep, confident, energetic - the showman
+    "anug": "iP95p4xoKVk53GoZ742B",    # Chris: charming, down to earth - the last line
+    "sup": "cjVigY5qzO86Huf0OWal",     # Eric: smooth - the spiral
+}
+# Characters act more than the narrator: a little looser, more style.
+CAST_SETTINGS = {"stability": 0.38, "similarity_boost": 0.8, "style": 0.45, "use_speaker_boost": True}
 
 
 def api_key():
@@ -49,8 +64,8 @@ def speakable(text):
     return re.sub(r"\b([A-Z]{2,}(?:\s+[A-Z]{2,})*)\b", lambda m: m.group(1).capitalize(), text)
 
 
-def tts(key, voice_id, text):
-    body = json.dumps({"text": speakable(text), "model_id": MODEL, "voice_settings": SETTINGS}).encode()
+def tts(key, voice_id, text, settings=None):
+    body = json.dumps({"text": speakable(text), "model_id": MODEL, "voice_settings": settings or SETTINGS}).encode()
     req = urllib.request.Request(
         "https://api.elevenlabs.io/v1/text-to-speech/%s?output_format=mp3_44100_128" % voice_id,
         data=body, headers={"xi-api-key": key, "Content-Type": "application/json", "Accept": "audio/mpeg"})
@@ -85,6 +100,7 @@ def main():
     ap.add_argument("--only", nargs="*", help="fighter ids (ish sab bib abhi anug anant sup)")
     ap.add_argument("--sample", action="store_true", help="record one line with every candidate voice")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--cast", action="store_true", help="also record each character's own lines")
     args = ap.parse_args()
     key = api_key()
     if args.sample:
@@ -106,10 +122,12 @@ def main():
         folder = os.path.join(ROOT, "audio", "story", fighter)
         os.makedirs(folder, exist_ok=True)
         for line in lines:
-            if line["speaker"] != "" or not line["text"].strip():
+            speaker = line["speaker"]
+            if not line["text"].strip() or (speaker != "" and not (args.cast and speaker in CAST)):
                 continue
+            voice = voice_id if speaker == "" else CAST[speaker]
             path = os.path.join(folder, line["key"] + ".ogg")
-            stamp = hashlib.sha1((voice_id + "|" + line["text"]).encode()).hexdigest()
+            stamp = hashlib.sha1((voice + "|" + line["text"]).encode()).hexdigest()
             rel = "%s/%s" % (fighter, line["key"])
             if os.path.exists(path) and manifest.get(rel) == stamp:
                 skipped += 1
@@ -118,7 +136,7 @@ def main():
             if args.dry_run:
                 print("would record", rel, "|", line["text"][:60])
                 continue
-            to_ogg(tts(key, voice_id, line["text"]), path)
+            to_ogg(tts(key, voice, line["text"], None if speaker == "" else CAST_SETTINGS), path)
             manifest[rel] = stamp
             made += 1
             print("recorded", rel)

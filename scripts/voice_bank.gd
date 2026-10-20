@@ -32,6 +32,41 @@ const EVENT_GAP := {"hit": 5.0, "landed_hit": 8.0, "move": 4.0}
 const EVENT_CHANCE := {"landed_hit": 0.4}
 var _last_event: Array = [{}, {}]
 var _record_bus := -1
+## Each fighter's own fight voice (audio/voices/<fighter>/<event>_<n>.ogg,
+## made by tools/voice_fighters.py in the voice that speaks their story),
+## used for any moment the player hasn't recorded a take of their own.
+const FIGHTER_VOICES := "res://audio/voices/"
+const FIGHTER_EVENTS := ["general", "hit", "landed_hit", "super", "call_enemy", "victory", "defeat"]
+var defaults: Array = [{}, {}]
+var _default_fighter: Array[String] = ["", ""]
+
+## Loads `fighter_id`'s own voice for player `player` (0 or 1).
+func use_fighter(player: int, fighter_id: String) -> void:
+	if player not in [0, 1] or _default_fighter[player] == fighter_id:
+		return
+	_default_fighter[player] = fighter_id
+	defaults[player] = {}
+	for event in FIGHTER_EVENTS:
+		var takes: Array = []
+		for n in range(1, MAX_TAKES + 1):
+			var path := "%s%s/%s_%d.ogg" % [FIGHTER_VOICES, fighter_id, event, n]
+			var stream: AudioStream = null
+			if ResourceLoader.exists(path):
+				stream = load(path)
+			elif FileAccess.file_exists(path):
+				stream = AudioStreamOggVorbis.load_from_file(path)
+			if stream == null:
+				break
+			takes.append(stream)
+		if not takes.is_empty():
+			defaults[player][event] = takes
+
+## The takes a slot plays: the player's own, or "default:<event>" for the
+## fighter's built-in voice.
+func _takes(player: int, slot: String) -> Array:
+	if slot.begins_with("default:"):
+		return defaults[player].get(slot.trim_prefix("default:"), [])
+	return banks[player].get(slot, [])
 
 static func move_event(fighter: String, move: String) -> String:
 	return "move_" + fighter + "_" + move
@@ -254,15 +289,21 @@ func resolve_event(player: int, event: String) -> String:
 	if has_cry(player, event):
 		return event
 	# Legacy/general takes remain useful for signature moves, supers and wins.
-	if (event == "super" or event == "victory" or (event.begins_with("move_") and BIG_MOVES.any(func(move): return event.ends_with("_" + move)))) and has_cry(player):
+	var big: bool = event.begins_with("move_") and BIG_MOVES.any(func(move): return event.ends_with("_" + move))
+	if (event == "super" or event == "victory" or big) and has_cry(player):
 		return "general"
+	# Nothing recorded: the fighter's own voice.
+	if defaults[player].has(event):
+		return "default:" + event
+	if big and defaults[player].has("general"):
+		return "default:general"
 	return ""
 
 func call_time_left(player: int) -> float:
 	return maxf(0.0, CALL_COOLDOWN - (Time.get_ticks_msec() / 1000.0 - _last_call[player]))
 
 func can_call_enemy(player: int) -> bool:
-	if player not in [0, 1] or not enabled[player] or recording_player >= 0 or not has_cry(player, "call_enemy") or call_time_left(player) > 0.0:
+	if player not in [0, 1] or not enabled[player] or recording_player >= 0 or resolve_event(player, "call_enemy") == "" or call_time_left(player) > 0.0:
 		return false
 	if _voices[player].playing and _priority[player] >= 2:
 		return false
@@ -299,7 +340,7 @@ func shout(player: int, always := false, event := "general") -> void:
 	_play(player, slot, _pick(player, slot))
 
 func _pick(player: int, event: String) -> int:
-	var size := count(player, event)
+	var size := _takes(player, event).size()
 	var pick := randi() % size
 	var previous: int = _last_take[player].get(event, -1)
 	if size > 1 and pick == previous:
@@ -308,7 +349,7 @@ func _pick(player: int, event: String) -> int:
 
 func _play(player: int, event: String, take: int) -> void:
 	_last_take[player][event] = take
-	_voices[player].stream = banks[player][event][take]
+	_voices[player].stream = _takes(player, event)[take]
 	_voices[player].volume_db = -80.0 if levels[player] <= 0.0 else linear_to_db(levels[player])
 	_voices[player].play()
 
