@@ -29,7 +29,8 @@ const FALLBACK := {
 }
 ## Attack variants (from move data poses) that use the heavy-punch clip.
 const HEAVY_PUNCHES := ["cross", "hook", "rear_hook", "uppercut", "overhand", "backfist", "body_hook"]
-const LOOPING := ["idle", "walk", "walk_back", "sidestep", "sidestep_left", "sidestep_right", "run", "dash", "backdash", "block", "injured", "crouch", "crouch_block"]
+const LOOPING := ["idle", "walk", "walk_back", "sidestep", "sidestep_left", "sidestep_right", "run", "dash", "backdash", "block", "injured", "crouch", "crouch_block",
+	"crouch_walk", "crouch_walk_back", "crouch_step_left", "crouch_step_right"]
 ## Movement that keeps the guard up on the upper body.
 const GUARDED := ["walk", "walk_back", "sidestep", "sidestep_left", "sidestep_right", "dash", "backdash"]
 ## Bones the guard overlay drives (substring match on the bone name).
@@ -38,12 +39,21 @@ const UPPER_BODY := ["Spine", "Neck", "Head", "Shoulder", "Arm", "Hand"]
 ## (too fast) or floaty (too slow), so a little foot slide is accepted.
 const MOVE_SPEED_RANGE := {"walk": [0.45, 2.2], "walk_back": [0.45, 2.2], "sidestep": [0.45, 2.2],
 	"sidestep_left": [0.45, 2.2], "sidestep_right": [0.45, 2.2],
-	"run": [0.55, 2.0], "injured": [0.7, 1.6], "dash": [1.0, 2.2], "backdash": [1.0, 2.4]}
+	"run": [0.8, 3.2], "injured": [0.7, 1.6],
+	"crouch_walk": [0.5, 1.8], "crouch_walk_back": [0.5, 1.8], "crouch_step_left": [0.5, 1.8], "crouch_step_right": [0.5, 1.8], "dash": [1.0, 2.2], "backdash": [1.0, 2.4]}
 ## Health fraction at or below which forward movement limps.
 const INJURED_HEALTH := 0.25
 ## Strikes thrown in the air: their clips' own leap is flattened, the
 ## jump's physics carries the body.
 const AIR_STRIKES := ["KB_JumpPunch", "KB_Jump_Loop2Kick"]
+const CLIP_REACH := preload("res://scripts/clip_reach.gd")
+## Turn that cancels a clip's AIM (the pack's +Z forward and +X left, seen
+## in the character's own frame).
+const AIM_SIGN := -1.0
+## Clips whose blow lands somewhere other than where they reach furthest
+## forward (round kicks sweeping across, a spinning elbow): their aim,
+## measured in game at the moment the blow lands.
+const AIM_OVERRIDE := {"KB_crouch_p_Uppercut_L": -48.0, "KB_m_ElbowRound_L2": 27.0, "KB_m_Overhand_L": -9.0, "KB_m_Backswing_L": -16.0}
 ## Attack-like clips driven by the fighter's attack timer (plus every pack
 ## strike a move names, "KB_...": see _is_strike).
 const SCRUBBED := ["jab", "cross", "hook", "punch_heavy", "uppercut", "kick", "kick_spin", "kick_front", "grapple", "taunt", "finisher"]
@@ -74,7 +84,8 @@ var _reach := 0.0
 var _ko_shift := Vector3.ZERO
 var _ko_measure := false
 var _last_hips := Vector3.ZERO
-const REACTIONS := ["hit", "hit_heavy", "block_hit", "hit_head", "hit_head_alt", "hit_head_heavy", "hit_body", "hit_body_alt", "hit_side", "hit_liver"]
+const REACTIONS := ["hit", "hit_heavy", "block_hit", "block_mid_left", "block_mid_right", "slip", "slip_left", "slip_right",
+	"hit_back", "hit_back_body", "hit_back_heavy", "hit_head", "hit_head_alt", "hit_head_heavy", "hit_body", "hit_body_alt", "hit_side", "hit_liver", "crouch_hit", "crouch_hit_left", "crouch_hit_right", "crouch_block_hit"]
 ## Rigs with their own reaction set (see fighter_models.gd) pick one by
 ## where and how hard each blow landed; picked on impact, held for the stun.
 var _reaction := ""
@@ -99,7 +110,7 @@ var _react_speed := 0.0
 var _tail := ""
 ## Fastest a reaction clip is played to fit a short stun; the rest of it
 ## plays out as the tail.
-const REACT_MAX_SPEED := 1.5
+const REACT_MAX_SPEED := 1.2
 var skeleton: Skeleton3D
 var guard_clip: Animation
 ## [track, bone] pairs of the idle clip's upper-body rotation tracks.
@@ -219,6 +230,13 @@ func configure(owner_visual: Node, profile: Dictionary) -> void:
 		character.add_child(player)
 	# Advanced by hand in update(), so the guard overlay lands after the clip.
 	player.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
+	# The skeleton comes from a Mixamo file, which carries its own takes:
+	# every clip a fighter plays is the pack's, so those are taken out.
+	# (A rig dropped into a fighter's folder keeps its own: they are its moves.)
+	if not config.get("pack", {}).is_empty():
+		for library_name in player.get_animation_library_list():
+			if library_name == "":
+				player.remove_animation_library(library_name)
 	if str(config.get("body", "")) != "":
 		_graft_body(config.body)
 	_add_clip_files()
@@ -254,8 +272,11 @@ static func _load_character(path: String) -> Node3D:
 			return document.generate_scene(state) as Node3D
 	return null
 
+var _slip_until := 0
 func _on_impact(_point: Vector2, blocked: bool, heavy: bool) -> void:
 	_react = true
+	if blocked and visual != null and visual.fighter != null and visual.fighter.get("last_perfect") == true:
+		_slip_until = Time.get_ticks_msec() + 550
 	var fighter: Node = visual.fighter if visual != null else null
 	var slammed: bool = fighter != null and fighter.get("thrown_down") != null and (fighter.state in [fighter.State.THROWN, fighter.State.KNOCKDOWN] or fighter.thrown_down)
 	if slammed and fighter.state in [fighter.State.KNOCKDOWN, fighter.State.KO]:
@@ -326,6 +347,14 @@ func _on_impact(_point: Vector2, blocked: bool, heavy: bool) -> void:
 func _pick_reaction(fighter: Node, attacker) -> String:
 	if fighter == null or not clip_names.has("hit_body") or fighter.get("last_hit_height") == null:
 		return ""
+	# Struck from behind: the blow throws the back, not the front.
+	if attacker != null and attacker.get("body") != null and fighter.get("forward") is Vector3 and clip_names.has("hit_back"):
+		var from: Vector3 = attacker.body.global_position - fighter.body.global_position
+		from.y = 0.0
+		if from.length() > 0.01 and (fighter.forward as Vector3).dot(from.normalized()) < -0.3:
+			if fighter.last_hit_stagger or fighter.last_hit_force >= 0.7:
+				return "hit_back_heavy"
+			return "hit_back" if fighter.last_hit_height == "high" else "hit_back_body"
 	var height: String = fighter.last_hit_height
 	var force: float = fighter.last_hit_force
 	if height != "high" and (fighter.last_hit_stagger or force >= 0.7) and clip_names.has("hit_liver"):
@@ -920,7 +949,7 @@ func _tint(colors: Array) -> void:
 ## Building one means converting about fifty clips (several seconds); a
 ## cached set loads in a fraction of that. Bump CLIP_CACHE_VERSION whenever
 ## the conversion below changes.
-const CLIP_CACHE_VERSION := 30
+const CLIP_CACHE_VERSION := 36
 const CLIP_CACHE_DIR := "user://clip_cache/"
 static var _clip_cache := {}
 
@@ -1238,6 +1267,8 @@ func _add_pack_clips(library: AnimationLibrary, path: String, wanted: Dictionary
 			out.position_track_insert_key(out_hips, at, hips)
 			time += step
 		var key: String = "pack_" + logical
+		if CRUISE.has(clip_name) and logical in ["run", "dash", "backdash"]:
+			out = _cruise_loop(out, CRUISE[clip_name])
 		if measure and peak_time >= 0.0:
 			# The blow lands at full extension, not at a guessed fraction.
 			var timing: Dictionary = config.get("timing", {})
@@ -1248,9 +1279,10 @@ func _add_pack_clips(library: AnimationLibrary, path: String, wanted: Dictionary
 		# a fighter of the game's height (the pack's actor is about 1.75 m).
 		var pace := 0.0
 		if root_track >= 0 and clip.track_get_key_count(root_track) > 1:
-			var first: Vector3 = clip.track_get_key_value(root_track, 0)
-			var last: Vector3 = clip.track_get_key_value(root_track, clip.track_get_key_count(root_track) - 1)
-			pace = Vector2(last.x - first.x, last.z - first.z).length() / maxf(clip.length, 0.01) * MODELS.FIGHTER_HEIGHT / 1.75
+			var span: Array = CRUISE.get(clip_name, [0.0, clip.length]) if logical in ["run", "dash", "backdash"] else [0.0, clip.length]
+			var first: Vector3 = clip.position_track_interpolate(root_track, span[0])
+			var last: Vector3 = clip.position_track_interpolate(root_track, span[1])
+			pace = Vector2(last.x - first.x, last.z - first.z).length() / maxf(span[1] - span[0], 0.01) * MODELS.FIGHTER_HEIGHT / 1.75
 		clip_pace["files/" + key] = pace
 		_centre_hips(out, target.get_bone_rest(target_hips).origin)
 		if logical in AIR_STRIKES:
@@ -1262,7 +1294,7 @@ func _add_pack_clips(library: AnimationLibrary, path: String, wanted: Dictionary
 			var lift := target.get_bone_rest(target_hips).origin.y - first.y
 			for k in out.track_get_key_count(out_hips):
 				out.track_set_key_value(out_hips, k, (out.track_get_key_value(out_hips, k) as Vector3) + Vector3(0.0, lift, 0.0))
-		elif logical == "jump":
+		elif logical == "jump" or logical == "jump_forward":
 			# The game's physics lifts the body; the clip keeps only the
 			# tuck, or the fighter would rise twice as high.
 			var ground: Vector3 = out.track_get_key_value(out_hips, 0)
@@ -1273,6 +1305,44 @@ func _add_pack_clips(library: AnimationLibrary, path: String, wanted: Dictionary
 			_ground_feet(out, target)
 		library.add_animation(key, out)
 	scene.free()
+
+## The pack's skips are one bound and a settle back into stance; run and
+## dash loop only the cruising stretch between (seconds, where its Root
+## moves at a steady pace), so the fighter keeps on going.
+const CRUISE := {"KB_SkipFwd_1": [0.2, 0.72], "KB_SkipFwd_2": [0.3, 1.1],
+	"KB_SkipBwd_1": [0.2, 0.85], "KB_SkipBwd_2": [0.2, 0.75]}
+## Share of a cruise loop over which its end is eased into its start.
+const LOOP_SEAM := 0.25
+
+## `animation` cut to `span` [start, end] seconds and made to loop: every
+## key shifted to start at 0, and the last stretch eased into the first
+## frame's pose so the loop has no seam.
+static func _cruise_loop(animation: Animation, span: Array) -> Animation:
+	var start: float = span[0]
+	var end: float = minf(span[1], animation.length)
+	var length := end - start
+	var out := Animation.new()
+	out.length = length
+	var step := 1.0 / 30.0
+	for track in animation.get_track_count():
+		var kind := animation.track_get_type(track)
+		if kind != Animation.TYPE_ROTATION_3D and kind != Animation.TYPE_POSITION_3D:
+			continue
+		var made := out.add_track(kind)
+		out.track_set_path(made, animation.track_get_path(track))
+		var first = animation.rotation_track_interpolate(track, start) if kind == Animation.TYPE_ROTATION_3D else animation.position_track_interpolate(track, start)
+		var t := 0.0
+		while t <= length + 0.0001:
+			var at := minf(t, length)
+			var seam := smoothstep(1.0 - LOOP_SEAM, 1.0, at / length)
+			if kind == Animation.TYPE_ROTATION_3D:
+				var q: Quaternion = animation.rotation_track_interpolate(track, start + at)
+				out.rotation_track_insert_key(made, at, q.slerp(first, seam))
+			else:
+				var v: Vector3 = animation.position_track_interpolate(track, start + at)
+				out.position_track_insert_key(made, at, v.lerp(first, seam))
+			t += step
+	return out
 
 ## Puts a retargeted clip's hips over the rig's own (pinned by _pin_hips
 ## to wherever the clip began): a clip that starts with the hips off to one
@@ -1288,7 +1358,7 @@ static func _centre_hips(animation: Animation, rest: Vector3) -> void:
 			animation.track_set_key_value(track, k, (animation.track_get_key_value(track, k) as Vector3) + shift)
 
 ## Moves left off the floor by _ground_feet: in the air, or lying down.
-const UNGROUNDED := ["jump", "ko", "fall", "getup"]
+const UNGROUNDED := ["jump", "jump_forward", "ko", "fall", "getup", "roll"]
 
 ## Lifts or lowers a retargeted clip so its lowest foot rests where the
 ## rig's feet rest: the pack's performer is proportioned a little
@@ -1479,6 +1549,40 @@ func _resolve_clips() -> void:
 			animation.loop_mode = Animation.LOOP_LINEAR if clip_names.find_key(name) in LOOPING else Animation.LOOP_NONE
 	_measure_ko_start()
 
+## The knockout that fits the blow that ended the fight; it becomes this
+## fighter's "ko" clip for the fall (its start re-measured).
+var _own_ko := ""
+func _choose_ko(fighter: Node) -> void:
+	if _own_ko == "":
+		_own_ko = clip_names.get("ko", "")
+	var attacker = fighter.get("opponent")
+	var variant: String = attacker.attack_variant if attacker != null else ""
+	var height: String = str(fighter.get("last_hit_height"))
+	var side: float = float((fighter.get("last_contact") if fighter.get("last_contact") is Dictionary else {}).get("side", 0.0))
+	var pick := ""
+	if not fighter_grounded():
+		pick = "ko_air"
+	elif fighter.get("crouching") == true:
+		pick = "ko_crouch"
+	elif attacker != null and attacker.state == attacker.State.SUPER or (attacker != null and attacker.current_move.get("finisher", false)):
+		pick = "ko_flip" if variant in ["uppercut"] else "ko_power"
+	elif variant in ["uppercut", "rising"]:
+		pick = "ko_upper"
+	elif height == "low":
+		pick = "ko_low_left" if side > 0.0 else "ko_low_right"
+	elif height == "mid":
+		pick = "ko_body"
+	elif fighter.get("last_hit_stagger") == true:
+		pick = "ko_power"
+	elif side != 0.0:
+		pick = "ko_left" if side > 0.0 else "ko_right"
+	var clip: String = clip_names.get(pick, "") if pick != "" else ""
+	clip_names["ko"] = clip if clip != "" else _own_ko
+	var starts: Dictionary = config.get("starts", {})
+	starts.erase("ko")
+	config["starts"] = starts
+	_measure_ko_start()
+
 ## A knockout plays from just before the body drops: knockout clips open
 ## with a second or more of reeling, which the KO's slow motion stretched
 ## so long the fighter was still on his feet when the replay began. Found
@@ -1559,6 +1663,155 @@ func _sound_cues(fighter: Node, step: float) -> void:
 ## _process and sync_pose.
 func update(delta: float) -> void:
 	_update_pose(delta)
+	if active and visual.fighter != null:
+		_keep_out(visual.fighter, delta)
+		_plant_feet(visual.fighter, delta)
+
+## Contact: no fist, forearm, foot or shin passes into the rival's body. The
+## rival's trunk is a capsule round the line of the spine (hips to head);
+## when this fighter's limb would end up inside it (a clip recorded with
+## nobody there, swung through where the rival stands), the whole model
+## eases back, away from the rival, until the limb stops on the surface,
+## the way a blow stops on a body. Eased in fast and out slow, so it reads
+## as weight, never a jump; the physics body and hits are untouched.
+const BODY_SURFACE := 0.15
+const KEEP_OUT_MAX := 0.35
+const KEEP_OUT_LIMBS := ["lefthand", "righthand", "leftforearm", "rightforearm", "leftfoot", "rightfoot", "leftleg", "rightleg"]
+var _keep_out_by := 0.0
+func _keep_out(fighter: Node, delta: float) -> void:
+	var rival = fighter.get("opponent")
+	var goal := 0.0
+	var away := Vector3.ZERO
+	var S: Dictionary = fighter.State
+	var other = rival.get_node("Visual").get("animated") if rival != null and rival.get_node_or_null("Visual") != null else null
+	if other != null and other.active and other.skeleton != null and skeleton != null and pose_override == "" 			and not rival.state in [rival.State.KO, rival.State.KNOCKDOWN] and not fighter.state in [S.KO, S.KNOCKDOWN, S.THROWN, S.THROWING, S.SUPER, S.STRUCK]:
+		skeleton.force_update_all_bone_transforms()
+		var hips: Vector3 = other.skeleton.global_transform * other.skeleton.get_bone_global_pose(other._bone("hips")).origin
+		var head: Vector3 = other.skeleton.global_transform * other.skeleton.get_bone_global_pose(other._bone("head")).origin
+		var line := head - hips
+		away = fighter.body.global_position - rival.body.global_position
+		away.y = 0.0
+		if away.length() > 0.01:
+			away = away.normalized()
+			for key in KEEP_OUT_LIMBS:
+				var bone := _bone(key)
+				if bone < 0:
+					continue
+				var at: Vector3 = skeleton.global_transform * skeleton.get_bone_global_pose(bone).origin
+				var t := clampf((at - hips).dot(line) / maxf(line.length_squared(), 0.0001), 0.0, 1.0)
+				var gap := at - (hips + line * t)
+				gap.y = 0.0
+				var inside := BODY_SURFACE - gap.length()
+				if inside > 0.0:
+					# Moving back along `away` clears the limb by about the
+					# share of it that lies along that direction.
+					goal = maxf(goal, minf(inside, KEEP_OUT_MAX))
+	# In at once (a fist going in is followed exactly), out eased.
+	_keep_out_by = goal if goal > _keep_out_by else lerpf(_keep_out_by, goal, 1.0 - exp(-6.0 * delta))
+	if _keep_out_by > 0.002 and away != Vector3.ZERO:
+		var parent := root.get_parent() as Node3D
+		root.position += parent.global_transform.basis.inverse() * (away * _keep_out_by)
+
+## Foot planting: a foot that is down stays where it touched the ground
+## while the body is moved by something other than its own step (pushed
+## back by a blow, gliding into a combo, stepping in to land a strike), the
+## leg bending to keep it there (two-bone IK on hip and knee). A foot the
+## clip lifts is let go; one held too far from where the clip has it is let
+## go too, and re-planted, so a leg never over-stretches.
+const PLANT_HEIGHT := 0.05
+## Never held further than this from where the clip has the foot: held up
+## to 28 cm, strikes and glides stretched the legs into a lunge.
+const PLANT_SLIP := 0.12
+## Strikes keep their own footwork (holding a foot back while the body
+## stepped in left the back leg stretched long behind).
+const PLANT_STATES := ["IDLE", "WALK", "BLOCK", "BLOCKSTUN", "HITSTUN", "LAND"]
+var _plants := {}
+var _foot_floor_height := {}
+## Each leg's last knee bend direction (skeleton space), for a straight leg.
+var _knee_bend := {}
+func _plant_feet(fighter: Node, delta: float) -> void:
+	if skeleton == null or root == null or fighter.get("body") == null:
+		return
+	var S: Dictionary = fighter.State
+	var state_name: String = S.find_key(fighter.state)
+	var can_plant: bool = state_name in PLANT_STATES and pose_override == "" and fighter_grounded() \
+		and not (fighter.state in [S.PUNCH, S.KICK] and fighter.current_move.get("air", false))
+	skeleton.force_update_all_bone_transforms()
+	var to_skeleton := skeleton.global_transform.affine_inverse()
+	var floor_y: float = fighter.body.global_position.y
+	for side in ["left", "right"]:
+		var foot := _bone(side + "foot")
+		var knee := _bone(side + "leg")
+		var hip := _bone(side + "upleg")
+		if foot < 0 or knee < 0 or hip < 0:
+			continue
+		var at: Vector3 = skeleton.global_transform * skeleton.get_bone_global_pose(foot).origin
+		var height := at.y - floor_y
+		# The ankle's resting height: the lowest it has sat lately.
+		var rest: float = minf(float(_foot_floor_height.get(foot, height)) + delta * 0.02, height)
+		_foot_floor_height[foot] = rest
+		var plant: Dictionary = _plants.get(foot, {})
+		var down := can_plant and height < rest + PLANT_HEIGHT
+		if down and plant.is_empty():
+			plant = {"at": at, "weight": 0.0}
+		if not plant.is_empty():
+			plant.weight = move_toward(float(plant.weight), 1.0 if down else 0.0, delta * (10.0 if down else 8.0))
+			if float(plant.weight) <= 0.0 and not down:
+				_plants.erase(foot)
+				continue
+			var held: Vector3 = plant.at
+			var slip := Vector2(held.x - at.x, held.z - at.z)
+			if slip.length() > PLANT_SLIP:
+				# Too far: drag the plant along behind the foot.
+				var pulled := slip.normalized() * PLANT_SLIP
+				held = Vector3(at.x + pulled.x, held.y, at.z + pulled.y)
+				plant.at = held
+			var goal := Vector3(held.x, at.y, held.z)
+			_solve_leg(hip, knee, foot, to_skeleton * at.lerp(goal, float(plant.weight)))
+			_plants[foot] = plant
+
+## Two-bone IK in skeleton space: turns the thigh and the shin so the
+## ankle reaches `target`, the knee bending in the plane it already bends
+## in, and the foot keeping its own turn.
+func _solve_leg(hip: int, knee: int, foot: int, target: Vector3) -> void:
+	var a := skeleton.get_bone_global_pose(hip)
+	var b := skeleton.get_bone_global_pose(knee)
+	var c := skeleton.get_bone_global_pose(foot)
+	var upper := a.origin.distance_to(b.origin)
+	var lower := b.origin.distance_to(c.origin)
+	if upper < 0.0001 or lower < 0.0001:
+		return
+	# Already there (within a centimetre): nothing to bend.
+	if c.origin.distance_to(target) < 0.01:
+		return
+	var reach := target - a.origin
+	var span := clampf(reach.length(), absf(upper - lower) + 0.001, (upper + lower) * 0.999)
+	var along := reach.normalized()
+	var bend := (b.origin - a.origin) - along * (b.origin - a.origin).dot(along)
+	# A leg nearly straight has no settled plane of its own to bend in (the
+	# knee could flip either way): it bends the way it last bent.
+	if bend.length() < upper * 0.06:
+		if not _knee_bend.has(hip):
+			return
+		bend = _knee_bend[hip]
+		bend = (bend - along * bend.dot(along))
+		if bend.length() < 0.001:
+			return
+	bend = bend.normalized()
+	_knee_bend[hip] = bend
+	var cos_hip := clampf((upper * upper + span * span - lower * lower) / (2.0 * upper * span), -1.0, 1.0)
+	var new_knee := a.origin + along * (upper * cos_hip) + bend * (upper * sqrt(1.0 - cos_hip * cos_hip))
+	var new_foot := a.origin + along * span
+	var turn_hip := Quaternion((b.origin - a.origin).normalized(), (new_knee - a.origin).normalized())
+	var hip_basis := Basis(turn_hip) * a.basis
+	var knee_from := Basis(turn_hip) * b.basis
+	var foot_from := new_knee + turn_hip * (c.origin - b.origin)
+	var turn_knee := Quaternion((foot_from - new_knee).normalized(), (new_foot - new_knee).normalized())
+	var knee_basis := Basis(turn_knee) * knee_from
+	var hip_parent := skeleton.get_bone_global_pose(skeleton.get_bone_parent(hip)).basis
+	skeleton.set_bone_pose_rotation(hip, (hip_parent.inverse() * hip_basis).get_rotation_quaternion())
+	skeleton.set_bone_pose_rotation(knee, (hip_basis.inverse() * knee_basis).get_rotation_quaternion())
+	skeleton.set_bone_pose_rotation(foot, (knee_basis.inverse() * c.basis).get_rotation_quaternion())
 
 ## Every pack stance leads with the left foot, which turns the chest to the
 ## fighter's right: from the camera the fighter on the left shows the chest,
@@ -1606,29 +1859,51 @@ func _update_pose(delta: float) -> void:
 		S.PUNCH, S.KICK:
 			logical = _attack_clip(fighter)
 		S.WALK:
-			logical = "crouch" if crouched else _move_clip(fighter)
+			logical = _crouch_move(fighter) if crouched else _move_clip(fighter)
 		S.DASH:
 			logical = "dash" if fighter._dash_dir == fighter.facing else "backdash"
 		S.JUMP, S.JUMP_START:
 			logical = "jump"
+			if absf(float(fighter.get("_jump_direction") if fighter.get("_jump_direction") != null else 0.0)) > 0.1 and clip_names.has("jump_forward"):
+				logical = "jump_forward"
 		S.LAND:
 			logical = "land"
 		S.BLOCK:
 			logical = ("crouch_block" if clip_names.has("crouch_block") else "crouch") if crouched else "block"
+			if Time.get_ticks_msec() < _slip_until and not crouched and clip_names.has("slip"):
+				var way: float = float((fighter.get("last_contact") if fighter.get("last_contact") is Dictionary else {}).get("side", 0.0))
+				logical = "slip_left" if way > 0.0 else ("slip_right" if way < 0.0 else "slip")
 		S.BLOCKSTUN:
 			logical = ("crouch_block_hit" if clip_names.has("crouch_block_hit") else "crouch") if crouched else "block_hit"
+			# A parry: the blow is slipped (under it or to the side it came from).
+			if Time.get_ticks_msec() < _slip_until and not crouched and clip_names.has("slip"):
+				var way: float = float((fighter.get("last_contact") if fighter.get("last_contact") is Dictionary else {}).get("side", 0.0))
+				logical = "slip_left" if way > 0.0 else ("slip_right" if way < 0.0 else "slip")
+			# Guard by height: a blow to the body is taken on the elbows, on
+			# the side it came in from; one to the head on the raised gloves.
+			if not crouched and fighter.get("last_hit_height") == "mid" and clip_names.has("block_mid_left"):
+				var side: float = float((fighter.get("last_contact") if fighter.get("last_contact") is Dictionary else {}).get("side", 0.0))
+				logical = "block_mid_left" if side > 0.0 else "block_mid_right"
 		S.HITSTUN, S.STRUCK:
 			logical = _reaction if _reaction != "" else ("hit_heavy" if last_hit_heavy else "hit")
+			# Struck down in a crouch: the flinch stays down there.
+			if crouched and clip_names.has("crouch_hit"):
+				var side: float = float((fighter.get("last_contact") if fighter.get("last_contact") is Dictionary else {}).get("side", 0.0))
+				logical = "crouch_hit_left" if side > 0.0 and clip_names.has("crouch_hit_left") else ("crouch_hit_right" if side < 0.0 and clip_names.has("crouch_hit_right") else "crouch_hit")
 		S.SUPER:
 			logical = "super_combo"
 		S.KO:
 			logical = "downed" if fighter.get("thrown_down") else "ko"
+			if logical == "ko" and state != _last_state:
+				_choose_ko(fighter)
 		S.THROWING:
 			logical = "throw" if fighter.throw_time < fighter.throw_rise_at else "idle"
 		S.THROWN:
 			logical = "thrown"
 		S.KNOCKDOWN:
 			logical = "downed" if fighter.knockdown_time < THROW.LIE_TIME else "getup"
+			if fighter.get("wake_choice") == "roll" and clip_names.has("roll"):
+				logical = "roll"
 			if fighter.get("swept") == true and fighter.knockdown_time < 0.0:
 				logical = "swept"
 	# The winner celebrates over a knocked-out rival.
@@ -1663,7 +1938,7 @@ func _update_pose(delta: float) -> void:
 	if logical in ["super_open", "super_combo"]:
 		logical = "punch_heavy"
 		clip = clip_names.get(logical, clip_names.get("idle", ""))
-	if logical in ["throw", "thrown", "downed", "swept"] or (logical == "getup" and _has_own("getup")):
+	if logical in ["throw", "thrown", "downed", "swept", "roll"] or (logical == "getup" and _has_own("getup")):
 		guard_weight = 0.0
 		_play_throw(fighter, logical, delta, frozen)
 		_procedural(fighter, logical, delta, frozen)
@@ -1719,9 +1994,9 @@ func _update_pose(delta: float) -> void:
 			_ko_shift = Vector3.ZERO
 		current = clip
 	player.speed_scale = 0.0 if frozen else _loop_speed(fighter, logical, clip)
-	if logical == "jump" and not frozen and entered:
+	if logical in ["jump", "jump_forward"] and not frozen and entered:
 		_jump_rate = _jump_speed(fighter, clip)
-	if logical == "jump" and not frozen:
+	if logical in ["jump", "jump_forward"] and not frozen:
 		player.speed_scale = _jump_rate
 	if logical in REACTIONS and not frozen:
 		# The recoil plays out inside the stun instead of being cut off
@@ -1819,22 +2094,23 @@ func _play_throw(fighter: Node, logical: String, delta: float, frozen: bool) -> 
 				_scrub_clip(clip_names.thrown, THROW.clip_time(fighter.throw_time), delta, frozen)
 			else:
 				_fall(fighter.throw_time / THROW.END_TIME, delta, frozen)
-		"swept":
-			# Legs taken: the back half of the takedown's fall, quick.
-			var fall := clampf(1.0 + fighter.knockdown_time / fighter.SWEEP_FALL, 0.0, 1.0)
+		"swept", "downed":
+			# Off the feet: the fall plays at its own speed from the moment
+			# the legs go, on through the time spent lying (the fall clip lands
+			# in about the time the game gives a sweep and the lie together).
+			var since: float = fighter.knockdown_time + (fighter.SWEEP_FALL if fighter.get("swept") == true else 1.0)
 			if paired:
-				_scrub_clip(clip_names.thrown, lerpf(THROW.CLIP_CONTACT, THROW.CLIP_END, fall), delta, frozen)
+				var fall := clampf(1.0 + fighter.knockdown_time / fighter.SWEEP_FALL, 0.0, 1.0)
+				_scrub_clip(clip_names.thrown, lerpf(THROW.CLIP_CONTACT, THROW.CLIP_END, fall) if logical == "swept" else THROW.CLIP_END, delta, frozen)
 			else:
-				_fall(fall, delta, frozen)
-		"downed":
-			if paired:
-				_scrub_clip(clip_names.thrown, THROW.CLIP_END, delta, frozen)
-			else:
-				_fall(1.0, delta, frozen)
-		"getup":
-			var rise := clampf((fighter.knockdown_time - THROW.LIE_TIME) / THROW.GETUP_TIME, 0.0, 1.0)
-			var animation := player.get_animation(clip_names.getup)
-			_scrub_clip(clip_names.getup, rise * animation.length, delta, frozen)
+				_fall_at(since, delta, frozen)
+		"roll", "getup":
+			# Back over the shoulder (or straight) up, across the time the game
+			# gives it: the clip's moving part only (fighter_models TIMING).
+			var progress := clampf((fighter.knockdown_time - THROW.LIE_TIME) / THROW.GETUP_TIME, 0.0, 1.0)
+			var clip: String = clip_names[logical]
+			var cut: Array = config.get("timing", {}).get(logical, [0.0, 0.0, player.get_animation(clip).length])
+			_scrub_clip(clip, lerpf(float(cut[0]), float(cut[2]), progress), delta, frozen)
 
 ## A punch thrown down from the mount: the arms and shoulders of the jab
 ## or cross clip (alternating hands) laid over the kneeling pose, the trunk
@@ -1869,6 +2145,14 @@ func _ground_punch(fighter: Node) -> void:
 	var load := smoothstep(0.0, landed * 0.8, progress) * (1.0 - smoothstep(landed * 0.8, landed, progress))
 	var drive := smoothstep(landed * 0.75, landed, progress) * (1.0 - smoothstep(landed + 0.15, 1.0, progress))
 	_posture = 0.3 * load - 0.32 * drive
+
+## The fall clip `seconds` in (held on its last, lying frame after).
+func _fall_at(seconds: float, delta: float, frozen: bool) -> void:
+	var clip: String = clip_names.get("fall", clip_names.get("ko", ""))
+	var animation := player.get_animation(clip) if clip != "" else null
+	if animation == null:
+		return
+	_scrub_clip(clip, clampf(seconds, 0.0, animation.length - 0.001), delta, frozen)
 
 ## Taken off the feet (a sweep, a knockdown): the fall clip from standing
 ## to flat on the back, progress 0 to 1 (or the knockout's, without one).
@@ -2085,7 +2369,9 @@ func _limit_facing(fighter: Node) -> void:
 	var rival = fighter.get("opponent")
 	if pose_override != "" or rival == null or rival.get("body") == null:
 		return
-	if not fighter.state in [S.HITSTUN, S.BLOCKSTUN, S.STRUCK, S.PUNCH, S.KICK]:
+	# Reactions only: strikes are aimed by their own AIM turn (_scrub_attack),
+	# which this limit would undo on the spinning and sweeping ones.
+	if not fighter.state in [S.HITSTUN, S.BLOCKSTUN, S.STRUCK]:
 		return
 	if _face_bones.is_empty():
 		_face_bones = [_bone("hips"), _bone("leftarm"), _bone("rightarm")]
@@ -2323,6 +2609,13 @@ func _attack_clip(fighter: Node) -> String:
 		return "hook"
 	return "punch_heavy" if variant in HEAVY_PUNCHES else "jab"
 
+## Crouched footwork: the low shuffle the way the fighter is going.
+func _crouch_move(fighter: Node) -> String:
+	var way := _move_clip(fighter)
+	var low: String = {"walk": "crouch_walk", "walk_back": "crouch_walk_back", "injured": "crouch_walk", "run": "crouch_walk",
+		"sidestep_left": "crouch_step_left", "sidestep_right": "crouch_step_right"}.get(way, "crouch")
+	return low if clip_names.has(low) else "crouch"
+
 func _move_clip(fighter: Node) -> String:
 	# Menu portraits use the 2D fighter, which has no physics body.
 	var body = fighter.get("body")
@@ -2395,8 +2688,27 @@ func _scrub_attack(fighter: Node, logical: String, clip: String, delta: float, f
 	# speed (the blend from guard covers the skipped bit), but keep most of
 	# it: a spinning kick needs its whole turn to come round on target.
 	start = maxf(start, impact - maxf(startup * WINDUP_RATE, (impact - start) * WINDUP_KEEP))
-	player.seek(minf(_strike_time(start, impact, end, startup, total, t), animation.length - 0.001), true)
+	var time := _strike_time(start, impact, end, startup, total, t)
+	# Hold on contact: a blow that landed stops where it met the body through
+	# its active frames (it doesn't carry on into it), then draws back over
+	# what is left of the recovery.
+	var active: float = fighter.attack_active_time()
+	if fighter.attack_connected and t >= startup:
+		if t < startup + active:
+			time = impact
+		else:
+			var back := clampf((t - startup - active) / maxf(total - startup - active, 0.01), 0.0, 1.0)
+			time = lerpf(impact, end, smoothstep(0.0, 1.0, back))
+	player.seek(minf(time, animation.length - 0.001), true)
 	_blend_in(delta, frozen)
+	# Aim: the strike as recorded points AIM degrees off straight ahead at
+	# its blow; the body turns that much the other way through the wind-up
+	# (and back through the recovery), so the fist or foot lands square on
+	# the rival instead of beside them.
+	var off: float = float(AIM_OVERRIDE.get(logical, CLIP_REACH.AIM.get(logical, 0.0)))
+	if absf(off) > 4.0 and absf(off) < 60.0 and root != null:
+		var weight := smoothstep(0.0, startup, t) * (1.0 - smoothstep(startup + active, total, t))
+		root.rotate_object_local(Vector3.UP, deg_to_rad(off) * AIM_SIGN * weight)
 
 ## Clip time for a strike `t` seconds in: the wind-up [start, impact] fills
 ## the startup and the follow-through [impact, end] the rest. Each half is a

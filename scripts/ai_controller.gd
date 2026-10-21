@@ -39,6 +39,10 @@ const LOW_READ := [0.2, 0.6, 0.9]
 const ANTI_AIR := [0.1, 0.35, 0.65]
 ## Reaching for the sweep in a decision at striking range.
 const SWEEP_CHANCE := [0.08, 0.14, 0.18]
+## Chance, by difficulty, that a rival who has held their guard a while is
+## met with the move that beats it (an overhead over a crouch, a low under a
+## stand): a read, not a rule, so a solid guard still holds most blows.
+const GUARD_OPENER := [0.06, 0.15, 0.28]
 ## Jumping in from just outside striking range with an overhead.
 const JUMP_IN := [0.06, 0.12, 0.18]
 var _air_plan := false
@@ -220,7 +224,7 @@ func _physics_process(delta: float) -> void:
 				move_id = "grapple"
 			elif fighter.character_profile.id == "abhi" and fighter.stamina < 55 and abs_distance > 85:
 				move_id = "back_heavy"
-			elif fighter.available_moves().has("b_rp") and _rival_guard_time > 0.3 and randf() < 0.55:
+			elif fighter.available_moves().has("b_rp") and _rival_guard_time > 0.6 and randf() < GUARD_OPENER[skill()]:
 				# Open a guard: the overhead over a crouch, the low under a stand.
 				move_id = "b_rp" if opponent.get("crouching") == true else ["b_rk", "crouch_rp", "crouch_rk"][randi() % 3]
 			elif fighter.available_moves().has("f_rp") and abs_distance > CLOSE_RANGE + 20.0 and randf() < 0.25:

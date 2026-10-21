@@ -85,6 +85,9 @@ var pending_contact: Dictionary = {}
 var last_hit_counter: bool = false
 ## Counter hits and the heaviest blows knock the fighter off balance.
 var last_hit_stagger: bool = false
+## The last guarded blow was a perfectly timed guard (a parry): the
+## fighter slips it rather than taking it on the arms.
+var last_perfect: bool = false
 ## Speed the current knockback started at; the slide eases out from it.
 var _knockback_start: float = 0.0
 var controls_enabled: bool = true
@@ -887,6 +890,7 @@ func take_hit(damage: int, knockback: float, attacker_facing: int, attacker: Nod
 	hitstop_remaining = freeze
 	if attacker != null:
 		attacker.hitstop_remaining = freeze
+	last_perfect = perfect
 	impact.emit(global_position + Vector2(-attacker_facing * 16.0, -66.0 if heavy else -88.0), blocked, heavy)
 	if perfect:
 		velocity.x = attacker_facing * knockback * 0.15

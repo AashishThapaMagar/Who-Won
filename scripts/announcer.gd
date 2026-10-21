@@ -20,9 +20,16 @@ const MODEL := "res://assets/announcer/hajurama.glb"
 const HOSTS := {
 	# Heritage Square: a Newar hajurbuwa.
 	0: {"model": "res://assets/announcer/hajurbuwa.glb", "height": 1.64, "stride": 0.95,
-		# Into the pagoda: the foot and top of its front steps, then just
-		# inside its door.
-		"route": [Vector3(0, -0.14, -19.2), Vector3(0, 0.98, -20.9), Vector3(0, 0.98, -22.6)],
+		# Into the pagoda: up its front staircase (left of centre, beside the
+		# pagoda's own lion), step by step (each rise taken in a short stride
+		# at the step's edge, each tread walked flat), across the plinth to
+		# the door and in. Measured from the pagoda model: floor -0.12,
+		# treads 0.33 and 0.73, plinth 1.05.
+		"route": [Vector3(-1.2, -0.12, -19.6), Vector3(-1.2, -0.12, -20.25),
+			Vector3(-1.2, 0.33, -20.4), Vector3(-1.2, 0.33, -20.72),
+			Vector3(-1.2, 0.73, -20.87), Vector3(-1.2, 0.73, -21.4),
+			Vector3(-1.2, 1.05, -21.55), Vector3(-0.5, 1.05, -22.0),
+			Vector3(0, 1.05, -22.5), Vector3(0, 1.05, -23.1)],
 		"hello": {"ne": "ज्वजलपा!", "en": "JWAJALAPA!"},
 		"match": {"ne": "खेल जित्यो!", "en": "THE MATCH IS WON!"}},
 	# Terai Plains: a Tharu didi.

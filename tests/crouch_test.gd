@@ -58,14 +58,22 @@ func run() -> void:
 	p1 = arena.player1
 	p2 = arena.player2
 
-	# Holding down crouches, and a crouching fighter doesn't walk.
+	# Holding down crouches; crouched, the fighter only shuffles, far slower
+	# than a walk.
+	await reset()
+	Input.action_press("p1_3d_left")
+	var walk_from: Vector3 = p1.body.position
+	await frames(30)
+	var walked: float = p1.body.position.distance_to(walk_from)
+	Input.action_release("p1_3d_left")
 	await reset()
 	Input.action_press("p1_3d_crouch")
 	Input.action_press("p1_3d_left")
 	var start: Vector3 = p1.body.position
 	await frames(30)
-	check(p1.crouching, "Holding S crouches")
-	check(p1.body.position.distance_to(start) < 0.05, "A crouching fighter holds its ground (moved %.2f m)" % p1.body.position.distance_to(start))
+	check(p1.crouching, "Holding crouch crouches")
+	var shuffled: float = p1.body.position.distance_to(start)
+	check(shuffled > 0.02 and shuffled < walked * 0.6, "A crouching fighter shuffles slower than a walk (%.2f m vs %.2f m)" % [shuffled, walked])
 	release_all()
 	await frames(4)
 	check(not p1.crouching, "Letting go of S stands back up")

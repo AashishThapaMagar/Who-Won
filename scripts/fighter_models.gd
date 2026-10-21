@@ -70,7 +70,7 @@ const STANCES := {
 	# Mahabali: planted and heavy.
 	"sab": {"tint": [Color("27375a"), Color("c48f49")],
 		"idle": "KB_Idle_3", "walk": "KB_WalkFwd1", "walk_back": "KB_WalkBwd",
-		"run": "KB_WalkFwd2", "dash": "KB_WalkFwd2", "backdash": "KB_WalkBwd", "ko": "KB_MidKO_Powerful",
+		"run": "KB_SkipFwd_1", "dash": "KB_SkipFwd_1", "backdash": "KB_SkipBwd_1", "ko": "KB_MidKO_Powerful",
 		"victory": "KB_GroundAttack"},
 	# Vajraveer: light, always moving, bouncing in and out, slipping aside.
 	"bib": {"tint": [Color("223f8a"), Color("9fe0c8")],
@@ -82,14 +82,14 @@ const STANCES := {
 		"idle": "KB_Idle_5", "walk": "KB_SkipFwd_1", "walk_back": "KB_SkipBwd_1",
 		"run": "KB_SkipFwd_1", "dash": "KB_SkipFwd_1", "backdash": "KB_SkipBwd_2", "ko": "KB_UpperKO_2",
 		"victory": "KB_Projectile_Up"},
-	# Anug: the keeper, hands ready, shuffling low across his line.
+	# Anug: the keeper, planted square, hands ready.
 	"anug": {"tint": [Color("2c5a3e"), Color("d9b45c")],
-		"idle": "KB_Idle_1", "walk": "KB_crouch_WalkFwd", "walk_back": "KB_crouch_WalkBwd",
+		"idle": "KB_Idle_3", "walk": "KB_WalkFwd2", "walk_back": "KB_WalkBwd",
 		"run": "KB_SkipFwd_2", "dash": "KB_SkipFwd_2", "backdash": "KB_SkipBwd_1", "ko": "KB_TopKO",
-		"block_hit": "KB_MidBlock_R_Single", "victory": "KB_MidBlock_L_Single"},
-	# Sarvochcha: always weaving, circling.
+		"victory": "KB_MidBlock_L_Single"},
+	# Sarvochcha: a loose, upright stance, circling.
 	"sup": {"tint": [Color("c29a3c"), Color("2f8a86")],
-		"idle": "KB_m_Duck", "walk": "KB_WalkFwd1", "walk_back": "KB_WalkBwd",
+		"idle": "KB_Idle_1", "walk": "KB_WalkFwd1", "walk_back": "KB_WalkBwd",
 		"sidestep_left": "KB_WalkLeft45", "sidestep_right": "KB_WalkRight45",
 		"run": "KB_SkipFwd_2", "dash": "KB_SkipFwd_2", "backdash": "KB_Dodge_R", "ko": "KB_UpperKO_Flip",
 		"victory": "KB_TurnR_180"},
@@ -103,8 +103,31 @@ const SHARED := {
 	"sidestep_left": "KB_Sidestep_L", "sidestep_right": "KB_Sidestep_R",
 	"jump": "KB_Jump_Arcade_RootJump", "land": "KB_Land",
 	"crouch": "KB_crouch_Idle", "block": "KB_Block", "block_hit": "KB_Block_Single",
+	# A body shot is guarded elbows down, on the side it comes from.
+	"block_mid_left": "KB_MidBlock_L_Single", "block_mid_right": "KB_MidBlock_R_Single",
 	# Guarding low: arms down over the body, and the jolt of a blocked low.
 	"crouch_block": "KB_crouch_Block", "crouch_block_hit": "KB_crouch_Block_Single",
+	# Knockouts by the blow that ends it (a fighter's own "ko" for a plain
+	# blow to the head): launched by an uppercut, flipped by a big one,
+	# folded forward by a body shot, legs taken by a low kick, dropped out
+	# of a crouch, knocked out of the air, sent flying by a heavy hit.
+	"ko_upper": "KB_UpperKO", "ko_flip": "KB_UpperKO_Flip", "ko_body": "KB_MidKO",
+	"ko_low_left": "KB_LowKO_L", "ko_low_right": "KB_LowKO_R", "ko_crouch": "KB_crouch_MidKO",
+	"ko_air": "KB_HighKO_Air", "ko_power": "KB_HighKO_Powerful",
+	"ko_left": "KB_HighKO_L", "ko_right": "KB_HighKO_R",
+	# Struck from behind (a rival who stepped round the guard).
+	"hit_back": "KB_Hit_m_HighBack_Weak", "hit_back_body": "KB_Hit_m_MidBack_Med",
+	"hit_back_heavy": "KB_Hit_m_HighBack_Stagger",
+	# Walking crouched: forward, back, and stepping to either side.
+	"crouch_walk": "KB_crouch_WalkFwd", "crouch_walk_back": "KB_crouch_WalkBwd",
+	"crouch_step_left": "KB_crouch_Sidestep_L", "crouch_step_right": "KB_crouch_Sidestep_R",
+	# A perfectly timed guard slips the blow: under it, or off to a side.
+	"slip": "KB_p_Duck", "slip_left": "KB_m_Duck_L", "slip_right": "KB_m_Duck_R",
+	# Hit while crouched: flinches that stay down (front, and from each side).
+	"crouch_hit": "KB_crouch_Hit_p_MidFront_Weak", "crouch_hit_left": "KB_crouch_Hit_p_MidLeft_Weak",
+	"crouch_hit_right": "KB_crouch_Hit_p_MidRight_Weak",
+	# Rolling back off the floor on waking, and a jump taken moving.
+	"roll": "KB_LayBack_Roll", "jump_forward": "KB_JumpFwd_Arcade_RootJump",
 	# Reactions picked by where and how hard each blow lands.
 	"hit": "KB_Hit_m_HighFront_Weak", "hit_heavy": "KB_Hit_m_HighFront_Stagger",
 	"hit_head": "KB_Hit_m_HighFront_Weak", "hit_head_alt": "KB_Hit_m_HighLeft_Weak",
@@ -123,6 +146,11 @@ const TIMING := {
 	"KB_Idle_5": [0.0, 1.0, 2.2],
 	"KB_m_Duck_L": [0.0, 0.35, 0.8],
 	"KB_crouch_p_Uppercut_L": [0.1, 0.45, 1.0],
+	# Off the floor: only the part where the body moves (the still lying
+	# frames before it are cut, so the get-up and the roll play near their
+	# own speed in the time the game gives them).
+	"KB_GetUpBack": [0.42, 1.0, 1.66],
+	"KB_LayBack_Roll": [0.3, 0.9, 1.6],
 	# Round low kicks sweep across the front: the shin lands at the widest
 	# reach (tools/measure_strike_clips.gd), not furthest straight ahead.
 	"KB_p_LowKick_R_1": [0.0, 0.23, 0.75],

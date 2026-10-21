@@ -28,7 +28,11 @@ const LINK_SLACK := 0.08
 ## Each fighter's own tempo on top of that (x startup, recovery and stun):
 ## Vajraveer flicks, Agasthya is quick, Sarvochcha flows, Mahabali's blows
 ## take their time and land like a wall falling.
-const TEMPO := {"bib": 0.85, "ish": 0.9, "sup": 0.95, "anug": 1.0, "anant": 1.0, "abhi": 1.05, "sab": 1.2}
+## Tuned with tools/balance_sim.gd (every pairing, computer vs computer).
+const TEMPO := {"bib": 0.85, "ish": 0.92, "sup": 0.93, "anug": 1.0, "anant": 1.0, "abhi": 1.1, "sab": 1.05}
+## Each fighter's damage on top of their moves: Mahabali's slower blows land
+## like a wall falling.
+const POWER := {"sab": 1.35}
 ## How each fighter's moves look: slot -> [name, clip from Fighting Animset
 ## Pro (assets/fighters/animset/, played by fighter_animated.gd), optional
 ## height]. No two fighters share a strike: Agasthya boxes, Mahabali swings
@@ -40,7 +44,7 @@ const TEMPO := {"bib": 0.85, "ish": 0.9, "sup": 0.95, "anug": 1.0, "anant": 1.0,
 const LOOK := {
 	"ish": {
 		# From the crouch: 2 and 4.
-		"crouch_rp": ["Ducking jab", "KB_crouch_p_Jab_R"], "crouch_rk": ["Low thigh kick", "KB_p_LowKick_R_1", -40],
+		"crouch_rp": ["Ducking jab", "KB_crouch_p_Jab_R"], "crouch_rk": ["Low snap kick", "KB_p_MidKickFront_R", -40],
 		# Signature moves (forward / back + 2 and 4).
 		"f_rp": ["Flash lunge", "KB_crouch_p_Jab_R"], "b_rp": ["Hammer fall", "KB_Projectile_3"],
 		"f_rk": ["Toppling kick", "KB_p_HighKick_R_1", -84], "b_rk": ["Thigh chop", "KB_p_MidKick_R_1", -40],
@@ -51,7 +55,7 @@ const LOOK := {
 		"combo_finish": ["Hammer Drop", "KB_p_DoubleHooks"], "drive": ["Flash one-two", "KB_p_OneTwo"],
 		"crouch_punch": ["Rising uppercut", "KB_p_Uppercut_L"],
 		"kick": ["Snap kick", "KB_p_MidKickFront_R"], "forward_heavy": ["Body kick", "KB_p_MidKick_R_1"],
-		"back_heavy": ["Low kick", "KB_p_LowKick_R_1", -40], "rk": ["High kick", "KB_p_HighKick_R_1", -84],
+		"back_heavy": ["Rising knee", "KB_m_KneeLeft", -62], "rk": ["High kick", "KB_p_HighKick_R_1", -84],
 		"roundhouse": ["Turning body kick", "KB_p_MidKick_R_1"], "side_kick": ["Push kick", "KB_p_MidKickFront_R"],
 		"breaker": ["Flying knee", "KB_m_KneeLeft", -72], "sweep": ["Hammer sweep", "KB_p_LowKick_R_1", -40],
 	},
@@ -60,14 +64,14 @@ const LOOK := {
 		"crouch_rp": ["Low anvil", "KB_crouch_m_Uppercut_R"], "crouch_rk": ["Low chop", "KB_crouch_m_LowKickRound_R"],
 		# Signature moves (forward / back + 2 and 4).
 		"f_rp": ["Battering palm", "KB_Projectile_1"], "b_rp": ["Hammer elbow", "KB_p_Elbow_Top_L"],
-		"f_rk": ["Iron axe drop", "KB_AxeKick", -86], "b_rk": ["Low chop", "KB_m_LowKickRound_R"],
+		"f_rk": ["Iron axe drop", "KB_AxeKick", -86], "b_rk": ["Low chop", "KB_crouch_m_LowKickRound_R"],
 		"jab": ["Club jab", "KB_m_Overhand_L"], "cross": ["Anvil overhand", "KB_m_Overhand_R"],
-		"hook": ["Anvil hook", "KB_m_Backswing_L"], "rp": ["Backswing", "KB_m_Backswing_R"],
+		"hook": ["Anvil hook", "KB_m_Backswing_L"], "rp": ["Iron body hook", "KB_p_MidHook_R", -66],
 		"chain_bridge": ["Iron body hook", "KB_p_MidHook_R", -64], "chain_finish": ["Anvil body hook", "KB_p_MidHook_L", -66],
 		"combo_finish": ["Anvil Drop", "KB_m_Backelbow_Uppercut_R"], "drive": ["Battering ram", "KB_p_MidHook_L", -66],
 		"breaker": ["Hammer elbow", "KB_p_Elbow_Top_L"], "crouch_punch": ["Rising uppercut", "KB_crouch_m_Uppercut_R"],
 		"kick": ["Iron knee", "KB_m_KneeRight", -68], "forward_heavy": ["Iron axe kick", "KB_AxeKick", -86],
-		"back_heavy": ["Low chop", "KB_m_LowKickRound_R", -28], "rk": ["Stomp axe", "KB_AxeKick", -86],
+		"back_heavy": ["Low chop", "KB_crouch_m_LowKickRound_R", -28], "rk": ["Stomp axe", "KB_AxeKick", -86],
 		"sweep": ["Iron sweep", "KB_crouch_m_LowKickRound_R"],
 	},
 	"bib": {
@@ -93,11 +97,11 @@ const LOOK := {
 		# Signature moves (forward / back + 2 and 4).
 		"f_rp": ["Thunder lunge", "KB_m_BackfistRoundFar_R"], "b_rp": ["Mic slam", "KB_m_BackfistRound_L"],
 		"f_rk": ["Thunder launch", "KB_m_KickUppercut_R", -84], "b_rk": ["Low special", "KB_m_LowKickL_Special"],
-		"jab": ["Thunder jab", "KB_m_Jab_LR_combo"], "cross": ["Spinning backfist", "KB_m_BackfistRound_R"],
+		"jab": ["Thunder jab", "KB_m_Jab_LR_combo"], "cross": ["Thunder uppercut", "KB_m_Uppercut_R"],
 		"hook": ["Mic drop", "KB_m_BackfistRound_L"], "rp": ["Short elbow", "KB_m_Backelbow_R"],
-		"elbow": ["Spinning elbow", "KB_m_Backelbow_L"], "drive": ["Loud thunder", "KB_m_BackfistRoundFar_R"],
+		"elbow": ["Mic drop backfist", "KB_m_BackfistRound_L"], "drive": ["Loud thunder", "KB_m_BackfistRoundFar_R"],
 		"chain_bridge": ["Thunder elbow", "KB_m_Backelbow_R"], "chain_finish": ["Thunder overhand", "KB_m_BackfistRoundFar_R"],
-		"combo_finish": ["Thunderclap", "KB_m_Uppercut_R"], "crouch_punch": ["Rising uppercut", "KB_crouch_m_Uppercut_R_2"],
+		"combo_finish": ["Thunderclap", "KB_m_BackfistRound_R"], "crouch_punch": ["Rising uppercut", "KB_crouch_m_Uppercut_R_2"],
 		"kick": ["Thunder roundhouse", "KB_m_RoundhouseKickRight", -76], "rk": ["High round kick", "KB_m_HighKickRound_L_1", -86],
 		"rear_front": ["Spinning back kick", "KB_m_BackKick_R"], "forward_heavy": ["Low special", "KB_m_LowKickL_Special", -26],
 		"breaker": ["Rising kick", "KB_m_KickUppercut_R", -84], "sweep": ["Thunder sweep", "KB_m_LowKickL_Special"],
@@ -501,6 +505,7 @@ static func for_fighter(id: String) -> Dictionary:
 			m.erase(key)
 	var tempo: float = TEMPO.get(id, 1.0)
 	for key in m:
+		m[key].damage = float(m[key].damage) * float(POWER.get(id, 1.0))
 		m[key].startup = float(m[key].startup) * PACE_STARTUP * tempo
 		m[key].recovery = float(m[key].recovery) * PACE_RECOVERY * tempo
 		# The blow stays live through the same share of the follow-through.

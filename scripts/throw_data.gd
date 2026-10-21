@@ -39,7 +39,7 @@ const STEP := 0.05
 ## ROLL_RATE while the body slides ROLL_DISTANCE metres away), hold guard
 ## to stay down LATE_EXTRA longer, or press an attack while rising to
 ## strike the moment the fighter is up.
-const ROLL_RATE := 2.0
+const ROLL_RATE := 1.25
 const ROLL_DISTANCE := 1.5
 const LATE_EXTRA := 0.45
 ## Ground punches from the mount (fighters whose grapple has ground_pound):

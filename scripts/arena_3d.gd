@@ -13,14 +13,26 @@ var camera_zoom_hold := 0.0
 ## follows their fighting line, leans in further when they trade toe to
 ## toe, and sweeps in from the side while the round is announced.
 const CAMERA_BACK := Vector3(0, 0.06, 0.9982)
-const CAMERA_HEIGHT := 1.1
+const CAMERA_HEIGHT := 1.15
 ## Nearest the camera sits at range, and nearer still in a close exchange
 ## (both eased toward as the gap between the fighters changes).
-const CAMERA_CLOSE := 3.6
-const CAMERA_CLINCH := 3.15
-const CAMERA_FOV := 38.0
-## The three-quarter turn toward the fighters' front (radians, ~8 degrees).
-const CAMERA_ANGLE := 0.14
+const CAMERA_CLOSE := 4.95
+const CAMERA_CLINCH := 4.3
+## A long lens from further back (a fight broadcast's telephoto): the same
+## framing as a wide lens up close, but the fighters stand solid and the
+## stage compresses behind them instead of bending away.
+const CAMERA_FOV := 31.0
+## Combo drift: past a few hits in a string the camera eases round this
+## far (radians) and this much nearer, and back when the string ends.
+const COMBO_ORBIT := 0.16
+const COMBO_PUSH := 0.1
+## Impact tilt: the lens rolls this far (radians) on a heavy blow, then
+## settles back.
+const IMPACT_ROLL := 0.028
+## Letterbox bars for the cinematic shots, as a share of the screen height.
+const BAR_HEIGHT := 0.11
+## The three-quarter turn toward the fighters' front (radians, ~11 degrees).
+const CAMERA_ANGLE := 0.19
 const ZOOM_SLACK := 0.6
 ## Furthest the fight camera turns (radians, ~25 degrees) to follow a
 ## sidestep. The arenas are built to be seen from the front; turned further
@@ -45,6 +57,9 @@ var super_fighter: Node = null
 ## Until when (msec) a filmed finisher holds the super's close shot.
 var finisher_until := 0
 var cinematic := 0.0
+var combo_cam := 0.0
+var roll_kick := 0.0
+var _bars: Array[ColorRect] = []
 ## The knockout shot: the fallen fighter, and until when (real milliseconds,
 ## since the fall plays in slow motion) the camera holds low on the fall.
 var ko_fighter: Node = null
@@ -278,7 +293,12 @@ func _update_fight_camera(delta: float) -> void:
 	# ignoring only sub-degree jitter.
 	if absf(angle_difference(camera_yaw, target_yaw)) > 0.01:
 		camera_yaw = lerp_angle(camera_yaw, target_yaw, 1.0 - exp(-4.5 * delta))
-	var turn := Basis(Vector3.UP, -camera_yaw + CAMERA_ANGLE)
+	# A long string turns the lens a little further round and nearer.
+	# (A string is live while its rival is still reeling from it.)
+	var hits: int = maxi(int(player1.combo_hits) if player2.state in [player2.State.HITSTUN, player2.State.STRUCK] else 0,
+		int(player2.combo_hits) if player1.state in [player1.State.HITSTUN, player1.State.STRUCK] else 0)
+	combo_cam = move_toward(combo_cam, smoothstep(3.0, 8.0, float(hits)), delta * (0.9 if hits >= 3 else 0.6))
+	var turn := Basis(Vector3.UP, -camera_yaw + CAMERA_ANGLE + COMBO_ORBIT * combo_cam)
 	var back: Vector3 = turn * CAMERA_BACK
 	var along: Vector3 = turn * Vector3.RIGHT
 	var desired := camera_target
@@ -323,7 +343,7 @@ func _update_fight_camera(delta: float) -> void:
 		camera_zoom_hold = maxf(0.0, camera_zoom_hold - delta)
 		if camera_zoom_hold == 0.0 and camera_distance - required > 0.35:
 			camera_distance = lerpf(camera_distance, required, 1.0 - exp(-0.9 * delta))
-	var eye: Vector3 = camera_target + back * camera_distance
+	var eye: Vector3 = camera_target + back * camera_distance * (1.0 - COMBO_PUSH * combo_cam)
 	# Round intro: crane down from high in front of the fighters while the
 	# round is announced, landing on the fight view as the banner clears. The
 	# swing stays small so neither fighter is ever seen from behind.
@@ -358,7 +378,7 @@ func _update_fight_camera(delta: float) -> void:
 		var middle: Vector3 = (down + winner.body.position) * 0.5 if winner != null else down
 		var swing: Vector3 = (turn * Vector3.BACK).rotated(Vector3.UP, -0.3 * side)
 		var k := smoothstep(0.0, 1.0, cinematic)
-		eye = eye.lerp(middle + swing * 4.4 + Vector3.UP * 0.45, k)
+		eye = eye.lerp(middle + swing * 5.4 + Vector3.UP * 0.45, k)
 		look = look.lerp(down.lerp(middle, 0.35) + Vector3.UP * 0.8, k)
 	elif cinematic > 0.001 and is_instance_valid(super_fighter):
 		var rival: Node = super_fighter.opponent
@@ -367,7 +387,7 @@ func _update_fight_camera(delta: float) -> void:
 		# A low profile shot, turned a little toward the attacker's front so
 		# both fighters stay in frame with the attacker's face toward us.
 		var swing: Vector3 = (turn * Vector3.BACK).rotated(Vector3.UP, 0.35 * toward_face)
-		var close: Vector3 = middle + swing * 3.4 + Vector3.UP * -0.25
+		var close: Vector3 = middle + swing * 4.2 + Vector3.UP * -0.25
 		var k := smoothstep(0.0, 1.0, cinematic)
 		eye = eye.lerp(close, k)
 		look = look.lerp(middle, k)
@@ -383,7 +403,34 @@ func _update_fight_camera(delta: float) -> void:
 	camera_3d.v_offset = 0.0
 	camera_3d.position = eye + nudge + sway + jolt
 	camera_3d.look_at(look + nudge * 0.6 + sway * 0.4)
-	camera_3d.rotate_object_local(Vector3.BACK, _wobble(7, 0.17) * 0.005 * feel + _wobble(8, 9.0) * 0.045 * shake)
+	roll_kick *= exp(-5.0 * delta)
+	camera_3d.rotate_object_local(Vector3.BACK, _wobble(7, 0.17) * 0.005 * feel + _wobble(8, 9.0) * 0.045 * shake + roll_kick * feel)
+	_update_bars()
+
+## Cinematic bars: black letterbox bars slide in over the supers, the
+## finisher and the knockout shot (as the camera's cinematic blend rises)
+## and back out after; under the HUD, over the stage.
+func _update_bars() -> void:
+	var ui := get_node_or_null("UI")
+	if ui == null:
+		return
+	if _bars.is_empty():
+		for top in [true, false]:
+			var bar := ColorRect.new()
+			bar.color = Color.BLACK
+			bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			bar.name = "CinemaBarTop" if top else "CinemaBarBottom"
+			ui.add_child(bar)
+			ui.move_child(bar, 0)
+			_bars.append(bar)
+	var size := get_viewport().get_visible_rect().size
+	var tall := size.y * BAR_HEIGHT * smoothstep(0.0, 1.0, cinematic)
+	_bars[0].position = Vector2(0, 0)
+	_bars[0].size = Vector2(size.x, tall)
+	_bars[1].position = Vector2(0, size.y - tall)
+	_bars[1].size = Vector2(size.x, tall)
+	for bar in _bars:
+		bar.visible = tall > 0.5
 
 ## Smooth noise in -1..1 at `rate` wobbles a second, one strand per `strand`.
 func _wobble(strand: int, rate: float) -> float:
@@ -469,6 +516,9 @@ func _impact_3d(fighter: Node, blocked: bool, heavy: bool) -> void:
 	else:
 		shake_3d = 0.045 if heavy else 0.022
 		fov_kick = 1.6 if heavy else 0.0
+		# A heavy blow tips the lens a degree or two, against the blow.
+		if heavy or fighter.get("last_hit_stagger"):
+			roll_kick = IMPACT_ROLL * (1.4 if fighter.get("last_hit_stagger") else 1.0) * (-1.0 if fighter.forward.x > 0.0 else 1.0)
 		# The lens is knocked the way the blow travels (the struck fighter
 		# faces the attacker, so away from its facing), harder for big hits.
 		var force: float = fighter.get("last_hit_force") if fighter.get("last_hit_force") != null else 0.0
@@ -509,6 +559,7 @@ func _finisher_cinematic(fighter: Node) -> void:
 	super_fighter = fighter
 	finisher_until = Time.get_ticks_msec() + 1500
 	fov_kick = 2.0
+	roll_kick = IMPACT_ROLL * 1.6
 	Engine.time_scale = 0.55
 	get_tree().create_timer(0.75, true, false, true).timeout.connect(func():
 		if Engine.time_scale < 1.0 and not is_replaying():

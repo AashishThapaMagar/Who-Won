@@ -26,6 +26,12 @@ func run() -> void:
 			seen[clip] = true
 			poses.append([clip, -1.0, slot])
 	poses += [["hit_head", 0.3], ["hit_body", 0.3], ["hit_liver", 0.6], ["fall", 1.2], ["ko", 1.6], ["getup", 0.8], ["jump", 0.5], ["victory", 3.0]]
+	# -- <id> <out> new: the pack's newer reactions and footwork.
+	if args.size() > 2 and args[2] == "new":
+		poses = [["ko_upper", 1.2], ["ko_flip", 1.2], ["ko_body", 1.2], ["ko_low_left", 1.2], ["ko_crouch", 1.2], ["ko_air", 1.0], ["ko_power", 0.9], ["ko_left", 1.3],
+			["hit_back", 0.3], ["hit_back_body", 0.4], ["hit_back_heavy", 0.6], ["crouch_walk", 0.3], ["crouch_walk_back", 0.3], ["crouch_step_left", 0.3],
+			["slip", 0.35], ["slip_left", 0.35], ["slip_right", 0.35]]
+		args = args.slice(0, 2)
 	# -- <id> <out> <clip>: that one clip frame by frame instead.
 	if args.size() > 2:
 		poses = []

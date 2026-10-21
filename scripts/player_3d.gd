@@ -11,6 +11,8 @@ const LANE_RECENTER := 0.6
 const LANE_HALF_WIDTH := 4.25
 ## Sidestep speed, as a share of the walk.
 const SIDESTEP_RATIO := 0.8
+## Crouched footwork, as a share of the walk.
+const CROUCH_WALK := 0.35
 var body: CharacterBody3D
 var pivot: Node3D
 var forward := Vector3.RIGHT
@@ -168,7 +170,8 @@ func _move_combat_body(delta: float) -> void:
 		_hold_placed_body()
 		return
 	# Crouched, the fighter holds its ground.
-	var input := world_input() if controls_enabled and not crouching else Vector3.ZERO
+	# Crouched, the fighter shuffles low at a third of the walk.
+	var input := world_input() * (CROUCH_WALK if crouching else 1.0) if controls_enabled else Vector3.ZERO
 	# A held second forward tap carries the dash into a sustained run.
 	# Releasing, reversing, guarding or attacking ends that commitment.
 	if input.dot(forward) <= 0.35 or state not in [State.IDLE, State.WALK, State.DASH] or not controls_enabled:

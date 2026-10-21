@@ -227,7 +227,9 @@ func _ready() -> void:
 	slash.color = Color(UI.CRIMSON, 0.95)
 	result_panel.add_child(slash)
 	UI.eyebrow(result_panel, "MATCH RESULT", Vector2(24, 40), Vector2(400, 16))
-	result_detail = UI.label(result_panel, "", Vector2(24, 108), Vector2(652, 22), 13, UI.MUTED)
+	# Under the verdict (the big WINS title, arena.result_label, sits in its
+	# own band above at panel y 48-96), never over it.
+	result_detail = UI.label(result_panel, "", Vector2(24, 104), Vector2(652, 20), 13, UI.MUTED)
 	result_detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	result_detail.add_theme_font_override("font", UI.strong_font())
 	var columns := ["ROUNDS", "DAMAGE", "COMBO", "KOs", "PERFECT"]
@@ -358,15 +360,24 @@ func _style_result(callout: bool) -> void:
 		label.scale = Vector2.ONE * 1.5
 		label.create_tween().tween_property(label, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	else:
-		label.position = Vector2(154, 166)
-		label.size = Vector2(652, 56)
-		label.scale = Vector2.ONE
-		label.remove_theme_font_override("font")
+		# The verdict's own band in the result card (panel y 48-96): every
+		# trace of the callout (its scale, pivot and the larger box) cleared,
+		# or the title sat low, over the score line under it.
+		# The font first: a label can't be sized smaller than its font, so
+		# shrunk while still on the callout's 78 px it kept the callout's
+		# height and centred the title low.
+		label.add_theme_font_override("font", UI.display_font())
 		label.add_theme_font_size_override("font_size", 34)
 		label.add_theme_color_override("font_color", UI.WHITE)
 		label.add_theme_constant_override("shadow_offset_x", 0)
 		label.add_theme_constant_override("shadow_offset_y", 0)
 		label.add_theme_constant_override("outline_size", 0)
+		label.pivot_offset = Vector2.ZERO
+		label.scale = Vector2.ONE
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		label.clip_text = true
+		label.position = Vector2(154, 166)
+		label.size = Vector2(652, 48)
 
 ## Match opener: both names slam in from either side under a big VS while
 ## the intro camera cranes down, then the whole card wipes away before the
