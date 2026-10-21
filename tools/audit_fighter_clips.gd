@@ -1,36 +1,47 @@
 extends SceneTree
-## Prints which animation each fighter gets for every logical move, and
-## where it comes from (shared, style, pack, low kit, Meshy/Tripo), so gaps
-## in the roster's animation coverage show at a glance.
+## Checks every fighter's clips against Fighting Animset Pro: each clip a
+## fighter needs is in the pack file fighter_models.gd says holds it, and no
+## strike is shared between two fighters. Prints each fighter's stance and
+## moves.
 ##
 ##   godot --headless --path . -s res://tools/audit_fighter_clips.gd
 const MODELS := preload("res://scripts/fighter_models.gd")
-const IDS := ["anug", "ish", "sab", "bib", "abhi", "sup", "anant"]
-const LOGICAL := ["idle", "walk", "walk_back", "sidestep_left", "sidestep_right", "run", "dash", "backdash",
-	"jump", "land", "crouch", "block", "block_hit", "jab", "cross", "hook", "punch_heavy", "uppercut",
-	"kick", "kick_front", "kick_spin", "strike_sweep", "grapple", "thrown", "getup", "finisher", "taunt",
-	"victory", "hit", "hit_heavy", "hit_head", "hit_head_heavy", "hit_body", "hit_body_alt", "hit_side",
-	"hit_liver", "ko", "injured"]
+const MOVES := preload("res://scripts/action_moves.gd")
+const IDS := ["ish", "sab", "bib", "abhi", "anug", "sup", "anant"]
 
 func _initialize() -> void:
-	var table := {}
+	var names := {}
+	var problems := 0
+	var owner := {}
 	for id in IDS:
-		table[id] = MODELS.entry(id)
-	var header := "%-15s" % "move"
-	for id in IDS:
-		header += "%-22s" % id
-	print(header)
-	for logical in LOGICAL:
-		var row := "%-15s" % logical
-		for id in IDS:
-			var config: Dictionary = table[id]
-			var clip: String = config.get("clips", {}).get(logical, "")
-			var source := "-"
-			if clip != "":
-				var file: String = config.get("files", {}).get(clip, "")
-				source = file.get_file().get_basename() if file != "" else clip
-				if clip.begins_with("meshy_"):
-					source = "meshy:" + logical
-			row += "%-22s" % source.left(21)
-		print(row)
+		var config := MODELS.entry(id)
+		if config.is_empty():
+			print("%s: no config (pack or skeleton missing)" % id)
+			problems += 1
+			continue
+		var count := 0
+		for file in config.pack:
+			if not names.has(file):
+				var scene: Node = (load(file) as PackedScene).instantiate()
+				names[file] = Array(scene.find_children("*", "AnimationPlayer", true, false)[0].get_animation_list())
+				scene.free()
+			for logical in config.pack[file]:
+				count += 1
+				var clip: String = config.pack[file][logical]
+				if not clip in names[file]:
+					print("%s: %s -> %s not in %s" % [id, logical, clip, file.get_file()])
+					problems += 1
+		var moves: Dictionary = MOVES.for_fighter(id)
+		var line := []
+		for slot in moves:
+			var clip := str(moves[slot].get("clip", ""))
+			if clip == "" or clip in MODELS.AIR:
+				continue
+			line.append("%s=%s" % [slot, clip.trim_prefix("KB_")])
+			if owner.has(clip) and owner[clip] != id:
+				print("%s and %s share %s" % [owner[clip], id, clip])
+				problems += 1
+			owner[clip] = id
+		print("%-6s %d clips  stance %s  ko %s\n       %s" % [id, count, MODELS.STANCES[id].idle, MODELS.STANCES[id].ko, ", ".join(line)])
+	print("PROBLEMS: %d" % problems)
 	quit()

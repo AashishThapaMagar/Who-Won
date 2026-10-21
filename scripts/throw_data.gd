@@ -8,9 +8,9 @@ extends RefCounted
 ## physics bodies instead travel along the hip paths sampled below, which is
 ## what keeps the two models locked together through the slam.
 
-## Clip seconds where the throw starts (the grab's impact frame, matching the
-## "grapple" timing in fighter_models.gd), where the victim's back meets the
-## floor, and where both bodies have settled.
+## Clip seconds where the throw starts (the grab's impact frame), where the
+## victim's back meets the floor, and where both bodies have settled. Throws
+## are switched off (action_moves.gd); kept for when they return.
 const CLIP_START := 0.9
 ## The attacker's shoulder meets the rival's body.
 const CLIP_CONTACT := 1.05

@@ -69,3 +69,6 @@ assets/fighters/meshy/*
 assets/fighters/*/meshy_body.glb
 assets/fighters/*/meshy_body.glb.import
 assets/fighters/*/meshy_body_*
+
+# Fighting Animset Pro (Kubold, Unity Asset Store licence): kept local, never committed.
+assets/fighters/animset/*

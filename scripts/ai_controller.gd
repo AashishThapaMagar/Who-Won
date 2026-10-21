@@ -220,6 +220,13 @@ func _physics_process(delta: float) -> void:
 				move_id = "grapple"
 			elif fighter.character_profile.id == "abhi" and fighter.stamina < 55 and abs_distance > 85:
 				move_id = "back_heavy"
+			elif fighter.available_moves().has("b_rp") and _rival_guard_time > 0.3 and randf() < 0.55:
+				# Open a guard: the overhead over a crouch, the low under a stand.
+				move_id = "b_rp" if opponent.get("crouching") == true else ["b_rk", "crouch_rp", "crouch_rk"][randi() % 3]
+			elif fighter.available_moves().has("f_rp") and abs_distance > CLOSE_RANGE + 20.0 and randf() < 0.25:
+				move_id = "f_rp"
+			elif fighter.available_moves().has("f_rk") and randf() < 0.12:
+				move_id = "f_rk"
 			elif fighter.available_moves().has("sweep") and randf() < SWEEP_CHANCE[skill()]:
 				move_id = "sweep"
 			elif randf() < 0.35:
@@ -318,8 +325,12 @@ func _try_evade(_attacking: bool, _abs_distance: float) -> bool:
 
 func _request_move(id: String) -> void:
 	# AI decisions enter the same expiring buffer and hit-confirm rules as input.
-	fighter._buffered_action = id if id in ["grapple", "super", "sweep", "crouch_punch"] else ("punch" if id in ["jab", "jump_punch"] else "kick")
+	fighter._buffered_action = id if id in ["grapple", "super", "sweep", "crouch_punch", "crouch_rp", "crouch_rk"] else ("punch" if id in ["jab", "jump_punch"] else "kick")
 	fighter._buffered_direction = 1 if id == "forward_heavy" else (-1 if id == "back_heavy" else 0)
+	# Signature moves: forward / back with button 2 or 4.
+	if id in ["f_rp", "b_rp", "f_rk", "b_rk"]:
+		fighter._buffered_action = "rpunch" if id.ends_with("rp") else "rkick"
+		fighter._buffered_direction = 1 if id.begins_with("f_") else -1
 	fighter._buffered_move = id if id in ["drive", "breaker"] else ""
 	fighter._buffer_remaining = fighter.input_buffer_time
 

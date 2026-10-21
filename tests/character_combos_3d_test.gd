@@ -49,7 +49,8 @@ func run() -> void:
 			await tap(opener)
 			var captured := false
 			var stage := 0
-			for frame in 110:
+			# Long enough for the slowest fighter's real-timed string.
+			for frame in 170:
 				if stage < 2 and p1.attack_connected and p1.chain_step == stage and p1.attack_timer >= p1.attack_startup():
 					await tap("punch" if stage == 0 else "kick")
 					stage += 1

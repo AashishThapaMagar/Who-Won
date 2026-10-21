@@ -43,7 +43,8 @@ func run() -> void:
 	arena.set_dummy_mode(0)
 	await reset()
 	jab()
-	await frames(10)
+	# The jab lands on its real contact frame, a few frames into the move.
+	await frames(14)
 	check(p2.state == p2.State.HITSTUN, "Standing dummy takes the jab")
 	await frames(60)
 	check(p2.state == p2.State.IDLE, "Dummy recovers from hit-stun (state %d)" % p2.state)
@@ -59,7 +60,8 @@ func run() -> void:
 	arena.set_dummy_mode(2)
 	await reset()
 	jab()
-	await frames(10)
+	# The jab lands on its real contact frame, a few frames into the move.
+	await frames(14)
 	check(p2.state == p2.State.HITSTUN, "Guard-after-hit dummy takes the first blow")
 	await frames(30)
 	jab()

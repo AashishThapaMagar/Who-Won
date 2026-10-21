@@ -48,7 +48,8 @@ func run() -> void:
 	current_scene = arena
 	p1 = arena.player1
 	p2 = arena.player2
-	for pair in [[1, 6], [6, 1]]:
+	# Every fighter has a cinematic super.
+	for pair in [[1, 6], [6, 1], [0, 2], [2, 3], [3, 4], [4, 5], [5, 0]]:
 		p1.apply_character(pair[0])
 		p2.apply_character(pair[1])
 		var who: String = p1.character_profile.id
@@ -103,13 +104,8 @@ func run() -> void:
 		for frame in 60:
 			await frames(1)
 		check(p1.state != p1.State.SUPER and p1.super_meter < 10.0, "%s: a whiffed opener spends the meter" % who)
-	# A fighter without a super never gets one, however full the meter.
-	p1.apply_character(0)
-	await reset()
-	check(not p1.has_super(), "Anug has no super")
-	p1.super_meter = 100.0
-	await press_super()
-	await frames(20)
-	check(p1.state != p1.State.SUPER and p1.attack_variant != "super", "2 + 4 is not a super for a fighter without one")
+	for index in 7:
+		p1.apply_character(index)
+		check(p1.has_super(), "%s has a super" % p1.character_profile.id)
 	print("SUPER_TEST: ", "ALL PASS" if failures.is_empty() else failures)
 	quit(0 if failures.is_empty() else 1)

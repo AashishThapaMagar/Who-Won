@@ -52,10 +52,10 @@ extends RefCounted
 ##          {"ball": {"from": [8, 0.11, 0], "to": [12.5, 1, -1], "time": 0.7}, "delay": 1.4}]
 ##       poses are animation names: idle, walk, run, jab, punch_heavy, kick,
 ##       kick_spin, block, block_hit, hit, ko, taunt, victory ("" = back to idle).
-##       Fighters with story gestures (fighter_models.gd TRIPO_MOVES; Sarvochcha
-##       so far) also have bow, hug, sob, angry, agree, laugh, swagger,
-##       warm_up and dance. In a "still" storyline, "settle" is how long the
-##       gesture plays before the picture freezes (a bow at its lowest).
+##       A gesture the fighter has no clip for (bow, hug, sob, angry, agree,
+##       laugh, swagger, warm_up, dance) holds the stance. In a "still"
+##       storyline, "settle" is how long the gesture plays before the picture
+##       freezes.
 ##   "shot": {"eye": [x,y,z], "look": [x,y,z], "eye_to": ..., "look_to": ..., "time": 6}
 ##           {"follow": "player", "offset": [x, y, z]}     {"close": "s1"}
 ##

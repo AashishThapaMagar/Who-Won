@@ -14,8 +14,6 @@ func _opponent_distance() -> float:
 ## Sidesteps a committed heavy strike (a kick or a heavy punch) instead of
 ## guarding it, holding the step just long enough to clear the blow.
 func _try_evade(attacking: bool, abs_distance: float) -> bool:
-	# The fight stays on one line now: no sidestep to evade with.
-	return false
 	if _evade_time > 0.0:
 		_evade_time -= get_physics_process_delta_time()
 		if _evade_time <= 0.0:
@@ -32,7 +30,7 @@ func _try_evade(attacking: bool, abs_distance: float) -> bool:
 	if randf() >= SIDESTEP_CHANCE[skill()]:
 		return false
 	_set_move(0)
-	# Step toward the open side of the lane.
-	Input.action_press(_prefix + ("near" if fighter.body.position.z < 0.0 else "far"))
+	# Step off the line of the blow, either way.
+	Input.action_press(_prefix + ["near", "far"][randi() % 2])
 	_evade_time = 0.3
 	return true

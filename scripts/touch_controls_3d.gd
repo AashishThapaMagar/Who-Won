@@ -21,6 +21,7 @@ const STICK_RADIUS := 62.0
 const STICK_DEAD := 16.0
 const STICK_RUN := 58.0
 const STICK_VERTICAL := 40.0
+const STICK_SIDESTEP := 20.0
 
 ## One per player: {prefix, zone, rest, base, knob, touch, held}.
 var _sticks: Array[Dictionary] = []
@@ -177,6 +178,10 @@ func _steer(stick: Dictionary, offset: Vector2) -> void:
 		p + "run": absf(offset.x) > STICK_RUN,
 		p + "jump": offset.y < -STICK_VERTICAL,
 		p + "crouch": offset.y > STICK_VERTICAL,
+		# A light push up or down sidesteps (into / out of the screen); all
+		# the way jumps or crouches.
+		p + "far": offset.y < -STICK_SIDESTEP and offset.y >= -STICK_VERTICAL,
+		p + "near": offset.y > STICK_SIDESTEP and offset.y <= STICK_VERTICAL,
 	}
 	for action: String in want:
 		var held: bool = stick.held.get(action, false)

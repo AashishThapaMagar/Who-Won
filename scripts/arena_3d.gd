@@ -7,13 +7,21 @@ var stage_index := -1
 var camera_target := Vector3(0, CAMERA_HEIGHT, 0)
 var camera_distance := CAMERA_CLOSE
 var camera_zoom_hold := 0.0
-## Tekken/Street Fighter framing: a low, nearly level camera at chest height
-## that keeps the fighters large, turns to stay square-on to their fighting
-## line, and sweeps in from the side while the round is announced.
-const CAMERA_BACK := Vector3(0, 0.07, 0.9975)
-const CAMERA_HEIGHT := 1.05
-const CAMERA_CLOSE := 4.9
+## A fight camera close enough to feel the blows: at chest height, nearly
+## level, near the fighters and turned a few degrees toward their front (a
+## three-quarter view, faces and chests instead of flat profiles). It
+## follows their fighting line, leans in further when they trade toe to
+## toe, and sweeps in from the side while the round is announced.
+const CAMERA_BACK := Vector3(0, 0.06, 0.9982)
+const CAMERA_HEIGHT := 1.1
+## Nearest the camera sits at range, and nearer still in a close exchange
+## (both eased toward as the gap between the fighters changes).
+const CAMERA_CLOSE := 3.6
+const CAMERA_CLINCH := 3.15
 const CAMERA_FOV := 38.0
+## The three-quarter turn toward the fighters' front (radians, ~8 degrees).
+const CAMERA_ANGLE := 0.14
+const ZOOM_SLACK := 0.6
 ## Furthest the fight camera turns (radians, ~25 degrees) to follow a
 ## sidestep. The arenas are built to be seen from the front; turned further
 ## the view ran off the end of the scenery into empty ground. Past this the
@@ -198,8 +206,8 @@ func _begin_round(index: int) -> void:
 	if MatchSetup.arcade:
 		place += "   /   " + (tr("FINAL BOSS") if MatchSetup.is_final_boss() else Settings.fmt("RIVAL %d OF %d", [MatchSetup.arcade_index + 1, MatchSetup.arcade_opponents.size()]))
 	banner_tagline.text = place
-	$UI/ControlsHint.text = "P1  A/D move  W jump  S crouch  E guard  |  F 1  V 2  G 3  B 4     |     P2  Left/Right move  Up jump  Down crouch  O guard  |  K 1  , 2  L 3  . 4\nF1 combos     |     Esc pause"
-	guide_text.text = "MOVEMENT: A/D or Left/Right approach and retreat; hold back (or E / O) to guard. W / Up jumps, S / Down crouches (and is the down of a command).\nCROUCHING: 1 / 2 rising uppercut, 3 / 4 leg sweep. A sweep can only be guarded crouching.\nForward and back are relative to your opponent.\n\n" + guide_text.text
+	$UI/ControlsHint.text = "P1  A/D move  W/S sidestep  Space jump  C crouch  E guard  |  F 1  V 2  G 3  B 4     |     P2  Left/Right move  Up/Down sidestep  Enter jump  / crouch  O guard  |  K 1  , 2  L 3  . 4\nF1 combos     |     Esc pause"
+	guide_text.text = "MOVEMENT: A/D or Left/Right approach and retreat; hold back (or E / O) to guard. W/S or Up/Down sidestep into and out of the screen (slip a straight blow). Space / Enter jumps, C or / crouches (and is the down of a command).\nCROUCHING: 1 / 2 rising uppercut, 3 / 4 leg sweep. A sweep can only be guarded crouching.\nForward and back are relative to your opponent.\n\n" + guide_text.text
 	camera_target = Vector3(0, CAMERA_HEIGHT, 0)
 	camera_distance = CAMERA_CLOSE
 	camera_zoom_hold = 0.0
@@ -260,16 +268,17 @@ func _update_fight_camera(delta: float) -> void:
 	var b: Vector3 = player2.body.position
 	var midpoint: Vector3 = (a + b) * 0.5
 	# Tekken-style: stay square-on to the line between the fighters, so they
-	# are always seen in profile and sidesteps turn the stage behind them
-	# instead of swinging the view round to a front angle. Measured
-	# left-to-right so the camera never flips when fighters cross over.
+	# are always seen in profile and a sidestep turns the stage a little
+	# behind them (never more than CAMERA_MAX_TURN: the stages are built to
+	# be seen from the front). Measured left-to-right so the camera never
+	# flips when fighters cross over.
 	var axis: Vector3 = preload("res://scripts/player_3d.gd").axis_between(a, b)
 	var target_yaw := clampf(atan2(axis.z, axis.x), -CAMERA_MAX_TURN, CAMERA_MAX_TURN)
 	# Follow closely (a lagging camera is what shows the fighters' fronts),
 	# ignoring only sub-degree jitter.
 	if absf(angle_difference(camera_yaw, target_yaw)) > 0.01:
 		camera_yaw = lerp_angle(camera_yaw, target_yaw, 1.0 - exp(-4.5 * delta))
-	var turn := Basis(Vector3.UP, -camera_yaw)
+	var turn := Basis(Vector3.UP, -camera_yaw + CAMERA_ANGLE)
 	var back: Vector3 = turn * CAMERA_BACK
 	var along: Vector3 = turn * Vector3.RIGHT
 	var desired := camera_target
@@ -289,19 +298,25 @@ func _update_fight_camera(delta: float) -> void:
 	var tan_v := tan(deg_to_rad(camera_3d.fov) * 0.5)
 	var tan_h := tan_v * size.x / maxf(size.y, 1.0)
 	var screen_up: Vector3 = (turn * Vector3(0, CAMERA_BACK.z, -CAMERA_BACK.y))
-	var required := CAMERA_CLOSE
+	# Toe to toe the lens leans in; at range it holds its usual distance.
+	var gap := Vector2(b.x - a.x, b.z - a.z).length()
+	var required := lerpf(CAMERA_CLINCH, CAMERA_CLOSE, clampf((gap - 0.8) / 0.9, 0.0, 1.0))
+	var base := required
 	# Fit both standing silhouettes. Zoom out promptly as fighters separate and
 	# ease back in once they close the gap again.
 	for fighter in [player1, player2]:
-		for height in [0.0, 2.1]:
+		for height in [0.0, 1.95]:
 			var point: Vector3 = fighter.body.position
 			point.y = height
 			var relative := point - camera_target
 			var depth := relative.dot(back)
 			var vertical := relative.dot(screen_up)
+			# Fill the frame: the fighters nearly reach its sides and the top.
 			required = maxf(required, depth + absf(relative.dot(along)) / (tan_h * 0.8))
-			required = maxf(required, depth + absf(vertical) / (tan_v * (0.68 if vertical > 0.0 else 0.8)))
-	if required > camera_distance:
+			required = maxf(required, depth + absf(vertical) / (tan_v * (0.8 if vertical > 0.0 else 0.85)))
+	# A little slack before pulling back: the close frame holds through
+	# footwork and only widens once a fighter really leaves it.
+	if required > camera_distance + (ZOOM_SLACK if required > base + 0.001 else 0.0):
 		camera_zoom_hold = 0.6
 		camera_distance = lerpf(camera_distance, required, 1.0 - exp(-3.2 * delta))
 	else:
@@ -752,7 +767,8 @@ func _wants_ghost(fighter: Node) -> bool:
 	if fighter.state == S.DASH:
 		return true
 	if fighter.state in [S.PUNCH, S.KICK]:
-		var heavy: bool = fighter.state == S.KICK or fighter.attack_variant in ["cross", "hook", "rear_hook", "uppercut", "overhand", "backfist", "body_hook", "finisher", "spin"]
+		var heavy: bool = fighter.state == S.KICK or fighter.attack_variant in ["cross", "hook", "rear_hook", "uppercut", "overhand", "backfist", "body_hook", "finisher", "spin"] \
+			or float(fighter.current_move.get("damage", 1.0)) >= 1.3
 		return heavy and fighter.attack_timer < fighter.attack_startup() + fighter.attack_active_time()
 	return false
 

@@ -280,7 +280,7 @@ F1 in a fight: every move and combo.": "1 2 मुक्का, 3 4 लात।
 	"SMOOTHER PLAY: GRAPHICS SET TO %s  (SETTINGS ▸ GRAPHICS TO CHANGE)": "सहज खेलका लागि: ग्राफिक्स %s मा राखियो  (बदल्न: सेटिङ ▸ ग्राफिक्स)",
 	"WELL FOUGHT, %s!": "शाबास, %s!",
 	"P%d CALL ENEMY [%s]": "खेलाडी %d ललकार [%s]",
-	"P1  A/D move  W jump  S crouch  E guard  |  F 1  V 2  G 3  B 4     |     P2  Left/Right move  Up jump  Down crouch  O guard  |  K 1  , 2  L 3  . 4\nF1 combos     |     Esc pause": "खेलाडी १  A/D चल्ने  W उफ्रिने  S निहुरिने  E बचाउ  |  F 1  V 2  G 3  B 4     |     खेलाडी २  ←/→ चल्ने  ↑ उफ्रिने  ↓ निहुरिने  O बचाउ  |  K 1  , 2  L 3  . 4\nF1 कम्बो     |     Esc रोक्ने",
+	"P1  A/D move  W/S sidestep  Space jump  C crouch  E guard  |  F 1  V 2  G 3  B 4     |     P2  Left/Right move  Up/Down sidestep  Enter jump  / crouch  O guard  |  K 1  , 2  L 3  . 4\nF1 combos     |     Esc pause": "खेलाडी १  A/D चल्ने  W/S छेउ सर्ने  Space उफ्रिने  C निहुरिने  E बचाउ  |  F 1  V 2  G 3  B 4     |     खेलाडी २  ←/→ चल्ने  ↑/↓ छेउ सर्ने  Enter उफ्रिने  / निहुरिने  O बचाउ  |  K 1  , 2  L 3  . 4\nF1 कम्बो     |     Esc रोक्ने",
 	"A/D WALK   W JUMP   S CROUCH   E GUARD   SHIFT + FORWARD RUN   DOUBLE-TAP + HOLD FORWARD TO RUN\nF 1   V 2   G 3   B 4   R RESET   F2 DUMMY   F1 MOVES   ESC PAUSE": "A/D हिँड्ने   W उफ्रिने   S निहुरिने   E बचाउ   SHIFT + अगाडि दौडिने   दुई पटक थिचेर अगाडि थिचिराखे दौडिने\nF 1   V 2   G 3   B 4   R रिसेट   F2 डमी   F1 चाल   ESC रोक्ने",
 	"CROUCH": "निहुरिने",
 	"LOW HIT": "तल्लो प्रहार",

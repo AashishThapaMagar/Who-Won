@@ -2,13 +2,15 @@ extends "res://scripts/player.gd"
 ## Combat controller in legacy pose units; CharacterBody3D owns all movement.
 ## Keeping combat in one implementation preserves hit confirms and frame data.
 const UNITS := 64.0
-## How far a sidestep can take a fighter off the fight line (metres), and
-## how fast they drift back onto it once the step is let go: a dodge, never
-## a new line, so the fighters stay face to face and the camera square-on.
-const LANE_HALF_DEPTH := 0.5
-const LANE_RECENTER := 1.4
+## Tekken sidestep: a step into or out of the screen, a metre at most off
+## the centre line, enough to slip a straight blow and turn the line a few
+## degrees. Let go, the pair eases back onto the centre line, so the camera
+## only ever turns a little and the stage is always seen from the front.
+const LANE_HALF_DEPTH := 1.0
+const LANE_RECENTER := 0.6
 const LANE_HALF_WIDTH := 4.25
-const SIDESTEP_RATIO := 0.35
+## Sidestep speed, as a share of the walk.
+const SIDESTEP_RATIO := 0.8
 var body: CharacterBody3D
 var pivot: Node3D
 var forward := Vector3.RIGHT
@@ -78,22 +80,42 @@ func _ready() -> void:
 	$Hitbox/CollisionShape2D.disabled = true
 
 func world_input() -> Vector3:
+	var along := Input.get_axis(input_prefix + "left", input_prefix + "right")
+	# Tekken sidestep: into or out of the screen, across the line to the
+	# rival. Held, it walks the fighter round the rival; the camera turns
+	# with the pair so they stay side-on.
+	var step := Input.get_axis(input_prefix + "near", input_prefix + "far")
+	var axis := fight_axis()
+	var direction := axis * along
 	if ai_controlled:
-		# Along the fight line only, as for a player (no sidestep).
-		var direction := forward * Input.get_axis(input_prefix + "left", input_prefix + "right")
-		direction.z = 0.0
-		return direction
-	# Street Fighter style: left/right move along the fight line as seen on
-	# screen; up jumps and down guards (their own actions), so nobody ever
-	# steps into or out of the background.
-	return fight_axis() * Input.get_axis(input_prefix + "left", input_prefix + "right")
+		# The computer thinks in toward / away from the rival.
+		direction = forward * along
+	if step != 0.0:
+		direction += _into_screen(axis) * step * SIDESTEP_RATIO
+	return direction.limit_length(1.0)
 
-## The line between the fighters, pointing screen-right (+x side). The fight
-## camera (arena_3d.gd) turns to stay square-on to it.
+## The line between the fighters as the camera sees it, pointing
+## screen-right: right on the keys is always right on screen, however far
+## the pair has circled.
 func fight_axis() -> Vector3:
 	if body == null or opponent == null or opponent.body == null:
 		return Vector3.RIGHT
-	return axis_between(body.position, opponent.body.position)
+	var camera := get_viewport().get_camera_3d() if is_inside_tree() else null
+	var line := axis_between(body.position, opponent.body.position)
+	if camera != null:
+		var right := camera.global_transform.basis.x
+		right.y = 0.0
+		if line.dot(right) < 0.0:
+			line = -line
+	return line
+
+## Across the fight line, away from the camera (into the screen).
+func _into_screen(axis: Vector3) -> Vector3:
+	var across := Vector3(-axis.z, 0.0, axis.x)
+	var camera := get_viewport().get_camera_3d() if is_inside_tree() else null
+	if camera != null and across.dot(body.global_position - camera.global_position) < 0.0:
+		across = -across
+	return across
 
 static func axis_between(a: Vector3, b: Vector3) -> Vector3:
 	var line := (b - a) if a.x <= b.x else (a - b)
@@ -196,8 +218,7 @@ func _move_combat_body(delta: float) -> void:
 	if absf(body.position.z) >= LANE_HALF_DEPTH:
 		body.velocity.z = 0.0
 		lateral_speed = 0.0
-	# Face to face: once a sidestep is let go, back onto the one fight line,
-	# so the pair never ends up side by side.
+	# Not stepping: drift back toward the centre line.
 	var stepping: bool = can_move and absf(input.dot(lateral)) > 0.1
 	if not stepping and state != State.KO:
 		body.position.z = move_toward(body.position.z, 0.0, LANE_RECENTER * delta)
@@ -229,6 +250,11 @@ func _footsteps(moved: float) -> void:
 		_stride_left += RUN_STRIDE if run else WALK_STRIDE
 		preload("res://scripts/sfx.gd").fire("step_run" if run else "step_walk", -12.0 if run else -15.0)
 
+## Closest two grounded fighters stand, hips to hips (metres). The mocap
+## stances lean into their strikes: any nearer and the two chests passed
+## through each other in close exchanges.
+const PUSHBOX := 0.74
+
 func _separate_bodies() -> void:
 	# Grounded fighters are circular pushboxes, never platforms. They still
 	# collide with the environment using the engine's 3D capsule solver.
@@ -241,21 +267,21 @@ func _separate_bodies() -> void:
 	var offset: Vector3 = body.position - opponent.body.position
 	offset.y = 0
 	var distance := offset.length()
-	if distance >= 0.64:
+	if distance >= PUSHBOX:
 		return
 	var normal := offset / distance if distance > 0.001 else -forward
-	var push := normal * (0.64 - distance + 0.001)
+	var push := normal * (PUSHBOX - distance + 0.001)
 	body.move_and_collide(push * 0.5)
 	opponent.body.move_and_collide(-push * 0.5)
 	# Give the free fighter the remaining space when the rival is at a wall.
 	var gap: Vector3 = body.position - opponent.body.position
 	gap.y = 0
-	if gap.length() < 0.64:
-		body.move_and_collide(normal * (0.64 - gap.length()))
+	if gap.length() < PUSHBOX:
+		body.move_and_collide(normal * (PUSHBOX - gap.length()))
 		gap = body.position - opponent.body.position
 		gap.y = 0
-		if gap.length() < 0.64:
-			opponent.body.move_and_collide(-normal * (0.64 - gap.length()))
+		if gap.length() < PUSHBOX:
+			opponent.body.move_and_collide(-normal * (PUSHBOX - gap.length()))
 
 ## Keeps a placed body still and its facing, hurtbox and 2D shadow in step
 ## with wherever _place_throw put it.

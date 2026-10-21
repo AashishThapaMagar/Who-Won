@@ -56,13 +56,12 @@ func is_final_boss() -> bool:
 func _ready() -> void:
 	var bindings_3d := [
 		["left", KEY_A, KEY_LEFT], ["right", KEY_D, KEY_RIGHT],
-		# Street Fighter layout: up jumps, down crouches, holding back guards
-		# (E/O guard too). Space/Enter also jump. There is no sidestep: the
-		# fight stays on one line ("far"/"near" are kept, unbound, for old
-		# callers).
-		["jump", KEY_W, KEY_UP], ["crouch", KEY_S, KEY_DOWN],
-		["jump", KEY_SPACE, KEY_ENTER], ["block", KEY_E, KEY_O],
-		["far", KEY_NONE, KEY_NONE], ["near", KEY_NONE, KEY_NONE],
+		# Up and down step into and out of the screen (Tekken's sidestep:
+		# W/S, or the Up/Down arrows for player two); Space/Enter jump and
+		# C or / crouch (and are the down of a command); E/O guard.
+		["far", KEY_W, KEY_UP], ["near", KEY_S, KEY_DOWN],
+		["jump", KEY_SPACE, KEY_ENTER], ["crouch", KEY_C, KEY_SLASH],
+		["block", KEY_E, KEY_O],
 		["punch", KEY_F, KEY_K], ["kick", KEY_G, KEY_L],
 		# Tekken's four limbs: punch/kick above are 1 and 3 (left punch,
 		# left kick); these are 2 and 4 (right punch, right kick).
@@ -96,14 +95,17 @@ func _ready() -> void:
 ## Gamepads: pad 1 drives player one, pad 2 player two, on every action a
 ## key already drives (fight, select screen and the legacy 2D arena). A =
 ## punch, X = kick, Y = jump, right shoulder = guard, left shoulder = run,
-## right trigger = grapple, stick or d-pad = move (up jumps, down crouches), Start or B =
+## right trigger = grapple, stick = move (up / down sidestep), d-pad up / Y jump,
+## d-pad down crouch, Start or B =
 ## pause, Back = movebook. Menus use Godot's own ui_* pad bindings.
 const PAD := {
 	"left": [JOY_AXIS_LEFT_X, -1.0, JOY_BUTTON_DPAD_LEFT], "right": [JOY_AXIS_LEFT_X, 1.0, JOY_BUTTON_DPAD_RIGHT],
-	"jump": [JOY_AXIS_LEFT_Y, -1.0, JOY_BUTTON_DPAD_UP], "crouch": [JOY_AXIS_LEFT_Y, 1.0, JOY_BUTTON_DPAD_DOWN],
+	"jump": [JOY_BUTTON_DPAD_UP], "crouch": [JOY_BUTTON_DPAD_DOWN],
 	"block": [JOY_BUTTON_RIGHT_SHOULDER], "punch": [JOY_BUTTON_A], "kick": [JOY_BUTTON_X],
 	"grapple": [JOY_AXIS_TRIGGER_RIGHT, 1.0], "run": [JOY_BUTTON_LEFT_SHOULDER],
 	"rpunch": [JOY_AXIS_TRIGGER_LEFT, 1.0], "rkick": [JOY_BUTTON_RIGHT_STICK],
+	# Sidestep on the stick: up into the screen, down out of it.
+	"far": [JOY_AXIS_LEFT_Y, -1.0], "near": [JOY_AXIS_LEFT_Y, 1.0],
 }
 
 static func _map_gamepads() -> void:

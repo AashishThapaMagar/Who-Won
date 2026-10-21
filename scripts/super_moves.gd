@@ -4,22 +4,52 @@ extends RefCounted
 ## combo clip, every blow landing at the time it lands in the clip, and the
 ## last one sends the victim flying (into the railing when it is close).
 ##
-## Blow times are clip seconds where a fist, knee or foot reaches furthest
-## from the hips, measured from each clip. "clip" names the logical clip in
-## the fighter's pack (fighter_models.gd).
+## Blow times are clip seconds where a fist reaches furthest from the hips,
+## measured with tools/measure_strike_clips.gd. "clip" is the Fighting
+## Animset Pro clip (fighter_models.gd loads it for the fighter).
 const SUPERS := {
 	"ish": {
-		"name": "FLASH HAMMER", "clip": "strike_flying_knee",
-		# Flying knee, left, right, then both hands to finish.
-		"start": 0.55, "hits": [0.9, 1.33, 1.8, 2.28], "end": 2.62,
+		"name": "FLASH HAMMER", "clip": "KB_p_RabbitPunch",
+		# The boxer's flurry: left, right, left, and the last right hand.
+		"start": 0.15, "hits": [0.27, 0.43, 0.6, 0.93], "end": 1.0,
 		"damage": [7, 6, 7, 12], "travel": 0.9,
 	},
 	"anant": {
-		"name": "CROWN BARRAGE", "clip": "punch_heavy",
-		# His Meshy kung fu form: the lunging punch (the opener lands on its
-		# way out), the high kick, the straight punch, the closing punch.
-		"start": 1.0, "hits": [1.05, 2.75, 3.0, 4.25], "end": 4.55,
+		"name": "CROWN BARRAGE", "clip": "KB_Superpunch",
+		# The master's charged barrage: the left and right that open it, the
+		# driving right, and the closing straight.
+		"start": 1.2, "hits": [1.33, 1.47, 2.0, 2.7], "end": 3.3,
 		"damage": [6, 6, 7, 13], "travel": 0.6,
+	},
+	"sab": {
+		"name": "IRON QUAKE", "clip": "KB_GroundAttack",
+		# The brawler hammers down: right, left, the low right, the slam.
+		"start": 0.2, "hits": [0.27, 0.47, 0.73, 1.17], "end": 1.7,
+		"damage": [7, 6, 7, 14], "travel": 0.5,
+	},
+	"bib": {
+		"name": "ENDLESS RUSH", "clip": "KB_m_MidRabbitKick_R_combo",
+		# Two quick hands, then the rabbit kicks.
+		"start": 0.1, "hits": [0.17, 0.33, 0.43, 0.6], "end": 1.0,
+		"damage": [5, 6, 7, 12], "travel": 1.0,
+	},
+	"abhi": {
+		"name": "LOUD THUNDER", "clip": "KB_Projectile_5",
+		# The showman's double palm: left, right, both hands, the push.
+		"start": 0.12, "hits": [0.2, 0.4, 0.63, 1.17], "end": 1.4,
+		"damage": [6, 6, 8, 12], "travel": 0.8,
+	},
+	"anug": {
+		"name": "GOAL KICK", "clip": "KB_MidKickStraightLong",
+		# Both hands to set it up, then the long straight kick.
+		"start": 0.3, "hits": [0.37, 0.5, 0.57], "end": 1.2,
+		"damage": [7, 7, 16], "travel": 1.0,
+	},
+	"sup": {
+		"name": "SPIRAL STORM", "clip": "KB_m_HighKick_R_2",
+		# Left hand, right hand, left again, and the spinning high kick.
+		"start": 0.05, "hits": [0.1, 0.23, 0.33, 0.5], "end": 1.0,
+		"damage": [6, 6, 7, 13], "travel": 0.8,
 	},
 }
 const METER_MAX := 100.0

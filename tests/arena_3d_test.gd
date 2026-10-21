@@ -50,7 +50,9 @@ func run() -> void:
 	check(p1.visual.world_root == p1.pivot and p1.visual.viewport_3d == null, "Characters render in the shared 3D world")
 	# The handheld sway moves the lens on its own; measure without it.
 	root.get_node("MatchSetup").camera_shake = false
-	arena._update_fight_camera(0.0)
+	# Settled first (it is still easing in from the round intro).
+	for settle in 60:
+		arena._update_fight_camera(0.5)
 	var steady_camera: Transform3D = arena.camera_3d.transform
 	p1.body.position += Vector3(0.25, 1.0, 0.2)
 	p2.body.position += Vector3(0.25, 0.0, 0.2)
@@ -63,7 +65,8 @@ func run() -> void:
 	Input.action_press("p1_3d_far")
 	await frames(25)
 	Input.action_release("p1_3d_far")
-	check(absf(p1.body.position.z - start.z) < 0.01, "No sidestep: the old step input leaves the fighter on the line")
+	# Tekken sidestep: the step takes the fighter off the line, a metre at most.
+	check(absf(p1.body.position.z - start.z) > 0.2 and absf(p1.body.position.z) <= p1.LANE_HALF_DEPTH + 0.01, "A sidestep steps off the fight line, within the lane (z %.2f)" % p1.body.position.z)
 	Input.action_press("p1_3d_far")
 	await frames(120)
 	check(absf(p1.body.position.z) <= 0.651 and p1._is_grounded(), "Holding sidestep stays grounded inside the narrow lane")
@@ -87,18 +90,22 @@ func run() -> void:
 	check(p1._is_grounded() and absf(p1.body.position.y) < 0.03, "Gravity returns the fighter to the floor")
 	await reset_fighters(Vector3(-0.44, 0.02, 0), Vector3(0.44, 0.02, 0))
 	p1._start_style_move("jab")
-	await frames(10)
+	# The jab lands on its real contact frame, a few frames into the move.
+	await frames(14)
 	check(p2.health < 100, "A 3D strike damages an overlapping opponent")
 	var first_health: int = p2.health
 	await frames(6)
 	check(p2.health == first_health, "Active frames cannot hit the same rival twice")
-	# Street Fighter style: no sidestep. Even the old sidestep input (and a
-	# fighter knocked off the line) ends up back on the one fight line.
+	# Let go, a sidestepped pair eases back onto the centre line: the
+	# camera only ever turns a few degrees.
 	await reset_fighters(Vector3(-0.8, 0.02, 0.3), Vector3(0.8, 0.02, 0))
 	Input.action_press("p2_3d_near")
-	await frames(40)
+	await frames(30)
 	Input.action_release("p2_3d_near")
-	check(absf(p2.body.position.z) < 0.01 and absf(p1.body.position.z) < 0.05, "Fighters stay face to face on one fight line")
+	check(absf(p2.body.position.z) > 0.15, "Holding the step moves player two off the line")
+	await frames(180)
+	check(absf(p2.body.position.z) < 0.05 and absf(p1.body.position.z) < 0.05, "Released, both fighters drift back onto the fight line")
+	check(absf(arena.camera_yaw) <= arena.CAMERA_MAX_TURN + 0.001, "The camera only turns a few degrees")
 	await reset_fighters(Vector3(-0.44, 0.02, 0), Vector3(0.44, 0.02, 0))
 	Input.action_press("p2_3d_block")
 	await frames(12)

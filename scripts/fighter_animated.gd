@@ -29,7 +29,7 @@ const FALLBACK := {
 }
 ## Attack variants (from move data poses) that use the heavy-punch clip.
 const HEAVY_PUNCHES := ["cross", "hook", "rear_hook", "uppercut", "overhand", "backfist", "body_hook"]
-const LOOPING := ["idle", "walk", "walk_back", "sidestep", "sidestep_left", "sidestep_right", "run", "dash", "backdash", "block", "injured", "crouch"]
+const LOOPING := ["idle", "walk", "walk_back", "sidestep", "sidestep_left", "sidestep_right", "run", "dash", "backdash", "block", "injured", "crouch", "crouch_block"]
 ## Movement that keeps the guard up on the upper body.
 const GUARDED := ["walk", "walk_back", "sidestep", "sidestep_left", "sidestep_right", "dash", "backdash"]
 ## Bones the guard overlay drives (substring match on the bone name).
@@ -41,28 +41,17 @@ const MOVE_SPEED_RANGE := {"walk": [0.45, 2.2], "walk_back": [0.45, 2.2], "sides
 	"run": [0.55, 2.0], "injured": [0.7, 1.6], "dash": [1.0, 2.2], "backdash": [1.0, 2.4]}
 ## Health fraction at or below which forward movement limps.
 const INJURED_HEALTH := 0.25
-## Clips allowed to move the hips across the floor. Everything else plays in
-## place: the game moves the fighter, so baked-in travel (a walk, a flip kick,
-## a diving catch) would drift away from the body and snap back.
-const TRAVELLING := ["ko"]
-## Attack-like clips driven by the fighter's attack timer.
 ## Strikes thrown in the air: their clips' own leap is flattened, the
 ## jump's physics carries the body.
-const AIR_STRIKES := ["strike_jump_punch", "strike_flying_kick"]
+const AIR_STRIKES := ["KB_JumpPunch", "KB_Jump_Loop2Kick"]
+## Attack-like clips driven by the fighter's attack timer (plus every pack
+## strike a move names, "KB_...": see _is_strike).
 const SCRUBBED := ["jab", "cross", "hook", "punch_heavy", "uppercut", "kick", "kick_spin", "kick_front", "grapple", "taunt", "finisher"]
-## Meshy's biped skeleton names -> Mixamo bone keys (see _bone_key); every
-## other bone already shares the Mixamo name.
-const MESHY_BONES := {"spine02": "spine", "spine01": "spine1", "spine": "spine2", "neck": "neck",
-	"head_end": "headtop_end", "lefthand_end": "", "righthand_end": "", "headfront": "",
-	"lefttoe_end": "lefttoe_end", "righttoe_end": "righttoe_end"}
-## Tripo's auto-rig (spec "tripo") names -> Mixamo bone keys. Twist bones
-## and the pelvis stay unmapped; their rest pose holds.
-const TRIPO_BONES := {"hip": "hips", "waist": "spine", "spine01": "spine1", "spine02": "spine2",
-	"necktwist01": "neck", "head": "head",
-	"l_clavicle": "leftshoulder", "l_upperarm": "leftarm", "l_forearm": "leftforearm", "l_hand": "lefthand",
-	"r_clavicle": "rightshoulder", "r_upperarm": "rightarm", "r_forearm": "rightforearm", "r_hand": "righthand",
-	"l_thigh": "leftupleg", "l_calf": "leftleg", "l_foot": "leftfoot", "l_toebase": "lefttoebase",
-	"r_thigh": "rightupleg", "r_calf": "rightleg", "r_foot": "rightfoot", "r_toebase": "righttoebase"}
+## Pack bone keys (see _bone_key) worn by another bone of this skeleton: the
+## pack's chest is Spine1, which carries the shoulders, as Mixamo's Spine2 does.
+const PACK_BONES := {"spine1": "spine2", "root": ""}
+## Share of the pack's collarbone roll the bodies wear (see _add_pack_clips).
+const SHOULDER_ROLL := 0.45
 var visual: Node
 var root: Node3D
 var character: Node3D
@@ -96,7 +85,11 @@ var _body_flip := false
 var _overlay_tracks := {}
 ## Distance from the rival's chest bone at which a strike reads as touching.
 const CONTACT := 0.16
+## The step never brings the two bodies nearer than BODY_GAP (hips to hips,
+## metres): stepping in from close range drove the attacker into the
+## rival's body; from further out it still closes the distance.
 const MAX_REACH_STEP := 0.3
+const BODY_GAP := 0.58
 ## Metres per second each locomotion clip travels at normal speed, keyed by
 ## animation name (measured before its hips are pinned).
 var clip_pace: Dictionary = {}
@@ -120,13 +113,24 @@ var guard_time := 0.0
 ## jab never snaps from the guard to the clip's first frame.
 var _blend_from: Dictionary = {}
 var _blend_time := 0.0
-const ATTACK_BLEND := 0.09
+## The hips' position when the blend began (rotations alone left the body
+## hopping between two clips whose hips sit at different heights), and how
+## long this blend lasts.
+var _blend_hips := Vector3.ZERO
+var _blend_span := 0.0
+## attack_timer last frame: a new strike restarts it, which is how a move
+## repeated in a combo (the same clip again) is told from one carrying on.
+var _last_attack_time := 0.0
+var _last_scrub_time := 0.0
+const ATTACK_BLEND := 0.12
+## Into a reaction restarting on the same clip (consecutive blows).
+const REACT_BLEND := 0.1
 ## Fastest a strike clip's wind-up may play (x its own speed): the move's
 ## startup is short, so the clip starts that much later in its wind-up
 ## instead of racing through all of it.
 const WINDUP_RATE := 1.5
 ## Share of every wind-up that always plays.
-const WINDUP_KEEP := 0.6
+const WINDUP_KEEP := 0.45
 ## Blend from the end of a strike back into guard (s).
 const STRIKE_SETTLE := 0.26
 var _from_strike := false
@@ -473,8 +477,8 @@ static func _swap_mesh(mesh: MeshInstance3D, built: ArrayMesh) -> void:
 	for surface in overrides.size():
 		mesh.set_surface_override_material(surface, overrides[surface])
 
-## Swaps the shared body's meshes for a generated one (body.glb from
-## tools/build_fighter_body.py). It is skinned to the same Mixamo rig, so its
+## Swaps the shared body's meshes for the fighter's own (meshy_body.glb from
+## tools/rig_meshy_body.py). It is skinned to the same Mixamo rig, so its
 ## binds are re-expressed against this skeleton's rest pose and every clip
 ## plays on it unchanged.
 func _graft_body(path: String) -> void:
@@ -533,9 +537,322 @@ func _graft_body(path: String) -> void:
 			for i in skin.get_bind_count():
 				skin.set_bind_pose(i, skin.get_bind_pose(i) * placed.affine_inverse())
 		mesh.transform = Transform3D.IDENTITY
+		# Skin and fingers are finished before the mesh takes its skin (binds
+		# added to a skin already in use weren't picked up).
+		mesh.mesh = _shoulder_weights(mesh.mesh, skin, target)
+		mesh.mesh = _finger_weights(mesh.mesh, skin, target)
 		mesh.skin = skin
 		mesh.skeleton = NodePath("..")
 	scene.free()
+
+## The Meshy bodies' auto-rig glued the vest, hood and chest beside each
+## shoulder to the upper arm, so every punch dragged a slab of clothing
+## forward with the arm. A vertex inside the shoulder joint (nearer the
+## spine than the joint is) hands its upper-arm weight to the collarbone,
+## fully once it is a little way in: the torso and clothes follow the
+## chest, the sleeve still follows the arm. Built once per body mesh.
+static var _reweighted := {}
+
+## The Meshy bodies' hands came rigged as one rigid piece: every finger
+## weight was folded into the hand (tools/rig_meshy_body.py), so the fingers
+## stood frozen half-open whatever a clip did, and the shared skeleton's
+## finger bones don't sit where any model's fingers are. Each hand is
+## measured from its own mesh in the bind pose (T-pose, palm down, fingers
+## running out along the arm): how far the fingertips reach, which side the
+## thumb is on, how wide the fingers spread. The finger bones of this
+## character's skeleton are moved onto the joints that gives (knuckles a
+## little under half way out, then two more joints), and the mesh is
+## skinned to them: past the knuckles by which of four bands across the
+## hand it falls in, joint by joint along its length with a soft blend at
+## each joint; the thumb by its own side. Fingers the model fused close as
+## one, like a fist in a glove. The fist pose (_fist_pose) curls them.
+static var _fingered := {}
+const FINGER_NAMES := ["index", "middle", "ring", "pinky"]
+## Joints as shares of the fingertip reach from the wrist.
+const KNUCKLE := 0.46
+const FINGER_JOINTS := [0.46, 0.67, 0.84]
+const THUMB_JOINTS := [0.12, 0.28, 0.42]
+func _finger_weights(source: Mesh, skin: Skin, skeleton: Skeleton3D) -> Mesh:
+	var keys := {}
+	for b in skeleton.get_bone_count():
+		keys[_bone_key(skeleton.get_bone_name(b))] = b
+	var binds := {}
+	for i in skin.get_bind_count():
+		binds[_bone_key(String(skin.get_bind_name(i)))] = i
+	var hands := []
+	for side in ["left", "right"]:
+		if not keys.has(side + "hand") or not binds.has(side + "hand") or not keys.has(side + "handthumb2") or not keys.has(side + "forearm"):
+			continue
+		var hand: Vector3 = skeleton.get_bone_global_rest(keys[side + "hand"]).origin
+		var out: Vector3 = (hand - skeleton.get_bone_global_rest(keys[side + "forearm"]).origin).normalized()
+		var thumb: Vector3 = skeleton.get_bone_global_rest(keys[side + "handthumb2"]).origin - hand
+		var across: Vector3 = (thumb - out * thumb.dot(out)).normalized()
+		hands.append({"side": side, "bind": binds[side + "hand"], "hand": hand, "out": out, "across": across})
+	if hands.is_empty():
+		return source
+	# Measure each hand: fingertip reach and the spread of the fingers.
+	var surfaces := []
+	for surface in source.get_surface_count():
+		surfaces.append(source.surface_get_arrays(surface))
+	for h in hands:
+		var reaches: Array[float] = []
+		for arrays in surfaces:
+			var points: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			var bones = arrays[Mesh.ARRAY_BONES]
+			var weights = arrays[Mesh.ARRAY_WEIGHTS]
+			if bones == null or weights == null or points.is_empty():
+				continue
+			var per := (bones as Array).size() / points.size()
+			for v in points.size():
+				for k in per:
+					if bones[v * per + k] == h.bind and weights[v * per + k] > 0.5:
+						reaches.append((points[v] - (h.hand as Vector3)).dot(h.out))
+		if reaches.size() < 40:
+			h.tip = 0.0
+			continue
+		reaches.sort()
+		h.tip = reaches[int(reaches.size() * 0.98)]
+		var spread: Array[float] = []
+		for arrays in surfaces:
+			var points: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			var bones = arrays[Mesh.ARRAY_BONES]
+			var weights = arrays[Mesh.ARRAY_WEIGHTS]
+			if bones == null or weights == null or points.is_empty():
+				continue
+			var per := (bones as Array).size() / points.size()
+			for v in points.size():
+				var d: Vector3 = points[v] - (h.hand as Vector3)
+				if d.dot(h.out) < h.tip * (KNUCKLE + 0.08):
+					continue
+				for k in per:
+					if bones[v * per + k] == h.bind and weights[v * per + k] > 0.5:
+						spread.append(d.dot(h.across))
+		if spread.size() < 20:
+			h.tip = 0.0
+			continue
+		spread.sort()
+		h.low = spread[int(spread.size() * 0.04)]
+		h.high = spread[int(spread.size() * 0.96)]
+		_place_finger_bones(skeleton, keys, h)
+	# Every finger joint gets a fresh bind, made after the bones were moved
+	# (the body's skin may list the fingers, bound where they used to be,
+	# with no weight on them).
+	var fresh := {}
+	var bind_of := func(key: String) -> int:
+		if fresh.has(key):
+			return fresh[key]
+		if not key.contains("thumb") and not FINGER_NAMES.any(func(name): return key.contains(name)) and binds.has(key):
+			return binds[key]
+		if not keys.has(key):
+			return -1
+		var bone: int = keys[key]
+		# Bound exactly as the hand is (its bind carries the body's fit onto
+		# this skeleton), so at rest the finger sits where it was modelled.
+		var hand_key := ("left" if key.begins_with("left") else "right") + "hand"
+		var hand_bind: int = binds[hand_key]
+		var fitted := _global_rest(skeleton, keys[hand_key]) * skin.get_bind_pose(hand_bind)
+		skin.add_named_bind(skeleton.get_bone_name(bone), _global_rest(skeleton, bone).affine_inverse() * fitted)
+		fresh[key] = skin.get_bind_count() - 1
+		return fresh[key]
+	if _fingered.has(source):
+		for h in hands:
+			for name in FINGER_NAMES + ["thumb"]:
+				for n in [1, 2, 3]:
+					bind_of.call("%shand%s%d" % [h.side, name, n])
+		return _fingered[source]
+	var built := ArrayMesh.new()
+	for surface in source.get_surface_count():
+		var arrays: Array = surfaces[surface]
+		var points: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var bones = arrays[Mesh.ARRAY_BONES]
+		var weights = arrays[Mesh.ARRAY_WEIGHTS]
+		if bones == null or weights == null or points.is_empty():
+			built.add_surface_from_arrays(source.surface_get_primitive_type(surface), arrays)
+			built.surface_set_material(surface, source.surface_get_material(surface))
+			continue
+		var per := (bones as Array).size() / points.size()
+		for v in points.size():
+			for h in hands:
+				if float(h.get("tip", 0.0)) <= 0.0:
+					continue
+				var slot := -1
+				for k in per:
+					if bones[v * per + k] == h.bind and weights[v * per + k] > 0.0:
+						slot = v * per + k
+				if slot < 0:
+					continue
+				var pick := _finger_for(points[v], h)
+				if pick.is_empty():
+					continue
+				var to: int = bind_of.call(pick[0])
+				var parent: int = bind_of.call(pick[1]) if pick[1] != "" else int(h.bind)
+				if to < 0 or parent < 0:
+					continue
+				var share: float = weights[slot]
+				var blend: float = pick[2]
+				# This slot takes the joint; a free slot the blend back toward
+				# the joint before it, so the skin bends softly.
+				bones[slot] = to
+				weights[slot] = share * blend
+				var rest := share * (1.0 - blend)
+				if rest > 0.0001:
+					var free := -1
+					for k in per:
+						if v * per + k != slot and weights[v * per + k] <= 0.0001:
+							free = v * per + k
+					if free >= 0:
+						bones[free] = parent
+						weights[free] = rest
+					else:
+						weights[slot] = share
+				break
+		arrays[Mesh.ARRAY_BONES] = bones
+		arrays[Mesh.ARRAY_WEIGHTS] = weights
+		var format: int = source.surface_get_format(surface) if source is ArrayMesh else 0
+		built.add_surface_from_arrays(source.surface_get_primitive_type(surface), arrays, [], {}, format & Mesh.ARRAY_FLAG_USE_8_BONE_WEIGHTS)
+		built.surface_set_material(surface, source.surface_get_material(surface))
+	_fingered[source] = built
+	return built
+
+## Moves this skeleton's finger bones onto the measured hand: each finger's
+## three joints out along the hand at FINGER_JOINTS of the fingertip reach,
+## in its own band across the fingers (index by the thumb, pinky furthest);
+## the thumb's joints out from the wrist on the thumb's side.
+static func _place_finger_bones(skeleton: Skeleton3D, keys: Dictionary, h: Dictionary) -> void:
+	var targets := {}
+	for c in 4:
+		var band: float = lerpf(float(h.high), float(h.low), (c + 0.5) / 4.0)
+		for j in 3:
+			targets["%shand%s%d" % [h.side, FINGER_NAMES[c], j + 1]] = (h.hand as Vector3) + (h.out as Vector3) * (float(h.tip) * float(FINGER_JOINTS[j])) + (h.across as Vector3) * band
+	for j in 3:
+		targets["%shandthumb%d" % [h.side, j + 1]] = (h.hand as Vector3) + (h.out as Vector3) * (float(h.tip) * float(THUMB_JOINTS[j])) + (h.across as Vector3) * (float(h.high) + float(h.tip) * (0.12 + 0.06 * j))
+	# Parents first, so each local offset is taken from the placed parent.
+	var order := targets.keys()
+	order.sort_custom(func(a, b): return int(keys[a]) < int(keys[b]))
+	for c in 4:
+		var tip_key := "%shand%s4" % [h.side, FINGER_NAMES[c]]
+		if keys.has(tip_key):
+			targets[tip_key] = (targets["%shand%s3" % [h.side, FINGER_NAMES[c]]] as Vector3) + (h.out as Vector3) * (float(h.tip) * 0.16)
+			order.append(tip_key)
+	order.sort_custom(func(a, b): return int(keys[a]) < int(keys[b]))
+	for key in order:
+		var bone: int = keys[key]
+		var parent := skeleton.get_bone_parent(bone)
+		var rest := skeleton.get_bone_rest(bone)
+		# The parent's rest as it now stands (Skeleton3D refreshes its global
+		# rests lazily, so a just-moved parent reads stale).
+		rest.origin = _global_rest(skeleton, parent).affine_inverse() * (targets[key] as Vector3)
+		skeleton.set_bone_rest(bone, rest)
+		skeleton.set_bone_pose_position(bone, rest.origin)
+
+## A bone's rest in skeleton space, chained from the local rests (always
+## current, unlike Skeleton3D's cached global rest after set_bone_rest).
+static func _global_rest(skeleton: Skeleton3D, bone: int) -> Transform3D:
+	var at := Transform3D()
+	while bone >= 0:
+		at = skeleton.get_bone_rest(bone) * at
+		bone = skeleton.get_bone_parent(bone)
+	return at
+
+## The finger joint a hand vertex belongs to: [joint key, the joint before's
+## key ("" for the hand), share of the joint], or [] for the palm and wrist.
+static func _finger_for(point: Vector3, h: Dictionary) -> Array:
+	var d: Vector3 = point - (h.hand as Vector3)
+	var reach: float = d.dot(h.out) / float(h.tip)
+	var side: float = d.dot(h.across)
+	var width: float = float(h.high) - float(h.low)
+	# The thumb: out on its own side, short of the knuckles.
+	var thumb_side: bool = side > float(h.high) + width * 0.12 and reach < KNUCKLE + 0.1
+	# Short of the knuckles, the thumb's root fills the thumb side of the palm.
+	thumb_side = thumb_side or (side > float(h.high) - width * 0.2 and reach < KNUCKLE - 0.04)
+	if thumb_side and reach > 0.06:
+		var j := 0
+		for k in range(1, 3):
+			if reach >= float(THUMB_JOINTS[k]):
+				j = k
+		var key := "%shandthumb%d" % [h.side, j + 1]
+		var before: String = "" if j == 0 else "%shandthumb%d" % [h.side, j]
+		return [key, before, smoothstep(float(THUMB_JOINTS[j]) - 0.05, float(THUMB_JOINTS[j]) + 0.03, reach)]
+	if reach < KNUCKLE - 0.06:
+		return []
+	var band := clampi(int(floor((float(h.high) - side) / maxf(width, 0.0001) * 4.0)), 0, 3)
+	var joint := 0
+	for k in range(1, 3):
+		if reach >= float(FINGER_JOINTS[k]):
+			joint = k
+	var key := "%shand%s%d" % [h.side, FINGER_NAMES[band], joint + 1]
+	var before: String = "" if joint == 0 else "%shand%s%d" % [h.side, FINGER_NAMES[band], joint]
+	var at: float = float(FINGER_JOINTS[joint])
+	return [key, before, smoothstep(at - 0.06, at + 0.04, reach)]
+
+static func _shoulder_weights(source: Mesh, skin: Skin, skeleton: Skeleton3D) -> Mesh:
+	if _reweighted.has(source):
+		return _reweighted[source]
+	var binds := {}
+	for i in skin.get_bind_count():
+		binds[_bone_key(String(skin.get_bind_name(i)))] = i
+	var bone := func(key: String) -> int:
+		for b in skeleton.get_bone_count():
+			if _bone_key(skeleton.get_bone_name(b)) == key:
+				return b
+		return -1
+	var hips: int = bone.call("hips")
+	var head: int = bone.call("head")
+	if hips < 0 or head < 0:
+		return source
+	var size := skeleton.get_bone_global_rest(head).origin.distance_to(skeleton.get_bone_global_rest(hips).origin)
+	var sides := []
+	for side in ["left", "right"]:
+		var arm: int = bone.call(side + "arm")
+		if arm < 0 or not binds.has(side + "arm") or not binds.has(side + "shoulder"):
+			continue
+		var joint := skeleton.get_bone_global_rest(arm).origin
+		var outward := joint - skeleton.get_bone_global_rest(hips).origin
+		outward.y = 0.0
+		sides.append([binds[side + "arm"], binds[side + "shoulder"], joint, outward.normalized()])
+	if sides.is_empty():
+		return source
+	var built := ArrayMesh.new()
+	for surface in source.get_surface_count():
+		var arrays := source.surface_get_arrays(surface)
+		var points: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var bones = arrays[Mesh.ARRAY_BONES]
+		var weights = arrays[Mesh.ARRAY_WEIGHTS]
+		if bones == null or weights == null or points.is_empty():
+			built.add_surface_from_arrays(source.surface_get_primitive_type(surface), arrays)
+			built.surface_set_material(surface, source.surface_get_material(surface))
+			continue
+		var per := (bones as Array).size() / points.size()
+		for v in points.size():
+			for entry in sides:
+				var inside := -(points[v] - (entry[2] as Vector3)).dot(entry[3])
+				if inside <= 0.0:
+					continue
+				var hand_over := smoothstep(0.0, size * 0.12, inside)
+				for k in per:
+					if bones[v * per + k] == entry[0] and weights[v * per + k] > 0.0:
+						var moved: float = weights[v * per + k] * hand_over
+						weights[v * per + k] -= moved
+						# Onto the collarbone's slot if the vertex has one, else
+						# this slot becomes the collarbone's.
+						var given := false
+						for j in per:
+							if bones[v * per + j] == entry[1]:
+								weights[v * per + j] += moved
+								given = true
+						if not given:
+							if weights[v * per + k] <= 0.0001:
+								bones[v * per + k] = entry[1]
+								weights[v * per + k] = moved
+							else:
+								weights[v * per + k] += moved
+		arrays[Mesh.ARRAY_BONES] = bones
+		arrays[Mesh.ARRAY_WEIGHTS] = weights
+		var format: int = source.surface_get_format(surface) if source is ArrayMesh else 0
+		built.add_surface_from_arrays(source.surface_get_primitive_type(surface), arrays, [], {}, format & Mesh.ARRAY_FLAG_USE_8_BONE_WEIGHTS)
+		built.surface_set_material(surface, source.surface_get_material(surface))
+	_reweighted[source] = built
+	return built
 
 static func _bone_key(name: String) -> String:
 	return name.get_slice(":", name.get_slice_count(":") - 1).trim_prefix("mixamorig_").to_lower()
@@ -597,13 +914,13 @@ func _tint(colors: Array) -> void:
 		paint.metallic = 0.35 if joint else 0.0
 		mesh.material_override = paint
 
-## Mixamo-style one-move-per-file downloads, retargeted onto this skeleton.
-## Retargeted clip sets, built once per fighter and reused: in memory for
-## the rest of the session, and on disk (user://clip_cache) for the next
-## launch. Building one means opening and converting every clip file (about
-## fifty for a full move pack, ~10 s); a cached set loads in a fraction of
-## that. Bump CLIP_CACHE_VERSION whenever the conversion below changes.
-const CLIP_CACHE_VERSION := 20
+## Each fighter's Fighting Animset Pro clips, retargeted onto this skeleton
+## (_add_pack_clips), built once per fighter and reused: in memory for the
+## rest of the session, and on disk (user://clip_cache) for the next launch.
+## Building one means converting about fifty clips (several seconds); a
+## cached set loads in a fraction of that. Bump CLIP_CACHE_VERSION whenever
+## the conversion below changes.
+const CLIP_CACHE_VERSION := 30
 const CLIP_CACHE_DIR := "user://clip_cache/"
 static var _clip_cache := {}
 
@@ -623,15 +940,14 @@ static func warm(fighter_ids: Array) -> void:
 				ResourceLoader.load_threaded_request(CLIP_CACHE_DIR + file, "AnimationLibrary")
 
 func _add_clip_files() -> void:
-	var files: Dictionary = config.get("files", {})
-	if files.is_empty():
+	var pack: Dictionary = config.get("pack", {})
+	if pack.is_empty():
 		return
 	var skeleton := character.find_children("*", "Skeleton3D", true, false)
 	if skeleton.is_empty():
 		return
 	var to_skeleton := player.get_node(player.root_node).get_path_to(skeleton[0])
-	var meshy: Dictionary = config.get("meshy", {})
-	var key := _clip_cache_key(files, meshy, skeleton[0], to_skeleton)
+	var key := _clip_cache_key(pack, skeleton[0], to_skeleton)
 	var library: AnimationLibrary = _clip_cache.get(key)
 	if library == null:
 		var saved := CLIP_CACHE_DIR + key + ".res"
@@ -641,7 +957,9 @@ func _add_clip_files() -> void:
 			library = ResourceLoader.load(saved, "AnimationLibrary", ResourceLoader.CACHE_MODE_IGNORE) as AnimationLibrary
 	if library == null or not library.has_meta("pace"):
 		var timing_before: Dictionary = config.get("timing", {}).duplicate(true)
-		library = _build_clip_files(files, meshy, skeleton[0], to_skeleton)
+		library = AnimationLibrary.new()
+		for file in pack:
+			_add_pack_clips(library, file, pack[file], skeleton[0], to_skeleton)
 		# What the build learned besides the clips: each clip's travel pace
 		# and any impact times it measured, replayed on a cached load.
 		var measured := {}
@@ -661,86 +979,102 @@ func _add_clip_files() -> void:
 	_clip_cache[key] = library
 	player.add_animation_library("files", library)
 
-## Names one fighter's clip set: the conversion version, every source file
-## with its modification time, and the skeleton the clips are fitted to.
-func _clip_cache_key(files: Dictionary, meshy: Dictionary, skeleton: Skeleton3D, to_skeleton: NodePath) -> String:
-	var parts := [CLIP_CACHE_VERSION, str(to_skeleton), skeleton.get_bone_count(), snappedf(_hips_height(skeleton), 0.0001), config.get("scene", ""), config.get("body", "")]
-	var keys := files.keys()
-	keys.sort()
-	for name in keys:
-		parts.append([name, files[name], FileAccess.get_modified_time(files[name])])
-	if not meshy.is_empty():
-		parts.append([meshy.get("file", ""), FileAccess.get_modified_time(str(meshy.get("file", ""))), meshy.get("clips", {})])
-	for extra in config.get("tripo", []):
-		parts.append([extra.file, FileAccess.get_modified_time(str(extra.file)), extra.clips])
+## Names one fighter's clip set: the conversion version, every pack file
+## with its modification time and the clips taken from it, and the skeleton
+## the clips are fitted to.
+func _clip_cache_key(pack: Dictionary, skeleton: Skeleton3D, to_skeleton: NodePath) -> String:
+	var parts := [CLIP_CACHE_VERSION, str(to_skeleton), skeleton.get_bone_count(), snappedf(_hips_height(skeleton), 0.0001), config.get("scene", "")]
+	var files := pack.keys()
+	files.sort()
+	for file in files:
+		var clips: Dictionary = pack[file]
+		var logicals := clips.keys()
+		logicals.sort()
+		parts.append([file, FileAccess.get_modified_time(file), logicals.map(func(logical): return [logical, clips[logical]])])
 	var timing_keys: Array = config.get("timing", {}).keys()
 	timing_keys.sort()
 	parts.append(timing_keys)
 	return str(parts).sha256_text().substr(0, 24)
 
-func _build_clip_files(files: Dictionary, meshy: Dictionary, target: Skeleton3D, to_skeleton: NodePath) -> AnimationLibrary:
-	var library := AnimationLibrary.new()
-	var skeleton := [target]
-	for key in files:
-		var source: PackedScene = load(files[key])
-		if source == null:
-			continue
-		var scene := source.instantiate()
-		var source_players := scene.find_children("*", "AnimationPlayer", true, false)
-		if not source_players.is_empty():
-			var from: AnimationPlayer = source_players[0]
-			# Mixamo files also carry a leftover bind-pose "Take 001"; the
-			# real clip is "mixamo_com", otherwise take the longest.
-			var names := Array(from.get_animation_list())
-			names.sort_custom(func(x, y): return x == "mixamo_com" or (y != "mixamo_com" and from.get_animation(x).length > from.get_animation(y).length))
-			for name in names:
-				var animation: Animation = from.get_animation(name).duplicate()
-				# Point every bone track at this character's skeleton.
-				for track in animation.get_track_count():
-					var path := animation.track_get_path(track)
-					if path.get_subname_count() > 0:
-						animation.track_set_path(track, NodePath(str(to_skeleton) + ":" + path.get_concatenated_subnames()))
-				# Same bone names but maybe another unit scale (a body exported
-				# in metres, clips from a centimetre rig): positions follow
-				# the ratio of hip heights, or the fighter sinks to the floor.
-				var source_skeletons := scene.find_children("*", "Skeleton3D", true, false)
-				if not source_skeletons.is_empty():
-					_scale_positions(animation, _hips_height(skeleton[0]) / maxf(_hips_height(source_skeletons[0]), 0.0001))
-					# A rig whose skeleton is turned under its parent (the
-					# Tripo-built Vajraveer's) keys its root in that turned
-					# frame: carried into this skeleton's frame, its clips
-					# stand upright here instead of lying on their side.
-					var turn := _node_rotation(target, character).inverse() * _node_rotation(source_skeletons[0], scene)
-					if not turn.is_equal_approx(Quaternion.IDENTITY):
-						_turn_root(animation, source_skeletons[0].get_bone_name(0), turn)
-				if not key in TRAVELLING:
-					clip_pace["files/" + key] = _pin_hips(animation)
-					# Over the fighter's own spot, whatever the clip began at
-					# (a reaction that started off-centre carried the body
-					# into the rival).
-					for bone in skeleton[0].get_bone_count():
-						if _bone_key(skeleton[0].get_bone_name(bone)) == "hips":
-							_centre_hips(animation, skeleton[0].get_bone_rest(bone).origin)
-							break
-				if key.ends_with("jump"):
-					_ground_jump(animation)
-				library.add_animation(key, animation)
-				break
-		scene.free()
-	if not meshy.is_empty() and ResourceLoader.exists(meshy.file):
-		_add_meshy_clips(library, meshy.file, meshy.clips, skeleton[0], to_skeleton)
-	# Tripo animations (one clip per file), retargeted the same way.
-	for extra in config.get("tripo", []):
-		if ResourceLoader.exists(extra.file):
-			_add_meshy_clips(library, extra.file, extra.clips, skeleton[0], to_skeleton)
-	return library
+## The pack's T-pose (its "tpose" clip; every pack file shares one skeleton):
+## bone name -> world rotation, plus the hips' local position. The pack rests
+## in a fighting stance while this skeleton rests in a T-pose, so the T-pose
+## is what lines the two up.
+static var _pack_tpose := {}
 
-## Meshy's own animations (its "Merged Animations" download) retargeted onto
-## this skeleton. The two rigs share a hierarchy but not bone names, rest
-## orientations or scale, so each frame is rebuilt: a bone's world rotation
-## keeps the same offset from its rest that the Meshy bone has from its own
-## rest, and the hips' travel is scaled by the ratio of hip heights.
-func _add_meshy_clips(library: AnimationLibrary, path: String, wanted: Dictionary, target: Skeleton3D, to_skeleton: NodePath) -> void:
+static func _tpose(source: Skeleton3D, from: AnimationPlayer) -> Dictionary:
+	if not _pack_tpose.is_empty():
+		return _pack_tpose
+	if not from.has_animation("tpose"):
+		var other: Node = (load(MODELS.pack_file("KB_Idle_1")) as PackedScene).instantiate()
+		var result := _tpose(other.find_children("*", "Skeleton3D", true, false)[0], other.find_children("*", "AnimationPlayer", true, false)[0])
+		other.free()
+		return result
+	var clip := from.get_animation("tpose")
+	var local := {}
+	for track in clip.get_track_count():
+		var bone := source.find_bone(String(clip.track_get_path(track).get_concatenated_subnames()))
+		if bone < 0:
+			continue
+		if clip.track_get_type(track) == Animation.TYPE_ROTATION_3D:
+			local[bone] = clip.rotation_track_interpolate(track, 0.0)
+		elif clip.track_get_type(track) == Animation.TYPE_POSITION_3D and _bone_key(source.get_bone_name(bone)) == "hips":
+			_pack_tpose["@hips"] = clip.position_track_interpolate(track, 0.0)
+	var world := {}
+	for bone in source.get_bone_count():
+		var parent := source.get_bone_parent(bone)
+		var rotation: Quaternion = local.get(bone, source.get_bone_rest(bone).basis.get_rotation_quaternion())
+		world[bone] = (world[parent] if parent >= 0 else Quaternion.IDENTITY) * rotation
+		_pack_tpose[source.get_bone_name(bone)] = world[bone]
+	return _pack_tpose
+
+## How far each finger joint curls into the fist (radians): knuckle, middle,
+## tip; the thumb folds less, across the front of the fingers.
+const FIST_CURL := [1.35, 1.6, 1.2]
+const THUMB_CURL := [0.35, 0.45, 0.4]
+
+## Bone -> local rotation of a clenched fist for every finger bone of this
+## skeleton: each joint turned from its rest (the T-pose, palm down) about
+## the axis that folds the finger toward the palm, so it fits any hand.
+static func _fist_pose(skeleton: Skeleton3D, node: Quaternion) -> Dictionary:
+	var fist := {}
+	for bone in skeleton.get_bone_count():
+		var key := _bone_key(skeleton.get_bone_name(bone))
+		if not key.contains("hand") or key.ends_with("hand"):
+			continue
+		var digit := ""
+		for name in ["thumb", "index", "middle", "ring", "pinky"]:
+			if key.contains(name):
+				digit = name
+		var joint := key.right(1).to_int() - 1
+		if digit == "" or joint < 0 or joint > 2:
+			continue
+		var children := skeleton.get_bone_children(bone)
+		if children.is_empty():
+			continue
+		var global := _global_rest(skeleton, bone)
+		var along: Vector3 = node * (_global_rest(skeleton, children[0]).origin - global.origin)
+		if along.length() < 0.00001:
+			continue
+		# The palm faces down in the T-pose; the thumb folds in toward it.
+		var axis := along.normalized().cross(Vector3.DOWN)
+		if axis.length() < 0.1:
+			continue
+		var turn: float = (THUMB_CURL if digit == "thumb" else FIST_CURL)[joint]
+		var local_axis := ((node * global.basis.get_rotation_quaternion()).inverse() * axis.normalized()).normalized()
+		fist[bone] = (skeleton.get_bone_rest(bone).basis.get_rotation_quaternion() * Quaternion(local_axis, turn)).normalized()
+	return fist
+
+## Fighting Animset Pro clips from one pack file, retargeted onto this
+## skeleton: wanted is logical clip -> pack clip name. A bone's world
+## rotation keeps the same offset from its T-pose that the pack's bone has
+## from the pack's T-pose; the hips' bob and sway are scaled by the ratio of
+## hip heights. The pack travels on its Root bone, which is left behind (the
+## game moves the fighter); its speed is kept as the clip's pace so feet
+## match the ground speed.
+func _add_pack_clips(library: AnimationLibrary, path: String, wanted: Dictionary, target: Skeleton3D, to_skeleton: NodePath) -> void:
+	if not ResourceLoader.exists(path):
+		return
 	var scene: Node = (load(path) as PackedScene).instantiate()
 	var sources := scene.find_children("*", "Skeleton3D", true, false)
 	var players := scene.find_children("*", "AnimationPlayer", true, false)
@@ -749,87 +1083,60 @@ func _add_meshy_clips(library: AnimationLibrary, path: String, wanted: Dictionar
 		return
 	var source: Skeleton3D = sources[0]
 	var from: AnimationPlayer = players[0]
-	# Source bone -> target bone.
-	var pairs := {}
+	var tpose := _tpose(source, from)
 	var target_keys := {}
 	for bone in target.get_bone_count():
 		target_keys[_bone_key(target.get_bone_name(bone))] = bone
-	# Meshy's own names only when the rig uses them (its biped FBX); its
-	# rigged .glb already uses Mixamo's.
-	var native := false
-	var tripo := false
-	for bone in source.get_bone_count():
-		tripo = tripo or _bone_key(source.get_bone_name(bone)) == "l_thigh"
-	for bone in source.get_bone_count():
-		native = native or (_bone_key(source.get_bone_name(bone)) == "spine02" and not tripo)
+	# Source bone -> target bone; the pack's twist ("Roll") and end bones have
+	# no partner and only pass their rotation on to their children.
+	var pairs := {}
 	for bone in source.get_bone_count():
 		var key := _bone_key(source.get_bone_name(bone))
-		if tripo:
-			key = TRIPO_BONES.get(key, "")
-			# Tripo's foot keys don't share its rest pose's frame (a standing
-			# foot reads ~150 degrees off rest), so retargeted feet point
-			# down like a dancer's. Its feet stay unmapped and flat on the
-			# ground (see flat_feet below).
-			if key.ends_with("foot") or key.contains("toe"):
-				key = ""
-		elif native:
-			key = MESHY_BONES.get(key, key)
-		elif key in ["headfront", "lefthandmiddle4", "righthandmiddle4"]:
-			key = ""
+		key = PACK_BONES.get(key, key)
 		if key != "" and target_keys.has(key):
 			pairs[bone] = target_keys[key]
-	var source_hips := source.find_bone(source.get_bone_name(0))
-	for bone in pairs:
-		if _bone_key(source.get_bone_name(bone)) == "hips":
-			source_hips = bone
+	# Fingers hold a clenched fist (_fist_pose) instead of the pack's relaxed,
+	# half-open hands, which bent the bodies' fingers into claws.
+	var fist := _fist_pose(target, _node_rotation(target, character))
+	for bone in pairs.keys():
+		if fist.has(pairs[bone]):
+			pairs.erase(bone)
+	var source_hips := source.find_bone("Hips")
+	var source_root := source.find_bone("Root")
 	var target_hips: int = target_keys.get("hips", 0)
-	# The rigs rest in different poses (Meshy's A-pose, Mixamo's T-pose), so
-	# bones are matched by where they point, not by their rest rotation: each
-	# mapped bone gets a frame built from its direction in the rest pose, and
-	# the target bone is turned so its frame follows the source bone's.
-	var s_node := _node_rotation(source, scene)
 	var t_node := _node_rotation(target, character)
+	# Pack T-pose -> this skeleton's rest (a T-pose), per pair: the offset
+	# each frame's pack rotation is carried by.
+	var offset := {}
+	for bone in pairs:
+		var to: int = pairs[bone]
+		offset[bone] = (tpose[source.get_bone_name(bone)] as Quaternion).inverse() * t_node * target.get_bone_global_rest(to).basis.get_rotation_quaternion()
 	var inverse_pairs := {}
 	for bone in pairs:
 		inverse_pairs[pairs[bone]] = bone
-	var s_frame := {}  # source bone -> frame in bone-local space
-	var t_frame := {}
-	for bone in pairs:
-		var target_bone: int = pairs[bone]
-		var s_dir := _rest_direction(source, s_node, bone, pairs.keys())
-		var t_dir := _rest_direction(target, t_node, target_bone, inverse_pairs.keys())
-		# Both sides of a pair twist from the same reference: a foot that
-		# rests flat on one rig (Tripo's) and angled on the other (Mixamo's)
-		# would otherwise pick different ones and roll the foot ~90 degrees.
-		var upright := _points_forward(s_dir) or _points_forward(t_dir)
-		s_frame[bone] = (s_node * source.get_bone_global_rest(bone).basis.get_rotation_quaternion()).inverse() * _frame(s_dir, upright)
-		t_frame[target_bone] = (t_node * target.get_bone_global_rest(target_bone).basis.get_rotation_quaternion()).inverse() * _frame(t_dir, upright)
-	# Target feet kept at their standing angle to the ground (Tripo clips;
-	# strikes let them follow the shin instead, so a kick's foot rises with
-	# the leg).
-	var flat_feet := {}
-	if tripo:
-		for bone in target.get_bone_count():
-			var key := _bone_key(target.get_bone_name(bone))
-			if key.ends_with("foot") or key.contains("toe"):
-				flat_feet[bone] = t_node * target.get_bone_global_rest(bone).basis.get_rotation_quaternion()
-	var s_height := source.get_bone_global_rest(source_hips).origin.length()
-	var t_height := target.get_bone_global_rest(target_hips).origin.length()
-	var scale := t_height / maxf(s_height, 0.0001)
-	var names := from.get_animation_list()
+	var s_hips_rest: Vector3 = tpose.get("@hips", source.get_bone_rest(source_hips).origin)
+	var scale := target.get_bone_global_rest(target_hips).origin.length() / maxf(s_hips_rest.length(), 0.0001)
+	var limbs: Array[int] = []
+	for key in ["lefthand", "righthand", "leftfoot", "rightfoot"]:
+		if target_keys.has(key):
+			limbs.append(target_keys[key])
+	var middle: int = target_keys.get("spine1", -1)
+	var chest: int = target_keys.get("spine2", -1)
+	if middle < 0 or chest < 0 or inverse_pairs.has(middle) or not inverse_pairs.has(chest) or target.get_bone_parent(chest) != middle:
+		middle = -1
+	var damped := {}
+	for key in ["leftshoulder", "rightshoulder"]:
+		if target_keys.has(key):
+			damped[target_keys[key]] = true
 	for logical in wanted:
-		var clip_name := ""
-		for candidate in names:
-			if String(candidate).contains(String(wanted[logical])):
-				clip_name = candidate
-		# No name given: the file's one animation (a single-move download).
-		if String(wanted[logical]) == "" and not names.is_empty():
-			clip_name = names[0]
-		if clip_name == "":
+		var clip_name: String = wanted[logical]
+		if not from.has_animation(clip_name):
+			push_warning("Fighting Animset Pro has no clip %s in %s" % [clip_name, path])
 			continue
-		var clip := _face_forward(from.get_animation(clip_name), source, source_hips)
+		var clip := from.get_animation(clip_name)
 		var rotation_tracks := {}
-		var position_track := -1
+		var hips_track := -1
+		var root_track := -1
 		for track in clip.get_track_count():
 			var bone := source.find_bone(String(clip.track_get_path(track).get_concatenated_subnames()))
 			if bone < 0:
@@ -837,102 +1144,140 @@ func _add_meshy_clips(library: AnimationLibrary, path: String, wanted: Dictionar
 			if clip.track_get_type(track) == Animation.TYPE_ROTATION_3D:
 				rotation_tracks[bone] = track
 			elif clip.track_get_type(track) == Animation.TYPE_POSITION_3D and bone == source_hips:
-				position_track = track
+				hips_track = track
+			elif clip.track_get_type(track) == Animation.TYPE_POSITION_3D and bone == source_root:
+				root_track = track
 		var out := Animation.new()
 		out.length = clip.length
 		var out_tracks := {}
-		var flat: Dictionary = {} if _is_strike(logical) else flat_feet
-		for bone in pairs.values() + flat.keys():
+		for bone in pairs.values():
 			var track := out.add_track(Animation.TYPE_ROTATION_3D)
 			out.track_set_path(track, NodePath(str(to_skeleton) + ":" + target.get_bone_name(bone)))
 			out_tracks[bone] = track
-		var hips_track := out.add_track(Animation.TYPE_POSITION_3D)
-		out.track_set_path(hips_track, NodePath(str(to_skeleton) + ":" + target.get_bone_name(target_hips)))
-		# Whole-move strike clips (no timing given) get their impact measured
-		# at the frame the hands or feet reach furthest from the hips.
+		# Every other bone is keyed at its rest too (Spine1, which the pack has
+		# no bone for): a bone no clip keys is never reset, so the hit recoil
+		# and head turn laid on it each frame piled up, folding the fighter
+		# lower with every exchange.
+		for bone in target.get_bone_count():
+			if bone == middle:
+				var track := out.add_track(Animation.TYPE_ROTATION_3D)
+				out.track_set_path(track, NodePath(str(to_skeleton) + ":" + target.get_bone_name(bone)))
+				out_tracks[bone] = track
+			elif not inverse_pairs.has(bone):
+				var track := out.add_track(Animation.TYPE_ROTATION_3D)
+				out.track_set_path(track, NodePath(str(to_skeleton) + ":" + target.get_bone_name(bone)))
+				out.rotation_track_insert_key(track, 0.0, fist.get(bone, target.get_bone_rest(bone).basis.get_rotation_quaternion()))
+		var out_hips := out.add_track(Animation.TYPE_POSITION_3D)
+		out.track_set_path(out_hips, NodePath(str(to_skeleton) + ":" + target.get_bone_name(target_hips)))
+		# Strikes with no timing given have their impact measured at the frame
+		# the hands or feet reach furthest from the hips.
 		var measure: bool = _is_strike(logical) and not config.get("timing", {}).has(logical)
-		var limbs: Array[int] = []
-		for key in ["lefthand", "righthand", "leftfoot", "rightfoot"]:
-			if target_keys.has(key):
-				limbs.append(target_keys[key])
 		var peak_extent := -1.0
 		var peak_time := -1.0
-		var t_node_scale := 1.0
 		var step := 1.0 / 30.0
 		var time := 0.0
 		while time <= clip.length + 0.0001:
 			var at := minf(time, clip.length)
-			# Source world rotations, parents before children.
 			var s_world := {}
 			for bone in source.get_bone_count():
 				var local := source.get_bone_rest(bone).basis.get_rotation_quaternion()
 				if rotation_tracks.has(bone):
 					local = clip.rotation_track_interpolate(rotation_tracks[bone], at)
 				var parent := source.get_bone_parent(bone)
-				s_world[bone] = (s_world[parent] if parent >= 0 else s_node) * local
+				s_world[bone] = (s_world[parent] if parent >= 0 else Quaternion.IDENTITY) * local
 			var t_world := {}
 			for bone in target.get_bone_count():
 				var parent := target.get_bone_parent(bone)
 				var parent_world: Quaternion = t_world[parent] if parent >= 0 else t_node
-				var source_bone = pairs.find_key(bone)
+				var source_bone = inverse_pairs.get(bone)
 				if source_bone != null:
-					t_world[bone] = (s_world[source_bone] as Quaternion) * (s_frame[source_bone] as Quaternion) * (t_frame[bone] as Quaternion).inverse()
-					out.rotation_track_insert_key(out_tracks[bone], at, (parent_world.inverse() * t_world[bone]).normalized())
-				elif flat.has(bone):
-					t_world[bone] = flat[bone]
-					out.rotation_track_insert_key(out_tracks[bone], at, (parent_world.inverse() * t_world[bone]).normalized())
+					t_world[bone] = (s_world[source_bone] as Quaternion) * (offset[source_bone] as Quaternion)
+					var local: Quaternion = (parent_world.inverse() * t_world[bone]).normalized()
+					if damped.has(bone):
+						# The collarbones roll only part way: the pack's boxers drive
+						# the shoulder far forward on every punch, and the bodies'
+						# vests and hoods (skinned to it) tore forward with it. The
+						# arm below keeps its own world turn, so the fist still
+						# reaches where the clip sends it.
+						local = target.get_bone_rest(bone).basis.get_rotation_quaternion().slerp(local, SHOULDER_ROLL)
+						t_world[bone] = parent_world * local
+					out.rotation_track_insert_key(out_tracks[bone], at, local)
+				elif bone == middle:
+					# The pack bends its back at two joints, this skeleton at three:
+					# the middle one takes half of the turn from the lower spine to
+					# the chest, so the twist of a punch runs up the whole back
+					# instead of folding at one joint under the chest.
+					var chest_world: Quaternion = (s_world[inverse_pairs[chest]] as Quaternion) * (offset[inverse_pairs[chest]] as Quaternion)
+					var rest_mid := target.get_bone_rest(bone).basis.get_rotation_quaternion()
+					var rest_chest := target.get_bone_rest(chest).basis.get_rotation_quaternion()
+					var bend := (parent_world.inverse() * chest_world) * (rest_mid * rest_chest).inverse()
+					var local := (Quaternion.IDENTITY.slerp(bend.normalized(), 0.5) * rest_mid).normalized()
+					t_world[bone] = parent_world * local
+					out.rotation_track_insert_key(out_tracks[bone], at, local)
 				else:
 					t_world[bone] = parent_world * target.get_bone_rest(bone).basis.get_rotation_quaternion()
 			if measure:
-				# Forward kinematics on the rebuilt rotations: how far the
-				# hands and feet reach from the hips at this moment.
 				var t_pos := {}
 				for bone in target.get_bone_count():
 					var parent := target.get_bone_parent(bone)
-					if parent < 0:
-						t_pos[bone] = Vector3.ZERO
-					else:
-						var parent_rot: Quaternion = t_world[parent]
-						t_pos[bone] = (t_pos[parent] as Vector3) + parent_rot * (target.get_bone_rest(bone).origin * t_node_scale)
-				var hips_at: Vector3 = t_pos[target_hips]
+					t_pos[bone] = Vector3.ZERO if parent < 0 else (t_pos[parent] as Vector3) + (t_world[parent] as Quaternion) * target.get_bone_rest(bone).origin
 				for limb in limbs:
-					var d: Vector3 = (t_pos[limb] as Vector3) - hips_at
-					var extent := Vector2(d.x, d.z).length()
+					var d: Vector3 = (t_pos[limb] as Vector3) - (t_pos[target_hips] as Vector3)
+					# Furthest ahead, toward the rival (+Z here): measured in every
+					# direction, a back kick's impact was read off the moment its
+					# foot was out behind the fighter.
+					var extent := d.z
 					if extent > peak_extent:
 						peak_extent = extent
 						peak_time = at
 			var hips := target.get_bone_rest(target_hips).origin
-			if position_track >= 0:
-				var moved: Vector3 = clip.position_track_interpolate(position_track, at) - source.get_bone_rest(source_hips).origin
-				hips += t_node.inverse() * (s_node * moved) * scale
-			out.position_track_insert_key(hips_track, at, hips)
+			if hips_track >= 0:
+				var moved: Vector3 = clip.position_track_interpolate(hips_track, at) - s_hips_rest
+				var parent_world: Quaternion = s_world[source.get_bone_parent(source_hips)] if source.get_bone_parent(source_hips) >= 0 else Quaternion.IDENTITY
+				hips += t_node.inverse() * (parent_world * moved) * scale
+			out.position_track_insert_key(out_hips, at, hips)
 			time += step
-		var key: String = "meshy_" + logical
+		var key: String = "pack_" + logical
 		if measure and peak_time >= 0.0:
 			# The blow lands at full extension, not at a guessed fraction.
 			var timing: Dictionary = config.get("timing", {})
 			timing[logical] = [maxf(0.0, peak_time - 0.4), peak_time, minf(clip.length, peak_time + 0.55)]
 			config["timing"] = timing
-		clip_pace["files/" + key] = _pin_hips(out)
+		_pin_hips(out)
+		# How fast the clip walks (its Root's travel), in metres per second of
+		# a fighter of the game's height (the pack's actor is about 1.75 m).
+		var pace := 0.0
+		if root_track >= 0 and clip.track_get_key_count(root_track) > 1:
+			var first: Vector3 = clip.track_get_key_value(root_track, 0)
+			var last: Vector3 = clip.track_get_key_value(root_track, clip.track_get_key_count(root_track) - 1)
+			pace = Vector2(last.x - first.x, last.z - first.z).length() / maxf(clip.length, 0.01) * MODELS.FIGHTER_HEIGHT / 1.75
+		clip_pace["files/" + key] = pace
 		_centre_hips(out, target.get_bone_rest(target_hips).origin)
-		if logical == "jump" or logical in AIR_STRIKES:
+		if logical in AIR_STRIKES:
+			# Recorded mid-jump, these clips hold the hips low (the pack lifts
+			# its jumper on the Root); the game's physics lifts the body, so the
+			# hips are raised back to standing height or the fighter squatted
+			# in the air.
+			var first: Vector3 = out.track_get_key_value(out_hips, 0)
+			var lift := target.get_bone_rest(target_hips).origin.y - first.y
+			for k in out.track_get_key_count(out_hips):
+				out.track_set_key_value(out_hips, k, (out.track_get_key_value(out_hips, k) as Vector3) + Vector3(0.0, lift, 0.0))
+		elif logical == "jump":
 			# The game's physics lifts the body; the clip keeps only the
 			# tuck, or the fighter would rise twice as high.
-			for track in out.get_track_count():
-				if out.track_get_type(track) == Animation.TYPE_POSITION_3D:
-					var ground: Vector3 = out.track_get_key_value(track, 0)
-					for k in out.track_get_key_count(track):
-						var v: Vector3 = out.track_get_key_value(track, k)
-						out.track_set_key_value(track, k, Vector3(v.x, minf(v.y, ground.y), v.z))
+			var ground: Vector3 = out.track_get_key_value(out_hips, 0)
+			for k in out.track_get_key_count(out_hips):
+				var v: Vector3 = out.track_get_key_value(out_hips, k)
+				out.track_set_key_value(out_hips, k, Vector3(v.x, minf(v.y, ground.y), v.z))
 		elif not logical in UNGROUNDED:
 			_ground_feet(out, target)
 		library.add_animation(key, out)
 	scene.free()
 
 ## Puts a retargeted clip's hips over the rig's own (pinned by _pin_hips
-## to wherever the clip began): Meshy's roundhouse starts with the hips
-## 0.75 m off to one side, so the whole body played away from the
-## fighter's real spot, hitbox and shadow for the length of the kick.
+## to wherever the clip began): a clip that starts with the hips off to one
+## side would play the whole body away from the fighter's real spot, hitbox
+## and shadow for the length of the move.
 static func _centre_hips(animation: Animation, rest: Vector3) -> void:
 	for track in animation.get_track_count():
 		if animation.track_get_type(track) != Animation.TYPE_POSITION_3D or animation.track_get_key_count(track) == 0:
@@ -943,13 +1288,13 @@ static func _centre_hips(animation: Animation, rest: Vector3) -> void:
 			animation.track_set_key_value(track, k, (animation.track_get_key_value(track, k) as Vector3) + shift)
 
 ## Moves left off the floor by _ground_feet: in the air, or lying down.
-const UNGROUNDED := ["jump", "knock_down", "ko", "thrown", "getup", "downed"]
+const UNGROUNDED := ["jump", "ko", "fall", "getup"]
 
 ## Lifts or lowers a retargeted clip so its lowest foot rests where the
-## rig's feet rest: Meshy's legs are proportioned a little differently, so
-## after retargeting the hips sat low and the feet sank into the floor (an
-## ankle 1 cm off the ground where it rests at 11). Measured by posing the
-## target skeleton from the clip's own tracks every few frames.
+## rig's feet rest: the pack's performer is proportioned a little
+## differently, so after retargeting the hips can sit low and the feet sink
+## into the floor. Measured by posing the target skeleton from the clip's
+## own tracks every few frames.
 func _ground_feet(animation: Animation, target: Skeleton3D) -> void:
 	var feet: Array[int] = []
 	for key in ["leftfoot", "rightfoot"]:
@@ -998,38 +1343,6 @@ func _ground_feet(animation: Animation, target: Skeleton3D) -> void:
 		var v: Vector3 = animation.track_get_key_value(hips_track, k)
 		animation.track_set_key_value(hips_track, k, v + Vector3(0.0, lift, 0.0))
 
-## Where a bone points in the rest pose (world space): toward its main
-## mapped child (the spine, neck or head over the shoulders and legs), or on
-## from its parent for end bones.
-static func _rest_direction(skeleton: Skeleton3D, node: Quaternion, bone: int, mapped: Array) -> Vector3:
-	var here := skeleton.get_bone_global_rest(bone).origin
-	var best := -1
-	for child in skeleton.get_bone_children(bone):
-		if not mapped.has(child):
-			continue
-		var key := _bone_key(skeleton.get_bone_name(child))
-		if best < 0 or key.contains("spine") or key.contains("neck") or key.contains("head"):
-			best = child
-	var direction := Vector3.ZERO
-	if best >= 0:
-		direction = skeleton.get_bone_global_rest(best).origin - here
-	elif skeleton.get_bone_parent(bone) >= 0:
-		direction = here - skeleton.get_bone_global_rest(skeleton.get_bone_parent(bone)).origin
-	if direction.length() < 0.00001:
-		direction = Vector3.UP
-	return (node * direction).normalized()
-
-## A rotation whose Y axis runs along direction, twist fixed by the
-## character's forward (+Z), or by up for a bone that points forward.
-static func _frame(direction: Vector3, upright := false) -> Quaternion:
-	var reference := Vector3.UP if upright else Vector3.BACK
-	var x := direction.cross(reference).normalized()
-	var z := x.cross(direction).normalized()
-	return Basis(x, direction, z).get_rotation_quaternion()
-
-static func _points_forward(direction: Vector3) -> bool:
-	return absf(direction.dot(Vector3.BACK)) > 0.9
-
 ## Plays a whole jump clip (take-off, tuck, landing) across the time the
 ## fighter will actually spend in the air.
 func _jump_speed(fighter: Node, clip: String) -> float:
@@ -1051,28 +1364,6 @@ static func _hips_height(skeleton: Skeleton3D) -> float:
 			return skeleton.get_bone_global_rest(bone).origin.length()
 	return 0.0
 
-static func _scale_positions(animation: Animation, ratio: float) -> void:
-	if ratio <= 0.0 or absf(ratio - 1.0) < 0.05:
-		return
-	for track in animation.get_track_count():
-		if animation.track_get_type(track) == Animation.TYPE_POSITION_3D:
-			for k in animation.track_get_key_count(track):
-				animation.track_set_key_value(track, k, (animation.track_get_key_value(track, k) as Vector3) * ratio)
-
-## Jump clips lift the hips themselves; the game's physics already does,
-## so the clip keeps only the crouch and tuck (hips never rise above where
-## they start), or the fighter would fly twice as high.
-static func _ground_jump(animation: Animation) -> void:
-	for track in animation.get_track_count():
-		if animation.track_get_type(track) != Animation.TYPE_POSITION_3D:
-			continue
-		if not String(animation.track_get_path(track).get_concatenated_subnames()).to_lower().ends_with("hips"):
-			continue
-		var ground: Vector3 = animation.track_get_key_value(track, 0)
-		for k in animation.track_get_key_count(track):
-			var v: Vector3 = animation.track_get_key_value(track, k)
-			animation.track_set_key_value(track, k, Vector3(v.x, minf(v.y, ground.y), v.z))
-
 static func _node_rotation(skeleton: Skeleton3D, top: Node) -> Quaternion:
 	var rotation := Quaternion.IDENTITY
 	var node: Node = skeleton
@@ -1081,72 +1372,6 @@ static func _node_rotation(skeleton: Skeleton3D, top: Node) -> Quaternion:
 			rotation = (node as Node3D).transform.basis.get_rotation_quaternion() * rotation
 		node = node.get_parent()
 	return rotation
-
-## A copy of `clip` turned about the vertical so its body starts facing the
-## way the rig faces at rest (towards the rival, in the fight). Meshy authors
-## some moves facing another way (its horse-stance idle a quarter turn off),
-## which played them square to the camera. Facing is read from the
-## shoulders on the first frame; turns within the move are kept.
-func _face_forward(clip: Animation, source: Skeleton3D, hips: int) -> Animation:
-	var keys := {}
-	for bone in source.get_bone_count():
-		keys[_bone_key(source.get_bone_name(bone))] = bone
-	if not (keys.has("leftarm") and keys.has("rightarm") and keys.has("head")):
-		return clip
-	var local := {}
-	for track in clip.get_track_count():
-		var bone := source.find_bone(String(clip.track_get_path(track).get_concatenated_subnames()))
-		if bone < 0 or clip.track_get_key_count(track) == 0:
-			continue
-		var pose: Transform3D = local.get(bone, source.get_bone_rest(bone))
-		match clip.track_get_type(track):
-			Animation.TYPE_ROTATION_3D:
-				pose.basis = Basis(clip.rotation_track_interpolate(track, 0.0))
-			Animation.TYPE_POSITION_3D:
-				pose.origin = clip.position_track_interpolate(track, 0.0)
-		local[bone] = pose
-	var posed := func(bone: int) -> Vector3:
-		var at := Transform3D()
-		var chain := bone
-		var parts: Array[Transform3D] = []
-		while chain >= 0:
-			parts.push_front(local.get(chain, source.get_bone_rest(chain)))
-			chain = source.get_bone_parent(chain)
-		for part in parts:
-			at = at * part
-		return at.origin
-	var up := (source.get_bone_global_rest(keys.head).origin - source.get_bone_global_rest(hips).origin).normalized()
-	var rest_facing := (source.get_bone_global_rest(keys.leftarm).origin - source.get_bone_global_rest(keys.rightarm).origin).cross(up)
-	var start_facing: Vector3 = (posed.call(keys.leftarm) - posed.call(keys.rightarm)).cross(up)
-	rest_facing = (rest_facing - up * rest_facing.dot(up)).normalized()
-	start_facing = (start_facing - up * start_facing.dot(up)).normalized()
-	if rest_facing.length() < 0.5 or start_facing.length() < 0.5:
-		return clip
-	var angle := start_facing.signed_angle_to(rest_facing, up)
-	# A bladed guard (a boxer's jab stance) is meant to sit at an angle; only
-	# a move turned further (Meshy's horse stance 47°, its floor sweep 54°) is
-	# corrected; Meshy's guard-stance jabs sit at about 35°.
-	if absf(angle) < deg_to_rad(40.0):
-		return clip
-	# Turned back only to the blade every other fighter's stance has (about
-	# 30 degrees, chest a little to the camera on the left): squared fully
-	# to the rival, Ananta read as turned away next to them.
-	angle -= signf(angle) * deg_to_rad(30.0)
-	var turned := clip.duplicate() as Animation
-	_turn_root(turned, source.get_bone_name(hips), Quaternion(up, angle))
-	return turned
-
-## Turns the root bone's keys (rotation and travel) by `turn`.
-static func _turn_root(animation: Animation, root_bone: String, turn: Quaternion) -> void:
-	for track in animation.get_track_count():
-		if String(animation.track_get_path(track).get_concatenated_subnames()) != root_bone:
-			continue
-		for key in animation.track_get_key_count(track):
-			match animation.track_get_type(track):
-				Animation.TYPE_ROTATION_3D:
-					animation.track_set_key_value(track, key, turn * (animation.track_get_key_value(track, key) as Quaternion))
-				Animation.TYPE_POSITION_3D:
-					animation.track_set_key_value(track, key, turn * (animation.track_get_key_value(track, key) as Vector3))
 
 ## Holds the root bone's horizontal position at its first key (keeping the
 ## up-down bob), making a travelling clip play in place. Returns how fast
@@ -1334,60 +1559,33 @@ func _sound_cues(fighter: Node, step: float) -> void:
 ## _process and sync_pose.
 func update(delta: float) -> void:
 	_update_pose(delta)
-	if active and visual.fighter != null and config.get("face_lock", false):
-		_face_lock(visual.fighter, delta)
 
-## Face-lock (fighters whose clips turn the body on their own, Ananta's
-## Meshy forms): after each frame's pose, the whole body is turned about
-## its hips so they face the rival with the roster's three-quarter blade
-## (about 30 degrees, chest a little to the camera). Moves that spin on
-## purpose (spin kick, sweep, air strikes) and knockdowns are left free.
-const FACE_BLADE := deg_to_rad(30.0)
-const FACE_FREE_VARIANTS := ["spin", "strike_sweep", "strike_jump_punch", "strike_flying_kick"]
-var _face_turn := 0.0
-func _face_lock(fighter: Node, delta: float) -> void:
-	var S: Dictionary = fighter.State
-	var free: bool = fighter.state in [S.KO, S.KNOCKDOWN, S.THROWN, S.THROWING, S.STRUCK, S.JUMP, S.JUMP_START] 		or (fighter.state in [S.PUNCH, S.KICK] and str(fighter.attack_variant) in FACE_FREE_VARIANTS)
-	var goal := 0.0
-	var rival = fighter.get("opponent")
+## Every pack stance leads with the left foot, which turns the chest to the
+## fighter's right: from the camera the fighter on the left shows the chest,
+## the one on the right showed the back. As in 2D fighting games, a fighter
+## whose right side faces away from the camera is drawn mirrored (a
+## southpaw), so both always face the camera. Switched only while standing,
+## stepping or guarding (never mid-strike or mid-fall), with a margin so
+## circling side-on can't flicker between the two.
+var mirrored := false
+func _mirror_basis(fighter: Node) -> Basis:
 	var camera := root.get_viewport().get_camera_3d() if root.is_inside_tree() else null
-	var left := _bone("leftupleg")
-	var right := _bone("rightupleg")
-	var hips_at := Vector3.ZERO
-	if not free and rival != null and rival.get("body") != null and camera != null and left >= 0 and right >= 0:
-		var l: Vector3 = skeleton.global_transform * skeleton.get_bone_global_pose(left).origin
-		var r: Vector3 = skeleton.global_transform * skeleton.get_bone_global_pose(right).origin
-		hips_at = (l + r) * 0.5
-		var facing := (l - r).cross(Vector3.UP)
-		facing.y = 0.0
-		var to_rival: Vector3 = rival.body.global_position - fighter.body.global_position
-		to_rival.y = 0.0
-		var to_camera: Vector3 = camera.global_position - fighter.body.global_position
-		to_camera.y = 0.0
-		if facing.length() > 0.01 and to_rival.length() > 0.01:
-			to_rival = to_rival.normalized()
-			var toward := to_rival.rotated(Vector3.UP, FACE_BLADE)
-			var away := to_rival.rotated(Vector3.UP, -FACE_BLADE)
-			var desired := toward if toward.dot(to_camera) > away.dot(to_camera) else away
-			goal = clampf(facing.normalized().signed_angle_to(desired, Vector3.UP), -1.3, 1.3)
-	# Strikes play exactly as authored: each is aimed along its own line, and
-	# turning the body (even held from the strike's start) threw fists and
-	# feet off their target (his jab fell from 9 in 10 landing to 6). The
-	# lock eases off through a punch or kick and back on after; his filmed
-	# finisher and his super (they always connect) stay locked.
-	if fighter.state in [S.PUNCH, S.KICK] and not fighter.current_move.get("finisher", false):
-		goal = 0.0
-	_face_turn = lerp_angle(_face_turn, goal, 1.0 - exp(-14.0 * delta))
-	if absf(_face_turn) < 0.002 or skeleton == null:
-		return
-	if hips_at == Vector3.ZERO:
-		var hips := _bone("hips")
-		hips_at = skeleton.global_transform * skeleton.get_bone_global_pose(hips).origin if hips >= 0 else root.global_position
-	var turn := Basis(Vector3.UP, _face_turn)
-	var placed := root.global_transform
-	placed.origin = hips_at + turn * (placed.origin - hips_at)
-	placed.basis = turn * placed.basis
-	root.global_transform = placed
+	if camera != null and fighter.get("body") != null:
+		var S: Dictionary = fighter.State
+		var busy: bool = fighter.state in [S.PUNCH, S.KICK, S.HITSTUN, S.STRUCK, S.BLOCKSTUN, S.KO, S.KNOCKDOWN, S.THROWN, S.THROWING, S.SUPER]
+		if not busy or pose_override != "":
+			# The fighter's right: forward x up (the model's own turn is 0; the
+			# facing is set on a parent).
+			var forward: Vector3 = fighter.get("forward") if fighter.get("forward") is Vector3 else Vector3.RIGHT
+			var right := forward.cross(Vector3.UP)
+			var to_camera: Vector3 = camera.global_position - fighter.body.global_position
+			to_camera.y = 0.0
+			var side := right.dot(to_camera.normalized()) if to_camera.length() > 0.01 else 1.0
+			if side < -0.15:
+				mirrored = true
+			elif side > 0.15:
+				mirrored = false
+	return Basis.from_scale(Vector3(1.0, 1.0, -1.0)) if mirrored else Basis.IDENTITY
 
 func _update_pose(delta: float) -> void:
 	if not active or visual.fighter == null:
@@ -1396,7 +1594,7 @@ func _update_pose(delta: float) -> void:
 	_sound_cues(fighter, delta)
 	# Only the facing turn: the procedural rig's knockdown/hit spin would
 	# double up with the clips' own falls and sink the model into the floor.
-	root.transform = Transform3D(Basis(Vector3.UP, visual.model.rotation.y), visual.model.position)
+	root.transform = Transform3D(Basis(Vector3.UP, visual.model.rotation.y) * _mirror_basis(fighter), visual.model.position)
 	var frozen: bool = fighter.combat_paused or fighter.hitstop_remaining > 0.0
 	var S: Dictionary = fighter.State
 	var state: int = fighter.state
@@ -1416,9 +1614,9 @@ func _update_pose(delta: float) -> void:
 		S.LAND:
 			logical = "land"
 		S.BLOCK:
-			logical = "crouch" if crouched else "block"
+			logical = ("crouch_block" if clip_names.has("crouch_block") else "crouch") if crouched else "block"
 		S.BLOCKSTUN:
-			logical = "crouch" if crouched else "block_hit"
+			logical = ("crouch_block_hit" if clip_names.has("crouch_block_hit") else "crouch") if crouched else "block_hit"
 		S.HITSTUN, S.STRUCK:
 			logical = _reaction if _reaction != "" else ("hit_heavy" if last_hit_heavy else "hit")
 		S.SUPER:
@@ -1500,8 +1698,16 @@ func _update_pose(delta: float) -> void:
 		_from_strike = false
 		# Into a flinch fast, but over a few frames: a cut in a single frame
 		# threw the hands and head a metre between two frames.
+		# The same clip starting over (a second blow's flinch, a reaction
+		# into the same reaction) has nothing to cross-fade from, so the
+		# pose it leaves is blended by hand once the clip has moved on.
+		var again := clip == current
+		if again:
+			_capture_pose(REACT_BLEND)
+		elif not _is_strike(logical):
+			_blend_from.clear()
 		player.play(clip, 0.0 if logical == "ko" else 0.12 if logical in REACTIONS else settle)
-		if restart:
+		if restart or again:
 			player.seek(0.0, true)
 		# Clips that open with a still beat (the knockout) start where the
 		# motion starts.
@@ -1534,6 +1740,11 @@ func _update_pose(delta: float) -> void:
 	else:
 		_react_speed = 0.0
 	player.advance(delta)
+	if frozen:
+		# Held at speed 0 (hit-stop, pause) the clip may not write its pose
+		# again, and the layers below would pile onto last frame's: rewrite it.
+		player.seek(player.current_animation_position, true)
+	_blend_in(delta, frozen)
 	# The knockout travels from where the fighter stood, not from where the
 	# clip's hips happen to be at the moment it starts (that offset snapped
 	# the body ~75 cm sideways in the first frames of the fall): the jump
@@ -1622,7 +1833,8 @@ func _play_throw(fighter: Node, logical: String, delta: float, frozen: bool) -> 
 				_fall(1.0, delta, frozen)
 		"getup":
 			var rise := clampf((fighter.knockdown_time - THROW.LIE_TIME) / THROW.GETUP_TIME, 0.0, 1.0)
-			_scrub_clip(clip_names.getup, lerpf(THROW.GETUP_START, THROW.GETUP_END, rise), delta, frozen)
+			var animation := player.get_animation(clip_names.getup)
+			_scrub_clip(clip_names.getup, rise * animation.length, delta, frozen)
 
 ## A punch thrown down from the mount: the arms and shoulders of the jab
 ## or cross clip (alternating hands) laid over the kneeling pose, the trunk
@@ -1658,13 +1870,16 @@ func _ground_punch(fighter: Node) -> void:
 	var drive := smoothstep(landed * 0.75, landed, progress) * (1.0 - smoothstep(landed + 0.15, 1.0, progress))
 	_posture = 0.3 * load - 0.32 * drive
 
-## Rigs without a victim clip go down on their knockout clip.
+## Taken off the feet (a sweep, a knockdown): the fall clip from standing
+## to flat on the back, progress 0 to 1 (or the knockout's, without one).
 func _fall(progress: float, delta: float, frozen: bool) -> void:
-	var clip: String = clip_names.get("ko", "")
+	var own := clip_names.has("fall")
+	var clip: String = clip_names.get("fall", clip_names.get("ko", ""))
 	var animation := player.get_animation(clip) if clip != "" else null
 	if animation == null:
 		return
-	_scrub_clip(clip, minf(clampf(progress, 0.0, 1.0) * 1.1, animation.length - 0.001), delta, frozen)
+	var time := clampf(progress, 0.0, 1.0) * (animation.length if own else 1.1)
+	_scrub_clip(clip, minf(time, animation.length - 0.001), delta, frozen)
 
 ## Holds `clip` at `time`, blending in from the previous pose by hand when
 ## the clip changes (the player sits at speed 0, so its cross-fade can't).
@@ -1672,19 +1887,16 @@ func _scrub_clip(clip: String, time: float, delta: float, frozen: bool) -> void:
 	var animation := player.get_animation(clip) if clip != "" else null
 	if animation == null:
 		return
-	if clip != current:
-		_capture_pose()
-		_blend_time = 0.0
+	# A new clip, or this one jumping back (a super's next blow, a fall
+	# after a get-up): blend from the pose the rig was in.
+	if clip != current or time < _last_scrub_time - 0.05:
+		_capture_pose(THROW_BLEND)
 		player.play(clip, 0.0)
 		current = clip
+	_last_scrub_time = time
 	player.speed_scale = 0.0
 	player.seek(clampf(time, 0.0, animation.length - 0.001), true)
-	if not frozen:
-		_blend_time += delta
-	if _blend_time < THROW_BLEND and skeleton != null and not _blend_from.is_empty():
-		var k := smoothstep(0.0, 1.0, _blend_time / THROW_BLEND)
-		for bone in _blend_from:
-			skeleton.set_bone_pose_rotation(bone, (_blend_from[bone] as Quaternion).slerp(skeleton.get_bone_pose_rotation(bone), k))
+	_blend_in(delta, frozen)
 
 ## Keeps the hips over the fighter's physics body through a strike. Some
 ## clips (spinning and jumping kicks especially) drift the hips sideways or
@@ -1737,7 +1949,7 @@ func _reach_step(fighter: Node, delta: float, attacking: bool) -> void:
 				var startup: float = maxf(fighter.attack_startup(), 0.01)
 				var total: float = maxf(fighter.attack_duration(), startup + 0.01)
 				var envelope := smoothstep(0.0, startup * 0.8, t) * (1.0 - smoothstep(startup + (total - startup) * 0.45, total, t))
-				goal = clampf(short, 0.0, MAX_REACH_STEP * (1.5 if kicking else 1.0)) * envelope
+				goal = clampf(minf(short, apart - BODY_GAP), 0.0, MAX_REACH_STEP * (1.5 if kicking else 1.0)) * envelope
 	_reach = lerpf(_reach, goal, 1.0 - exp(-30.0 * delta))
 	if _reach > 0.001 and direction != Vector3.ZERO:
 		var parent := root.get_parent() as Node3D
@@ -1947,12 +2159,20 @@ func _aim_at_rival(fighter: Node, delta: float, frozen: bool) -> void:
 		var axis: Vector3 = (skeleton.get_bone_global_pose(bone).basis.orthonormalized().inverse() * up_local).normalized()
 		skeleton.set_bone_pose_rotation(bone, skeleton.get_bone_pose_rotation(bone) * Quaternion(axis, _aim * _aim_weight * link[1]))
 
+## How much of the recoil spring reaches the body. The pack's reactions are
+## full mocap flinches; the spring at full strength on top of them folded a
+## struck fighter backwards like rubber, so it adds only a little weight.
+const RECOIL_GAIN := 0.35
+
 ## Bends the calibrated bones by the current tuck, lean and recoil amounts.
 func _apply_layers() -> void:
 	if skeleton == null:
 		return
+	var recoil := _recoil * RECOIL_GAIN
+	var push := _push * RECOIL_GAIN
+	var snap := _snap * RECOIL_GAIN
 	# Knees only ever buckle; the spring's overshoot must not lock them back.
-	var buckle := maxf(_recoil.z, 0.0) if fighter_grounded() else 0.0
+	var buckle := maxf(recoil.z, 0.0) if fighter_grounded() else 0.0
 	var bend := _tuck + buckle
 	if bend > 0.001:
 		for leg in _legs:
@@ -1960,28 +2180,28 @@ func _apply_layers() -> void:
 			skeleton.set_bone_pose_rotation(leg[0], hip * Quaternion(leg[4], leg[2] * 0.5 * bend))
 			var knee := skeleton.get_bone_pose_rotation(leg[1])
 			skeleton.set_bone_pose_rotation(leg[1], knee * Quaternion(leg[5], leg[3] * 1.05 * bend))
-	var lean := _lean + _recoil.x + _posture
+	var lean := _lean + recoil.x + _posture
 	if absf(lean) > 0.001:
 		for i in _spine.size():
 			var part: Array = _spine[i]
 			var share: float = _recoil_spread[i] if _spine.size() == 3 else 1.0 / _spine.size()
 			# The guard lean stays even; only the recoil follows the spread.
-			var angle: float = (_lean + _posture) / _spine.size() + _recoil.x * share
+			var angle: float = (_lean + _posture) / _spine.size() + recoil.x * share
 			var pose := skeleton.get_bone_pose_rotation(part[0])
 			skeleton.set_bone_pose_rotation(part[0], pose * Quaternion(part[2], part[1] * angle))
-	if absf(_snap) > 0.001 and not _head_roll.is_empty():
+	if absf(snap) > 0.001 and not _head_roll.is_empty():
 		var head := _bone("head")
-		skeleton.set_bone_pose_rotation(head, skeleton.get_bone_pose_rotation(head) * Quaternion(_head_roll[0], _head_roll[1] * _snap))
-	if root == null or (absf(_recoil.y) < 0.001 and buckle < 0.001 and absf(_push) < 0.0005):
+		skeleton.set_bone_pose_rotation(head, skeleton.get_bone_pose_rotation(head) * Quaternion(_head_roll[0], _head_roll[1] * snap))
+	if root == null or (absf(recoil.y) < 0.001 and buckle < 0.001 and absf(push) < 0.0005):
 		return
 	var parent := root.get_parent() as Node3D
-	if absf(_push) >= 0.0005:
+	if absf(push) >= 0.0005:
 		var ahead := root.global_transform.basis.x
 		ahead.y = 0.0
-		root.position += parent.global_transform.basis.inverse() * (ahead.normalized() * _push)
+		root.position += parent.global_transform.basis.inverse() * (ahead.normalized() * push)
 	# The blow turns the whole body a touch, and a knee buckle lowers the
 	# hips by what the bent legs lose in height, so the feet stay planted.
-	root.rotate_object_local(Vector3.UP, _recoil.y)
+	root.rotate_object_local(Vector3.UP, recoil.y)
 	if buckle > 0.001 and not _legs.is_empty():
 		var leg: Array = _legs[0]
 		var hip_at: Vector3 = skeleton.global_transform * skeleton.get_bone_global_pose(leg[0]).origin
@@ -2067,13 +2287,17 @@ func _apply_guard() -> void:
 		var pose := skeleton.get_bone_pose_rotation(pair[1])
 		skeleton.set_bone_pose_rotation(pair[1], pose.slerp(guard, guard_weight))
 
-## Attack clips, played scrubbed against the move's timing. "strike_*"
-## are a fighter's own extra moves (a move whose pose names one plays it).
+## Attack clips, played scrubbed against the move's timing: the generic
+## strikes and every pack strike a move names ("KB_...").
 func _is_strike(logical: String) -> bool:
-	return logical in SCRUBBED or logical.begins_with("strike_")
+	return logical in SCRUBBED or logical.begins_with("KB_") or logical.begins_with("strike_")
 
 func _attack_clip(fighter: Node) -> String:
 	var variant: String = fighter.attack_variant
+	# Every move names its own clip (action_moves.gd LOOK).
+	var own := str(fighter.current_move.get("clip", "")) if fighter.get("current_move") is Dictionary else ""
+	if own != "" and clip_names.has(own):
+		return own
 	if variant.begins_with("strike_") and clip_names.has(variant):
 		return variant
 	if variant in ["grapple"]:
@@ -2130,15 +2354,9 @@ func _loop_speed(fighter: Node, logical: String, clip: String) -> float:
 	var tempo: float = fighter.get_script().get_script_constant_map().get("COMBAT_TEMPO", 1.0)
 	var pace: float = Vector3(body.velocity.x, 0.0, body.velocity.z).length() * tempo
 	var native: float = clip_pace.get(clip, 0.0)
-	# Mixamo FBX clips carry centimetres: no walk is 20 m/s.
-	if native > 20.0:
-		native *= 0.01
 	var limits: Array = MOVE_SPEED_RANGE[logical]
 	var speed: float = clampf(pace / native if native > 0.2 else pace / 1.6, limits[0], limits[1])
 	var reversed: bool = logical in ["walk_back", "backdash"] and clip_names.get(logical) == clip_names.get("walk")
-	# A guarded forward walk made by playing the boxing walk-back in reverse.
-	if logical in config.get("reversed", []):
-		reversed = true
 	return -speed if reversed else speed
 
 ## Maps attack_timer onto the clip: wind-up covers the clip up to its
@@ -2150,9 +2368,12 @@ func _scrub_attack(fighter: Node, logical: String, clip: String, delta: float, f
 	# The player is held at speed 0 while scrubbing, so its own cross-fade
 	# would never finish. Instead the pose the rig was in is captured and
 	# blended toward the clip by hand over the first few frames.
-	if clip != current:
-		_capture_pose()
-		_blend_time = 0.0
+	# A new strike blends from wherever the body was, even when it is the
+	# same clip again (a jab repeated in a string snapped back to its start).
+	var restarted: bool = fighter.attack_timer < _last_attack_time - 0.0001
+	_last_attack_time = fighter.attack_timer
+	if clip != current or restarted:
+		_capture_pose(ATTACK_BLEND)
 		player.play(clip, 0.0)
 		current = clip
 	player.speed_scale = 0.0
@@ -2175,12 +2396,7 @@ func _scrub_attack(fighter: Node, logical: String, clip: String, delta: float, f
 	# it: a spinning kick needs its whole turn to come round on target.
 	start = maxf(start, impact - maxf(startup * WINDUP_RATE, (impact - start) * WINDUP_KEEP))
 	player.seek(minf(_strike_time(start, impact, end, startup, total, t), animation.length - 0.001), true)
-	if not frozen:
-		_blend_time += delta
-	if _blend_time < ATTACK_BLEND and skeleton != null and not _blend_from.is_empty():
-		var k := smoothstep(0.0, 1.0, _blend_time / ATTACK_BLEND)
-		for bone in _blend_from:
-			skeleton.set_bone_pose_rotation(bone, (_blend_from[bone] as Quaternion).slerp(skeleton.get_bone_pose_rotation(bone), k))
+	_blend_in(delta, frozen)
 
 ## Clip time for a strike `t` seconds in: the wind-up [start, impact] fills
 ## the startup and the follow-through [impact, end] the rest. Each half is a
@@ -2201,9 +2417,30 @@ static func _hermite(p0: float, p1: float, span: float, m0: float, m1: float, u:
 	var u3 := u2 * u
 	return (2.0 * u3 - 3.0 * u2 + 1.0) * p0 + (u3 - 2.0 * u2 + u) * span * m0 + (-2.0 * u3 + 3.0 * u2) * p1 + (u3 - u2) * span * m1
 
-func _capture_pose() -> void:
+## Remembers the pose drawn last (every bone's turn and the hips' place) to
+## blend from over `span` seconds (see _blend_in).
+func _capture_pose(span: float = ATTACK_BLEND) -> void:
 	_blend_from.clear()
+	_blend_time = 0.0
+	_blend_span = span
 	if skeleton == null:
 		return
 	for bone in skeleton.get_bone_count():
 		_blend_from[bone] = skeleton.get_bone_pose_rotation(bone)
+	var hips := _bone("hips")
+	if hips >= 0:
+		_blend_hips = skeleton.get_bone_pose_position(hips)
+
+## Eases the clip's pose in from the captured one: slow out of the old pose,
+## slow into the new, never a cut.
+func _blend_in(delta: float, frozen: bool) -> void:
+	if not frozen:
+		_blend_time += delta
+	if _blend_time >= _blend_span or skeleton == null or _blend_from.is_empty():
+		return
+	var k := smoothstep(0.0, 1.0, _blend_time / _blend_span)
+	for bone in _blend_from:
+		skeleton.set_bone_pose_rotation(bone, (_blend_from[bone] as Quaternion).slerp(skeleton.get_bone_pose_rotation(bone), k))
+	var hips := _bone("hips")
+	if hips >= 0:
+		skeleton.set_bone_pose_position(hips, _blend_hips.lerp(skeleton.get_bone_pose_position(hips), k))

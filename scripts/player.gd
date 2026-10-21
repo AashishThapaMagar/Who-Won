@@ -515,7 +515,7 @@ func _consume_action() -> bool:
 		# Grabs are switched off: the button does nothing.
 		if available_moves().has("grapple"):
 			_start_style_move("grapple")
-	elif action in ["sweep", "crouch_punch"]:
+	elif action in ["sweep", "crouch_punch", "crouch_rp", "crouch_rk"]:
 		# Asked for by name (the AI): squat into it.
 		if available_moves().has(action):
 			_start_style_move(action)
@@ -527,7 +527,8 @@ func _consume_action() -> bool:
 	else:
 		if crouching and command.is_empty() and available_moves().has("sweep") and state not in [State.PUNCH, State.KICK]:
 			# From the crouch: punches rise into the uppercut, kicks sweep.
-			_start_style_move("crouch_punch" if action in ["punch", "rpunch"] else "sweep")
+			var low: String = {"punch": "crouch_punch", "rpunch": "crouch_rp", "kick": "sweep", "rkick": "crouch_rk"}.get(action, "sweep")
+			_start_style_move(low if available_moves().has(low) else ("crouch_punch" if action in ["punch", "rpunch"] else "sweep"))
 		elif not command.is_empty():
 			_start_style_move(command, chain_step + 1 if state in [State.PUNCH, State.KICK] else 0)
 		elif not next_id.is_empty():
@@ -536,6 +537,10 @@ func _consume_action() -> bool:
 			# Buttons 2 and 4: the fighter's right punch / right kick.
 			var moves := available_moves()
 			var own := "rp" if action == "rpunch" else "rk"
+			# Forward / back + 2 or 4: the fighter's signature moves (lunge,
+			# overhead, knockdown, low kick; action_moves.gd).
+			if direction != 0 and moves.has(("f_" if direction > 0 else "b_") + own):
+				own = ("f_" if direction > 0 else "b_") + own
 			_start_style_move(own if moves.has(own) else ("cross" if action == "rpunch" else "forward_heavy"))
 		else:
 			var move_id := "jab" if action == "punch" else "kick"
@@ -686,6 +691,7 @@ func _process_attack(delta: float) -> void:
 		knockback = (kick_knockback if heavy else punch_knockback) * float(current_move.push)
 		if not airborne:
 			velocity.x = facing * float(current_move.lunge) / attack_startup() if attack_timer < attack_startup() else 0.0
+			velocity.x = facing * maxf(velocity.x * facing, _combo_glide())
 	if attack_variant == "finisher":
 		damage = int(round(damage * current_style.finisher_damage_mult))
 		knockback *= current_style.finisher_knockback_mult
@@ -722,6 +728,31 @@ func _process_attack(delta: float) -> void:
 		chain_step = 0
 		state = State.IDLE
 		_process_move_and_actions(delta)
+
+## Combo glide: a blow chained onto one that landed follows the rival it
+## knocked back, closing to striking range by the moment of impact (pixels
+## per second along the facing). An opening blow gets none, so spacing
+## still decides whether a string starts; the knockback stays, so a string
+## that stops still pushes the rival away.
+const COMBO_RANGE := 0.82
+const COMBO_GLIDE_MAX := 5.0
+func _combo_glide() -> float:
+	# Only a blow continuing this string (not a fresh string started on a
+	# rival still reeling, which looped into endless combos), and never past
+	# the string's last blow.
+	if combo_hits <= 0 or chain_step <= 0 or chain_step >= max_chain() or opponent == null or attack_timer >= attack_startup():
+		return 0.0
+	var gap := absf(opponent.global_position.x - global_position.x) / 64.0
+	var mine = get("body")
+	var theirs = opponent.get("body")
+	if mine != null and theirs != null:
+		var apart: Vector3 = theirs.position - mine.position
+		gap = Vector2(apart.x, apart.z).length()
+	# Into this blow's own range (a short elbow closes in further than a jab).
+	var range := clampf(float(current_move.get("reach", 52.0)) / 64.0 - 0.12, 0.6, COMBO_RANGE)
+	var close := maxf(0.0, gap - range)
+	var remaining := maxf(attack_startup() - attack_timer, 0.05)
+	return minf(close / remaining, COMBO_GLIDE_MAX) * 64.0
 
 func _combo_bonus() -> int:
 	if current_style != null and current_style.combo_damage_step > 0 and combat_time - _last_land_time <= current_style.combo_window:
